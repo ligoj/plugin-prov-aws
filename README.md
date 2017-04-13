@@ -1,1 +1,1 @@
-# plugin-provisioning-aws
+# plugin-prov-aws

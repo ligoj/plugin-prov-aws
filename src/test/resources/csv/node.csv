@@ -1,3 +1,3 @@
 id;name;refined.id;mode;uiClasses;tag;tagUiClasses
-service:provisioning:aws;Provisioning AWS;service:provisioning;LINK;;;
-service:provisioning:aws:account;Provisioning AWS AccountA;service:provisioning:aws;LINK;;;
+service:prov:aws;Provisioning AWS;service:prov;LINK;;;
+service:prov:aws:account;Provisioning AWS AccountA;service:prov:aws;LINK;;;

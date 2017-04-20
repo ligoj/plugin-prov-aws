@@ -1,0 +1,5 @@
+node.id;name;period
+service:prov:aws;On Demand;60
+service:prov:aws;Reserved 1y;527040
+service:prov:aws;Reserved 1y Partial Upfront;527040
+service:prov:aws;Spot;60

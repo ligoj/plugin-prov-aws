@@ -1,0 +1,9 @@
+node.id;name;type;cost;description;minimal;maximal
+service:prov:aws;gp2;HOT;0.11;SSD;1024;16777216
+service:prov:aws;io1;HOT;0.138;SSD Provisioned;4096;16777216
+service:prov:aws;st1;COLD;0.05;HDD;512000;16777216
+service:prov:aws;sc1;COLD;0.028;HDD Cold;512000;16777216
+service:prov:aws;S3 Snapshots;OBJECT;0.05;Snapshot;0;
+service:prov:aws;S3;OBJECT;0.023;Very Cold;0;
+service:prov:aws;S3 IA;OBJECT;0.0125;X Cold;0;
+service:prov:aws;Glacier;OBJECT;0.004;XX Cold;0;

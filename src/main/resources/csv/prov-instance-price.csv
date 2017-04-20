@@ -1,0 +1,815 @@
+type.name;cost;instance.name;os
+On Demand;0.0063;t2.nano;LINUX
+On Demand;0.013;t2.micro;LINUX
+On Demand;0.02;t1.micro;LINUX
+On Demand;0.025;t2.small;LINUX
+On Demand;0.047;m1.small;LINUX
+On Demand;0.05;t2.medium;LINUX
+On Demand;0.073;m3.medium;LINUX
+On Demand;0.095;m1.medium;LINUX
+On Demand;0.101;t2.large;LINUX
+On Demand;0.113;c4.large;LINUX
+On Demand;0.119;m4.large;LINUX
+On Demand;0.12;c3.large;LINUX
+On Demand;0.146;m3.large;LINUX
+On Demand;0.148;c1.medium;LINUX
+On Demand;0.1482;r4.large;LINUX
+On Demand;0.172;i3.large;LINUX
+On Demand;0.185;r3.large;LINUX
+On Demand;0.19;m1.large;LINUX
+On Demand;0.202;t2.xlarge;LINUX
+On Demand;0.226;c4.xlarge;LINUX
+On Demand;0.238;m4.xlarge;LINUX
+On Demand;0.239;c3.xlarge;LINUX
+On Demand;0.275;m2.xlarge;LINUX
+On Demand;0.293;m3.xlarge;LINUX
+On Demand;0.2964;r4.xlarge;LINUX
+On Demand;0.344;i3.xlarge;LINUX
+On Demand;0.371;r3.xlarge;LINUX
+On Demand;0.379;m1.xlarge;LINUX
+On Demand;0.404;t2.2xlarge;LINUX
+On Demand;0.453;c4.2xlarge;LINUX
+On Demand;0.475;m4.2xlarge;LINUX
+On Demand;0.478;c3.2xlarge;LINUX
+On Demand;0.55;m2.2xlarge;LINUX
+On Demand;0.585;m3.2xlarge;LINUX
+On Demand;0.592;c1.xlarge;LINUX
+On Demand;0.5928;r4.2xlarge;LINUX
+On Demand;0.688;i3.2xlarge;LINUX
+On Demand;0.702;g2.2xlarge;LINUX
+On Demand;0.735;d2.xlarge;LINUX
+On Demand;0.741;r3.2xlarge;LINUX
+On Demand;0.905;c4.4xlarge;LINUX
+On Demand;0.938;i2.xlarge;LINUX
+On Demand;0.95;m4.4xlarge;LINUX
+On Demand;0.956;c3.4xlarge;LINUX
+On Demand;0.972;p2.xlarge;LINUX
+On Demand;1.1;m2.4xlarge;LINUX
+On Demand;1.1856;r4.4xlarge;LINUX
+On Demand;1.376;i3.4xlarge;LINUX
+On Demand;1.47;d2.2xlarge;LINUX
+On Demand;1.482;r3.4xlarge;LINUX
+On Demand;1.811;c4.8xlarge;LINUX
+On Demand;1.876;i2.2xlarge;LINUX
+On Demand;1.912;c3.8xlarge;LINUX
+On Demand;2.25;cc2.8xlarge;LINUX
+On Demand;2.36;cg1.4xlarge;LINUX
+On Demand;2.3712;r4.8xlarge;LINUX
+On Demand;2.377;m4.10xlarge;LINUX
+On Demand;2.752;i3.8xlarge;LINUX
+On Demand;2.808;g2.8xlarge;LINUX
+On Demand;2.94;d2.4xlarge;LINUX
+On Demand;2.964;r3.8xlarge;LINUX
+On Demand;3.1;hi1.4xlarge;LINUX
+On Demand;3.75;cr1.8xlarge;LINUX
+On Demand;3.751;i2.4xlarge;LINUX
+On Demand;3.803;m4.16xlarge;LINUX
+On Demand;4.7424;r4.16xlarge;LINUX
+On Demand;4.9;hs1.8xlarge;LINUX
+On Demand;5.504;i3.16xlarge;LINUX
+On Demand;5.88;d2.8xlarge;LINUX
+On Demand;7.502;i2.8xlarge;LINUX
+On Demand;7.776;p2.8xlarge;LINUX
+On Demand;8.003;x1.16xlarge;LINUX
+On Demand;15.552;p2.16xlarge;LINUX
+On Demand;16.006;x1.32xlarge;LINUX
+Reserved 1y;0.005;t2.nano;LINUX
+Reserved 1y;0.01;t2.micro;LINUX
+Reserved 1y;0.016;t1.micro;LINUX
+Reserved 1y;0.02;t2.small;LINUX
+Reserved 1y;0.034;m1.small;LINUX
+Reserved 1y;0.04;t2.medium;LINUX
+Reserved 1y;0.055;m3.medium;LINUX
+Reserved 1y;0.068;m1.medium;LINUX
+Reserved 1y;0.08;t2.large;LINUX
+Reserved 1y;0.087;c4.large;LINUX
+Reserved 1y;0.09;m4.large;LINUX
+Reserved 1y;0.09;c3.large;LINUX
+Reserved 1y;0.11;m3.large;LINUX
+Reserved 1y;0.111;c1.medium;LINUX
+Reserved 1y;0.104;r4.large;LINUX
+Reserved 1y;0.131;i3.large;LINUX
+Reserved 1y;0.136;r3.large;LINUX
+Reserved 1y;0.136;m1.large;LINUX
+Reserved 1y;0.16;t2.xlarge;LINUX
+Reserved 1y;0.173;c4.xlarge;LINUX
+Reserved 1y;0.18;m4.xlarge;LINUX
+Reserved 1y;0.18;c3.xlarge;LINUX
+Reserved 1y;0.134;m2.xlarge;LINUX
+Reserved 1y;0.22;m3.xlarge;LINUX
+Reserved 1y;0.208;r4.xlarge;LINUX
+Reserved 1y;0.262;i3.xlarge;LINUX
+Reserved 1y;0.272;r3.xlarge;LINUX
+Reserved 1y;0.272;m1.xlarge;LINUX
+Reserved 1y;0.321;t2.2xlarge;LINUX
+Reserved 1y;0.345;c4.2xlarge;LINUX
+Reserved 1y;0.36;m4.2xlarge;LINUX
+Reserved 1y;0.36;c3.2xlarge;LINUX
+Reserved 1y;0.268;m2.2xlarge;LINUX
+Reserved 1y;0.441;m3.2xlarge;LINUX
+Reserved 1y;0.444;c1.xlarge;LINUX
+Reserved 1y;0.416;r4.2xlarge;LINUX
+Reserved 1y;0.523;i3.2xlarge;LINUX
+Reserved 1y;0.514;g2.2xlarge;LINUX
+Reserved 1y;0.447;d2.xlarge;LINUX
+Reserved 1y;0.543;r3.2xlarge;LINUX
+Reserved 1y;0.691;c4.4xlarge;LINUX
+Reserved 1y;0.515;i2.xlarge;LINUX
+Reserved 1y;0.721;m4.4xlarge;LINUX
+Reserved 1y;0.72;c3.4xlarge;LINUX
+Reserved 1y;0.742;p2.xlarge;LINUX
+Reserved 1y;0.536;m2.4xlarge;LINUX
+Reserved 1y;0.832;r4.4xlarge;LINUX
+Reserved 1y;1.046;i3.4xlarge;LINUX
+Reserved 1y;0.894;d2.2xlarge;LINUX
+Reserved 1y;1.087;r3.4xlarge;LINUX
+Reserved 1y;1.381;c4.8xlarge;LINUX
+Reserved 1y;1.03;i2.2xlarge;LINUX
+Reserved 1y;1.44;c3.8xlarge;LINUX
+Reserved 1y;1.381;cc2.8xlarge;LINUX
+Reserved 1y;2.36;cg1.4xlarge;LINUX
+Reserved 1y;1.665;r4.8xlarge;LINUX
+Reserved 1y;1.801;m4.10xlarge;LINUX
+Reserved 1y;2.093;i3.8xlarge;LINUX
+Reserved 1y;2.056;g2.8xlarge;LINUX
+Reserved 1y;1.788;d2.4xlarge;LINUX
+Reserved 1y;2.174;r3.8xlarge;LINUX
+Reserved 1y;1.698;hi1.4xlarge;LINUX
+Reserved 1y;1.832;cr1.8xlarge;LINUX
+Reserved 1y;2.06;i2.4xlarge;LINUX
+Reserved 1y;2.881;m4.16xlarge;LINUX
+Reserved 1y;3.329;r4.16xlarge;LINUX
+Reserved 1y;2.858;hs1.8xlarge;LINUX
+Reserved 1y;4.186;i3.16xlarge;LINUX
+Reserved 1y;3.576;d2.8xlarge;LINUX
+Reserved 1y;4.12;i2.8xlarge;LINUX
+Reserved 1y;5.934;p2.8xlarge;LINUX
+Reserved 1y;5.495;x1.16xlarge;LINUX
+Reserved 1y;11.868;p2.16xlarge;LINUX
+Reserved 1y;10.99;x1.32xlarge;LINUX
+Reserved 1y Partial Upfront;0.002;t2.nano;LINUX
+Reserved 1y Partial Upfront;0.004;t2.micro;LINUX
+Reserved 1y Partial Upfront;0.008;t1.micro;LINUX
+Reserved 1y Partial Upfront;0.008;t2.small;LINUX
+Reserved 1y Partial Upfront;0.016;m1.small;LINUX
+Reserved 1y Partial Upfront;0.017;t2.medium;LINUX
+Reserved 1y Partial Upfront;0.027;m3.medium;LINUX
+Reserved 1y Partial Upfront;0.032;m1.medium;LINUX
+Reserved 1y Partial Upfront;0.034;t2.large;LINUX
+Reserved 1y Partial Upfront;0.037;c4.large;LINUX
+Reserved 1y Partial Upfront;0.038;m4.large;LINUX
+Reserved 1y Partial Upfront;0.041;c3.large;LINUX
+Reserved 1y Partial Upfront;0.054;m3.large;LINUX
+Reserved 1y Partial Upfront;0.051;c1.medium;LINUX
+Reserved 1y Partial Upfront;0.044;r4.large;LINUX
+Reserved 1y Partial Upfront;0.112;i3.large;LINUX
+Reserved 1y Partial Upfront;0.041;r3.large;LINUX
+Reserved 1y Partial Upfront;0.064;m1.large;LINUX
+Reserved 1y Partial Upfront;0.069;t2.xlarge;LINUX
+Reserved 1y Partial Upfront;0.074;c4.xlarge;LINUX
+Reserved 1y Partial Upfront;0.077;m4.xlarge;LINUX
+Reserved 1y Partial Upfront;0.083;c3.xlarge;LINUX
+Reserved 1y Partial Upfront;0.061;m2.xlarge;LINUX
+Reserved 1y Partial Upfront;0.107;m3.xlarge;LINUX
+Reserved 1y Partial Upfront;0.089;r4.xlarge;LINUX
+Reserved 1y Partial Upfront;0.224;i3.xlarge;LINUX
+Reserved 1y Partial Upfront;0.082;r3.xlarge;LINUX
+Reserved 1y Partial Upfront;0.127;m1.xlarge;LINUX
+Reserved 1y Partial Upfront;0.137;t2.2xlarge;LINUX
+Reserved 1y Partial Upfront;0.148;c4.2xlarge;LINUX
+Reserved 1y Partial Upfront;0.154;m4.2xlarge;LINUX
+Reserved 1y Partial Upfront;0.165;c3.2xlarge;LINUX
+Reserved 1y Partial Upfront;0.122;m2.2xlarge;LINUX
+Reserved 1y Partial Upfront;0.214;m3.2xlarge;LINUX
+Reserved 1y Partial Upfront;0.205;c1.xlarge;LINUX
+Reserved 1y Partial Upfront;0.178;r4.2xlarge;LINUX
+Reserved 1y Partial Upfront;0.448;i3.2xlarge;LINUX
+Reserved 1y Partial Upfront;0.154;g2.2xlarge;LINUX
+Reserved 1y Partial Upfront;0.191;d2.xlarge;LINUX
+Reserved 1y Partial Upfront;0.163;r3.2xlarge;LINUX
+Reserved 1y Partial Upfront;0.296;c4.4xlarge;LINUX
+Reserved 1y Partial Upfront;0.233;i2.xlarge;LINUX
+Reserved 1y Partial Upfront;0.308;m4.4xlarge;LINUX
+Reserved 1y Partial Upfront;0.33;c3.4xlarge;LINUX
+Reserved 1y Partial Upfront;0.317;p2.xlarge;LINUX
+Reserved 1y Partial Upfront;0.245;m2.4xlarge;LINUX
+Reserved 1y Partial Upfront;0.356;r4.4xlarge;LINUX
+Reserved 1y Partial Upfront;0.894;i3.4xlarge;LINUX
+Reserved 1y Partial Upfront;0.382;d2.2xlarge;LINUX
+Reserved 1y Partial Upfront;0.327;r3.4xlarge;LINUX
+Reserved 1y Partial Upfront;0.59;c4.8xlarge;LINUX
+Reserved 1y Partial Upfront;0.466;i2.2xlarge;LINUX
+Reserved 1y Partial Upfront;0.661;c3.8xlarge;LINUX
+Reserved 1y Partial Upfront;0.61;cc2.8xlarge;LINUX
+Reserved 1y Partial Upfront;2.36;cg1.4xlarge;LINUX
+Reserved 1y Partial Upfront;0.711;r4.8xlarge;LINUX
+Reserved 1y Partial Upfront;0.77;m4.10xlarge;LINUX
+Reserved 1y Partial Upfront;1.788;i3.8xlarge;LINUX
+Reserved 1y Partial Upfront;0.616;g2.8xlarge;LINUX
+Reserved 1y Partial Upfront;0.764;d2.4xlarge;LINUX
+Reserved 1y Partial Upfront;0.654;r3.8xlarge;LINUX
+Reserved 1y Partial Upfront;0.621;hi1.4xlarge;LINUX
+Reserved 1y Partial Upfront;0.742;cr1.8xlarge;LINUX
+Reserved 1y Partial Upfront;0.931;i2.4xlarge;LINUX
+Reserved 1y Partial Upfront;1.231;m4.16xlarge;LINUX
+Reserved 1y Partial Upfront;1.423;r4.16xlarge;LINUX
+Reserved 1y Partial Upfront;1.163;hs1.8xlarge;LINUX
+Reserved 1y Partial Upfront;3.578;i3.16xlarge;LINUX
+Reserved 1y Partial Upfront;1.528;d2.8xlarge;LINUX
+Reserved 1y Partial Upfront;1.862;i2.8xlarge;LINUX
+Reserved 1y Partial Upfront;2.536;p2.8xlarge;LINUX
+Reserved 1y Partial Upfront;2.348;x1.16xlarge;LINUX
+Reserved 1y Partial Upfront;5.072;p2.16xlarge;LINUX
+Reserved 1y Partial Upfront;4.697;x1.32xlarge;LINUX
+On Demand;0.009;t2.nano;WINDOWS
+On Demand;0.018;t2.micro;WINDOWS
+On Demand;0.02;t1.micro;WINDOWS
+On Demand;0.034;t2.small;WINDOWS
+On Demand;0.075;m1.small;WINDOWS
+On Demand;0.068;t2.medium;WINDOWS
+On Demand;0.129;m3.medium;WINDOWS
+On Demand;0.149;m1.medium;WINDOWS
+On Demand;0.129;t2.large;WINDOWS
+On Demand;0.205;c4.large;WINDOWS
+On Demand;0.211;m4.large;WINDOWS
+On Demand;0.188;c3.large;WINDOWS
+On Demand;0.258;m3.large;WINDOWS
+On Demand;0.21;c1.medium;WINDOWS
+On Demand;0.24;r4.large;WINDOWS
+On Demand;0.264;i3.large;WINDOWS
+On Demand;0.29;r3.large;WINDOWS
+On Demand;0.299;m1.large;WINDOWS
+On Demand;0.243;t2.xlarge;WINDOWS
+On Demand;0.41;c4.xlarge;WINDOWS
+On Demand;0.422;m4.xlarge;WINDOWS
+On Demand;0.376;c3.xlarge;WINDOWS
+On Demand;0.345;m2.xlarge;WINDOWS
+On Demand;0.517;m3.xlarge;WINDOWS
+On Demand;0.48;r4.xlarge;WINDOWS
+On Demand;0.528;i3.xlarge;WINDOWS
+On Demand;0.581;r3.xlarge;WINDOWS
+On Demand;0.598;m1.xlarge;WINDOWS
+On Demand;0.466;t2.2xlarge;WINDOWS
+On Demand;0.821;c4.2xlarge;WINDOWS
+On Demand;0.843;m4.2xlarge;WINDOWS
+On Demand;0.752;c3.2xlarge;WINDOWS
+On Demand;0.69;m2.2xlarge;WINDOWS
+On Demand;1.033;m3.2xlarge;WINDOWS
+On Demand;0.84;c1.xlarge;WINDOWS
+On Demand;0.961;r4.2xlarge;WINDOWS
+On Demand;1.056;i3.2xlarge;WINDOWS
+On Demand;0.767;g2.2xlarge;WINDOWS
+On Demand;0.866;d2.xlarge;WINDOWS
+On Demand;1.08;r3.2xlarge;WINDOWS
+On Demand;1.641;c4.4xlarge;WINDOWS
+On Demand;0.973;i2.xlarge;WINDOWS
+On Demand;1.686;m4.4xlarge;WINDOWS
+On Demand;1.504;c3.4xlarge;WINDOWS
+On Demand;1.156;p2.xlarge;WINDOWS
+On Demand;1.38;m2.4xlarge;WINDOWS
+On Demand;1.922;r4.4xlarge;WINDOWS
+On Demand;2.112;i3.4xlarge;WINDOWS
+On Demand;1.691;d2.2xlarge;WINDOWS
+On Demand;1.944;r3.4xlarge;WINDOWS
+On Demand;3.334;c4.8xlarge;WINDOWS
+On Demand;1.946;i2.2xlarge;WINDOWS
+On Demand;3.008;c3.8xlarge;WINDOWS
+On Demand;2.57;cc2.8xlarge;WINDOWS
+On Demand;2.6;cg1.4xlarge;WINDOWS
+On Demand;3.843;r4.8xlarge;WINDOWS
+On Demand;4.217;m4.10xlarge;WINDOWS
+On Demand;4.224;i3.8xlarge;WINDOWS
+On Demand;3.086;g2.8xlarge;WINDOWS
+On Demand;3.242;d2.4xlarge;WINDOWS
+On Demand;3.5;r3.8xlarge;WINDOWS
+On Demand;3.58;hi1.4xlarge;WINDOWS
+On Demand;3.831;cr1.8xlarge;WINDOWS
+On Demand;3.891;i2.4xlarge;WINDOWS
+On Demand;6.747;m4.16xlarge;WINDOWS
+On Demand;7.686;r4.16xlarge;WINDOWS
+On Demand;4.931;hs1.8xlarge;WINDOWS
+On Demand;8.448;i3.16xlarge;WINDOWS
+On Demand;6.558;d2.8xlarge;WINDOWS
+On Demand;7.782;i2.8xlarge;WINDOWS
+On Demand;9.248;p2.8xlarge;WINDOWS
+On Demand;10.947;x1.16xlarge;WINDOWS
+On Demand;18.496;p2.16xlarge;WINDOWS
+On Demand;21.894;x1.32xlarge;WINDOWS
+Reserved 1y;0.0073;t2.nano;WINDOWS
+Reserved 1y;0.015;t2.micro;WINDOWS
+Reserved 1y;0.019;t1.micro;WINDOWS
+Reserved 1y;0.03;t2.small;WINDOWS
+Reserved 1y;0.066;m1.small;WINDOWS
+Reserved 1y;0.06;t2.medium;WINDOWS
+Reserved 1y;0.114;m3.medium;WINDOWS
+Reserved 1y;0.131;m1.medium;WINDOWS
+Reserved 1y;0.108;t2.large;WINDOWS
+Reserved 1y;0.179;c4.large;WINDOWS
+Reserved 1y;0.182;m4.large;WINDOWS
+Reserved 1y;0.186;c3.large;WINDOWS
+Reserved 1y;0.229;m3.large;WINDOWS
+Reserved 1y;0.203;c1.medium;WINDOWS
+Reserved 1y;0.196;r4.large;WINDOWS
+Reserved 1y;0.223;i3.large;WINDOWS
+Reserved 1y;0.251;r3.large;WINDOWS
+Reserved 1y;0.265;m1.large;WINDOWS
+Reserved 1y;0.201;t2.xlarge;WINDOWS
+Reserved 1y;0.357;c4.xlarge;WINDOWS
+Reserved 1y;0.364;m4.xlarge;WINDOWS
+Reserved 1y;0.371;c3.xlarge;WINDOWS
+Reserved 1y;0.313;m2.xlarge;WINDOWS
+Reserved 1y;0.455;m3.xlarge;WINDOWS
+Reserved 1y;0.392;r4.xlarge;WINDOWS
+Reserved 1y;0.446;i3.xlarge;WINDOWS
+Reserved 1y;0.456;r3.xlarge;WINDOWS
+Reserved 1y;0.529;m1.xlarge;WINDOWS
+Reserved 1y;0.383;t2.2xlarge;WINDOWS
+Reserved 1y;0.713;c4.2xlarge;WINDOWS
+Reserved 1y;0.728;m4.2xlarge;WINDOWS
+Reserved 1y;0.741;c3.2xlarge;WINDOWS
+Reserved 1y;0.625;m2.2xlarge;WINDOWS
+Reserved 1y;0.912;m3.2xlarge;WINDOWS
+Reserved 1y;0.815;c1.xlarge;WINDOWS
+Reserved 1y;0.784;r4.2xlarge;WINDOWS
+Reserved 1y;0.891;i3.2xlarge;WINDOWS
+Reserved 1y;0.611;g2.2xlarge;WINDOWS
+Reserved 1y;0.517;d2.xlarge;WINDOWS
+Reserved 1y;0.9;r3.2xlarge;WINDOWS
+Reserved 1y;1.427;c4.4xlarge;WINDOWS
+Reserved 1y;0.706;i2.xlarge;WINDOWS
+Reserved 1y;1.457;m4.4xlarge;WINDOWS
+Reserved 1y;1.482;c3.4xlarge;WINDOWS
+Reserved 1y;0.926;p2.xlarge;WINDOWS
+Reserved 1y;1.252;m2.4xlarge;WINDOWS
+Reserved 1y;1.568;r4.4xlarge;WINDOWS
+Reserved 1y;1.782;i3.4xlarge;WINDOWS
+Reserved 1y;0.974;d2.2xlarge;WINDOWS
+Reserved 1y;1.584;r3.4xlarge;WINDOWS
+Reserved 1y;2.979;c4.8xlarge;WINDOWS
+Reserved 1y;1.414;i2.2xlarge;WINDOWS
+Reserved 1y;2.961;c3.8xlarge;WINDOWS
+Reserved 1y;1.668;cc2.8xlarge;WINDOWS
+Reserved 1y;2.6;cg1.4xlarge;WINDOWS
+Reserved 1y;3.137;r4.8xlarge;WINDOWS
+Reserved 1y;3.641;m4.10xlarge;WINDOWS
+Reserved 1y;3.565;i3.8xlarge;WINDOWS
+Reserved 1y;2.139;g2.8xlarge;WINDOWS
+Reserved 1y;1.868;d2.4xlarge;WINDOWS
+Reserved 1y;2.518;r3.8xlarge;WINDOWS
+Reserved 1y;2.26;hi1.4xlarge;WINDOWS
+Reserved 1y;2.596;cr1.8xlarge;WINDOWS
+Reserved 1y;2.827;i2.4xlarge;WINDOWS
+Reserved 1y;5.825;m4.16xlarge;WINDOWS
+Reserved 1y;6.273;r4.16xlarge;WINDOWS
+Reserved 1y;3.701;hs1.8xlarge;WINDOWS
+Reserved 1y;7.13;i3.16xlarge;WINDOWS
+Reserved 1y;4.159;d2.8xlarge;WINDOWS
+Reserved 1y;5.654;i2.8xlarge;WINDOWS
+Reserved 1y;7.406;p2.8xlarge;WINDOWS
+Reserved 1y;8.439;x1.16xlarge;WINDOWS
+Reserved 1y;14.812;p2.16xlarge;WINDOWS
+Reserved 1y;16.878;x1.32xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.0033;t2.nano;WINDOWS
+Reserved 1y Partial Upfront;0.006;t2.micro;WINDOWS
+Reserved 1y Partial Upfront;0.009;t1.micro;WINDOWS
+Reserved 1y Partial Upfront;0.013;t2.small;WINDOWS
+Reserved 1y Partial Upfront;0.038;m1.small;WINDOWS
+Reserved 1y Partial Upfront;0.026;t2.medium;WINDOWS
+Reserved 1y Partial Upfront;0.064;m3.medium;WINDOWS
+Reserved 1y Partial Upfront;0.075;m1.medium;WINDOWS
+Reserved 1y Partial Upfront;0.048;t2.large;WINDOWS
+Reserved 1y Partial Upfront;0.08;c4.large;WINDOWS
+Reserved 1y Partial Upfront;0.085;m4.large;WINDOWS
+Reserved 1y Partial Upfront;0.109;c3.large;WINDOWS
+Reserved 1y Partial Upfront;0.129;m3.large;WINDOWS
+Reserved 1y Partial Upfront;0.12;c1.medium;WINDOWS
+Reserved 1y Partial Upfront;0.09;r4.large;WINDOWS
+Reserved 1y Partial Upfront;0.204;i3.large;WINDOWS
+Reserved 1y Partial Upfront;0.075;r3.large;WINDOWS
+Reserved 1y Partial Upfront;0.151;m1.large;WINDOWS
+Reserved 1y Partial Upfront;0.089;t2.xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.159;c4.xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.169;m4.xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.218;c3.xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.177;m2.xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.255;m3.xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.181;r4.xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.408;i3.xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.14;r3.xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.301;m1.xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.168;t2.2xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.319;c4.2xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.338;m4.2xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.435;c3.2xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.353;m2.2xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.511;m3.2xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.48;c1.xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.362;r4.2xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.816;i3.2xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.183;g2.2xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.221;d2.xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.269;r3.2xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.637;c4.4xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.396;i2.xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.676;m4.4xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.87;c3.4xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.409;p2.xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.708;m2.4xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.724;r4.4xlarge;WINDOWS
+Reserved 1y Partial Upfront;1.63;i3.4xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.416;d2.2xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.474;r3.4xlarge;WINDOWS
+Reserved 1y Partial Upfront;1.273;c4.8xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.793;i2.2xlarge;WINDOWS
+Reserved 1y Partial Upfront;1.739;c3.8xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.855;cc2.8xlarge;WINDOWS
+Reserved 1y Partial Upfront;2.6;cg1.4xlarge;WINDOWS
+Reserved 1y Partial Upfront;1.447;r4.8xlarge;WINDOWS
+Reserved 1y Partial Upfront;1.69;m4.10xlarge;WINDOWS
+Reserved 1y Partial Upfront;3.26;i3.8xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.64;g2.8xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.798;d2.4xlarge;WINDOWS
+Reserved 1y Partial Upfront;0.753;r3.8xlarge;WINDOWS
+Reserved 1y Partial Upfront;1.101;hi1.4xlarge;WINDOWS
+Reserved 1y Partial Upfront;1.395;cr1.8xlarge;WINDOWS
+Reserved 1y Partial Upfront;1.585;i2.4xlarge;WINDOWS
+Reserved 1y Partial Upfront;2.703;m4.16xlarge;WINDOWS
+Reserved 1y Partial Upfront;2.895;r4.16xlarge;WINDOWS
+Reserved 1y Partial Upfront;1.883;hs1.8xlarge;WINDOWS
+Reserved 1y Partial Upfront;6.522;i3.16xlarge;WINDOWS
+Reserved 1y Partial Upfront;1.777;d2.8xlarge;WINDOWS
+Reserved 1y Partial Upfront;3.17;i2.8xlarge;WINDOWS
+Reserved 1y Partial Upfront;3.272;p2.8xlarge;WINDOWS
+Reserved 1y Partial Upfront;3.82;x1.16xlarge;WINDOWS
+Reserved 1y Partial Upfront;6.544;p2.16xlarge;WINDOWS
+Reserved 1y Partial Upfront;7.641;x1.32xlarge;WINDOWS
+Spot;0.0035;t1.micro;LINUX
+Spot;0.0063;t2.nano;LINUX
+Spot;0.0102;m1.small;LINUX
+Spot;0.013;t2.micro;LINUX
+Spot;0.0148;m3.medium;LINUX
+Spot;0.0157;m1.medium;LINUX
+Spot;0.0165;r4.large;LINUX
+Spot;0.0171;m4.large;LINUX
+Spot;0.0178;i3.large;LINUX
+Spot;0.0243;c3.large;LINUX
+Spot;0.0248;r3.large;LINUX
+Spot;0.025;t2.small;LINUX
+Spot;0.0284;c1.medium;LINUX
+Spot;0.0288;m3.large;LINUX
+Spot;0.0292;c4.large;LINUX
+Spot;0.0347;m1.large;LINUX
+Spot;0.036;r4.xlarge;LINUX
+Spot;0.0384;i3.xlarge;LINUX
+Spot;0.0411;m2.xlarge;LINUX
+Spot;0.05;t2.medium;LINUX
+Spot;0.0506;c3.xlarge;LINUX
+Spot;0.0511;m4.xlarge;LINUX
+Spot;0.0611;c4.xlarge;LINUX
+Spot;0.0637;m1.xlarge;LINUX
+Spot;0.0648;m3.xlarge;LINUX
+Spot;0.0719;i3.2xlarge;LINUX
+Spot;0.0734;r3.xlarge;LINUX
+Spot;0.075;r4.2xlarge;LINUX
+Spot;0.0866;m2.2xlarge;LINUX
+Spot;0.0891;m4.2xlarge;LINUX
+Spot;0.0995;m3.2xlarge;LINUX
+Spot;0.101;t2.large;LINUX
+Spot;0.103;c3.2xlarge;LINUX
+Spot;0.1141;c4.2xlarge;LINUX
+Spot;0.1142;c1.xlarge;LINUX
+Spot;0.1471;r3.2xlarge;LINUX
+Spot;0.1489;r4.4xlarge;LINUX
+Spot;0.16;hi1.4xlarge;LINUX
+Spot;0.1624;i3.4xlarge;LINUX
+Spot;0.1686;m2.4xlarge;LINUX
+Spot;0.1715;i2.xlarge;LINUX
+Spot;0.1789;d2.xlarge;LINUX
+Spot;0.202;t2.xlarge;LINUX
+Spot;0.2049;c3.4xlarge;LINUX
+Spot;0.2053;p2.xlarge;LINUX
+Spot;0.2096;r3.4xlarge;LINUX
+Spot;0.2151;m4.4xlarge;LINUX
+Spot;0.2195;c4.4xlarge;LINUX
+Spot;0.275;i3.8xlarge;LINUX
+Spot;0.3007;d2.2xlarge;LINUX
+Spot;0.3282;r4.8xlarge;LINUX
+Spot;0.3362;cc2.8xlarge;LINUX
+Spot;0.3406;i2.2xlarge;LINUX
+Spot;0.404;t2.2xlarge;LINUX
+Spot;0.4125;c3.8xlarge;LINUX
+Spot;0.4287;c4.8xlarge;LINUX
+Spot;0.55;i3.16xlarge;LINUX
+Spot;0.5795;d2.4xlarge;LINUX
+Spot;0.6185;r3.8xlarge;LINUX
+Spot;0.6241;m4.10xlarge;LINUX
+Spot;0.6453;cr1.8xlarge;LINUX
+Spot;0.668;r4.16xlarge;LINUX
+Spot;0.6699;i2.4xlarge;LINUX
+Spot;0.7587;m4.16xlarge;LINUX
+Spot;0.8492;g2.8xlarge;LINUX
+Spot;1;g2.2xlarge;LINUX
+Spot;1.3832;i2.8xlarge;LINUX
+Spot;1.4287;d2.8xlarge;LINUX
+Spot;1.4379;x1.16xlarge;LINUX
+Spot;1.555;p2.16xlarge;LINUX
+Spot;1.601;x1.32xlarge;LINUX
+Spot;2.1381;p2.8xlarge;LINUX
+Spot;4.9;hs1.8xlarge;LINUX
+Spot;23.6;cg1.4xlarge;LINUX
+Spot;0.0031;t1.micro;WINDOWS
+Spot;0.0086;t2.nano;WINDOWS
+Spot;0.018;t2.micro;WINDOWS
+Spot;0.0321;m1.small;WINDOWS
+Spot;0.034;t2.small;WINDOWS
+Spot;0.0641;m1.medium;WINDOWS
+Spot;0.068;t2.medium;WINDOWS
+Spot;0.0722;m3.medium;WINDOWS
+Spot;0.096;c1.medium;WINDOWS
+Spot;0.1031;c3.large;WINDOWS
+Spot;0.1031;c4.large;WINDOWS
+Spot;0.1061;r4.large;WINDOWS
+Spot;0.109;i3.large;WINDOWS
+Spot;0.1261;m4.large;WINDOWS
+Spot;0.1281;m1.large;WINDOWS
+Spot;0.129;t2.large;WINDOWS
+Spot;0.1309;i2.xlarge;WINDOWS
+Spot;0.1431;m3.large;WINDOWS
+Spot;0.158;m2.xlarge;WINDOWS
+Spot;0.1781;r3.large;WINDOWS
+Spot;0.2061;c3.xlarge;WINDOWS
+Spot;0.2061;c4.xlarge;WINDOWS
+Spot;0.213;r4.xlarge;WINDOWS
+Spot;0.218;i3.xlarge;WINDOWS
+Spot;0.2434;t2.xlarge;WINDOWS
+Spot;0.246;d2.xlarge;WINDOWS
+Spot;0.2521;m4.xlarge;WINDOWS
+Spot;0.2561;m1.xlarge;WINDOWS
+Spot;0.2592;i2.2xlarge;WINDOWS
+Spot;0.2681;m3.xlarge;WINDOWS
+Spot;0.2825;p2.xlarge;WINDOWS
+Spot;0.2911;r3.xlarge;WINDOWS
+Spot;0.317;m2.2xlarge;WINDOWS
+Spot;0.34;d2.2xlarge;WINDOWS
+Spot;0.384;c1.xlarge;WINDOWS
+Spot;0.4123;c4.2xlarge;WINDOWS
+Spot;0.4127;c3.2xlarge;WINDOWS
+Spot;0.4274;r4.2xlarge;WINDOWS
+Spot;0.436;i3.2xlarge;WINDOWS
+Spot;0.4606;r3.2xlarge;WINDOWS
+Spot;0.4661;t2.2xlarge;WINDOWS
+Spot;0.48;m2.4xlarge;WINDOWS
+Spot;0.481;hi1.4xlarge;WINDOWS
+Spot;0.5042;m4.2xlarge;WINDOWS
+Spot;0.515;i2.4xlarge;WINDOWS
+Spot;0.5368;m3.2xlarge;WINDOWS
+Spot;0.5906;cr1.8xlarge;WINDOWS
+Spot;0.6463;cc2.8xlarge;WINDOWS
+Spot;0.7048;r3.4xlarge;WINDOWS
+Spot;0.8242;c3.4xlarge;WINDOWS
+Spot;0.8242;c4.4xlarge;WINDOWS
+Spot;0.8558;r4.4xlarge;WINDOWS
+Spot;0.873;i3.4xlarge;WINDOWS
+Spot;0.984;d2.4xlarge;WINDOWS
+Spot;1.0074;m4.4xlarge;WINDOWS
+Spot;1.0214;r3.8xlarge;WINDOWS
+Spot;1.03;i2.8xlarge;WINDOWS
+Spot;1.6495;c4.8xlarge;WINDOWS
+Spot;1.6528;c3.8xlarge;WINDOWS
+Spot;1.712;r4.8xlarge;WINDOWS
+Spot;1.747;i3.8xlarge;WINDOWS
+Spot;1.968;d2.8xlarge;WINDOWS
+Spot;2.249;p2.8xlarge;WINDOWS
+Spot;2.518;m4.10xlarge;WINDOWS
+Spot;3.086;g2.8xlarge;WINDOWS
+Spot;3.418;r4.16xlarge;WINDOWS
+Spot;3.494;i3.16xlarge;WINDOWS
+Spot;3.744;x1.16xlarge;WINDOWS
+Spot;4.006;m4.16xlarge;WINDOWS
+Spot;4.499;p2.16xlarge;WINDOWS
+Spot;4.931;hs1.8xlarge;WINDOWS
+Spot;7.489;x1.32xlarge;WINDOWS
+Spot;7.67;g2.2xlarge;WINDOWS
+Spot;26;cg1.4xlarge;WINDOWS
+On Demand;0.0663;t2.nano;RHE
+On Demand;0.073;t2.micro;RHE
+On Demand;0.08;t1.micro;RHE
+On Demand;0.085;t2.small;RHE
+On Demand;0.107;m1.small;RHE
+On Demand;0.11;t2.medium;RHE
+On Demand;0.133;m3.medium;RHE
+On Demand;0.155;m1.medium;RHE
+On Demand;0.161;t2.large;RHE
+On Demand;0.173;c4.large;RHE
+On Demand;0.179;m4.large;RHE
+On Demand;0.18;c3.large;RHE
+On Demand;0.206;m3.large;RHE
+On Demand;0.208;c1.medium;RHE
+On Demand;0.2082;r4.large;RHE
+On Demand;0.232;i3.large;RHE
+On Demand;0.245;r3.large;RHE
+On Demand;0.25;m1.large;RHE
+On Demand;0.262;t2.xlarge;RHE
+On Demand;0.286;c4.xlarge;RHE
+On Demand;0.298;m4.xlarge;RHE
+On Demand;0.299;c3.xlarge;RHE
+On Demand;0.335;m2.xlarge;RHE
+On Demand;0.353;m3.xlarge;RHE
+On Demand;0.3564;r4.xlarge;RHE
+On Demand;0.404;i3.xlarge;RHE
+On Demand;0.431;r3.xlarge;RHE
+On Demand;0.439;m1.xlarge;RHE
+On Demand;0.534;t2.2xlarge;RHE
+On Demand;0.583;c4.2xlarge;RHE
+On Demand;0.605;m4.2xlarge;RHE
+On Demand;0.608;c3.2xlarge;RHE
+On Demand;0.61;m2.2xlarge;RHE
+On Demand;0.715;m3.2xlarge;RHE
+On Demand;0.722;c1.xlarge;RHE
+On Demand;0.7228;r4.2xlarge;RHE
+On Demand;0.818;i3.2xlarge;RHE
+On Demand;0.832;g2.2xlarge;RHE
+On Demand;0.795;d2.xlarge;RHE
+On Demand;0.871;r3.2xlarge;RHE
+On Demand;1.035;c4.4xlarge;RHE
+On Demand;0.998;i2.xlarge;RHE
+On Demand;1.08;m4.4xlarge;RHE
+On Demand;1.086;c3.4xlarge;RHE
+On Demand;1.032;p2.xlarge;RHE
+On Demand;1.23;m2.4xlarge;RHE
+On Demand;1.3156;r4.4xlarge;RHE
+On Demand;1.506;i3.4xlarge;RHE
+On Demand;1.6;d2.2xlarge;RHE
+On Demand;1.612;r3.4xlarge;RHE
+On Demand;1.941;c4.8xlarge;RHE
+On Demand;2.006;i2.2xlarge;RHE
+On Demand;2.042;c3.8xlarge;RHE
+On Demand;2.38;cc2.8xlarge;RHE
+On Demand;2.49;cg1.4xlarge;RHE
+On Demand;2.5012;r4.8xlarge;RHE
+On Demand;2.507;m4.10xlarge;RHE
+On Demand;2.882;i3.8xlarge;RHE
+On Demand;2.938;g2.8xlarge;RHE
+On Demand;3.07;d2.4xlarge;RHE
+On Demand;3.094;r3.8xlarge;RHE
+On Demand;3.23;hi1.4xlarge;RHE
+On Demand;3.88;cr1.8xlarge;RHE
+On Demand;3.881;i2.4xlarge;RHE
+On Demand;3.933;m4.16xlarge;RHE
+On Demand;4.8724;r4.16xlarge;RHE
+On Demand;5.03;hs1.8xlarge;RHE
+On Demand;5.634;i3.16xlarge;RHE
+On Demand;6.01;d2.8xlarge;RHE
+On Demand;7.632;i2.8xlarge;RHE
+On Demand;7.906;p2.8xlarge;RHE
+On Demand;8.133;x1.16xlarge;RHE
+On Demand;15.682;p2.16xlarge;RHE
+On Demand;16.136;x1.32xlarge;RHE
+Reserved 1y;0.065;t2.nano;RHE
+Reserved 1y;0.07;t2.micro;RHE
+Reserved 1y;0.076;t1.micro;RHE
+Reserved 1y;0.08;t2.small;RHE
+Reserved 1y;0.094;m1.small;RHE
+Reserved 1y;0.1;t2.medium;RHE
+Reserved 1y;0.115;m3.medium;RHE
+Reserved 1y;0.128;m1.medium;RHE
+Reserved 1y;0.14;t2.large;RHE
+Reserved 1y;0.147;c4.large;RHE
+Reserved 1y;0.15;m4.large;RHE
+Reserved 1y;0.15;c3.large;RHE
+Reserved 1y;0.17;m3.large;RHE
+Reserved 1y;0.171;c1.medium;RHE
+Reserved 1y;0.164;r4.large;RHE
+Reserved 1y;0.191;i3.large;RHE
+Reserved 1y;0.196;r3.large;RHE
+Reserved 1y;0.196;m1.large;RHE
+Reserved 1y;0.22;t2.xlarge;RHE
+Reserved 1y;0.233;c4.xlarge;RHE
+Reserved 1y;0.24;m4.xlarge;RHE
+Reserved 1y;0.24;c3.xlarge;RHE
+Reserved 1y;0.194;m2.xlarge;RHE
+Reserved 1y;0.28;m3.xlarge;RHE
+Reserved 1y;0.268;r4.xlarge;RHE
+Reserved 1y;0.322;i3.xlarge;RHE
+Reserved 1y;0.332;r3.xlarge;RHE
+Reserved 1y;0.332;m1.xlarge;RHE
+Reserved 1y;0.451;t2.2xlarge;RHE
+Reserved 1y;0.475;c4.2xlarge;RHE
+Reserved 1y;0.49;m4.2xlarge;RHE
+Reserved 1y;0.49;c3.2xlarge;RHE
+Reserved 1y;0.328;m2.2xlarge;RHE
+Reserved 1y;0.571;m3.2xlarge;RHE
+Reserved 1y;0.574;c1.xlarge;RHE
+Reserved 1y;0.546;r4.2xlarge;RHE
+Reserved 1y;0.653;i3.2xlarge;RHE
+Reserved 1y;0.644;g2.2xlarge;RHE
+Reserved 1y;0.507;d2.xlarge;RHE
+Reserved 1y;0.673;r3.2xlarge;RHE
+Reserved 1y;0.821;c4.4xlarge;RHE
+Reserved 1y;0.575;i2.xlarge;RHE
+Reserved 1y;0.851;m4.4xlarge;RHE
+Reserved 1y;0.85;c3.4xlarge;RHE
+Reserved 1y;0.802;p2.xlarge;RHE
+Reserved 1y;0.666;m2.4xlarge;RHE
+Reserved 1y;0.962;r4.4xlarge;RHE
+Reserved 1y;1.176;i3.4xlarge;RHE
+Reserved 1y;1.024;d2.2xlarge;RHE
+Reserved 1y;1.217;r3.4xlarge;RHE
+Reserved 1y;1.511;c4.8xlarge;RHE
+Reserved 1y;1.16;i2.2xlarge;RHE
+Reserved 1y;1.57;c3.8xlarge;RHE
+Reserved 1y;1.511;cc2.8xlarge;RHE
+Reserved 1y;2.49;cg1.4xlarge;RHE
+Reserved 1y;1.795;r4.8xlarge;RHE
+Reserved 1y;1.931;m4.10xlarge;RHE
+Reserved 1y;2.223;i3.8xlarge;RHE
+Reserved 1y;2.186;g2.8xlarge;RHE
+Reserved 1y;1.918;d2.4xlarge;RHE
+Reserved 1y;2.304;r3.8xlarge;RHE
+Reserved 1y;1.828;hi1.4xlarge;RHE
+Reserved 1y;1.962;cr1.8xlarge;RHE
+Reserved 1y;2.19;i2.4xlarge;RHE
+Reserved 1y;3.011;m4.16xlarge;RHE
+Reserved 1y;3.459;r4.16xlarge;RHE
+Reserved 1y;2.988;hs1.8xlarge;RHE
+Reserved 1y;4.316;i3.16xlarge;RHE
+Reserved 1y;3.706;d2.8xlarge;RHE
+Reserved 1y;4.25;i2.8xlarge;RHE
+Reserved 1y;6.064;p2.8xlarge;RHE
+Reserved 1y;5.625;x1.16xlarge;RHE
+Reserved 1y;11.998;p2.16xlarge;RHE
+Reserved 1y;11.12;x1.32xlarge;RHE
+Reserved 1y Partial Upfront;0.062;t2.nano;RHE
+Reserved 1y Partial Upfront;0.064;t2.micro;RHE
+Reserved 1y Partial Upfront;0.068;t1.micro;RHE
+Reserved 1y Partial Upfront;0.068;t2.small;RHE
+Reserved 1y Partial Upfront;0.076;m1.small;RHE
+Reserved 1y Partial Upfront;0.077;t2.medium;RHE
+Reserved 1y Partial Upfront;0.087;m3.medium;RHE
+Reserved 1y Partial Upfront;0.092;m1.medium;RHE
+Reserved 1y Partial Upfront;0.094;t2.large;RHE
+Reserved 1y Partial Upfront;0.097;c4.large;RHE
+Reserved 1y Partial Upfront;0.098;m4.large;RHE
+Reserved 1y Partial Upfront;0.101;c3.large;RHE
+Reserved 1y Partial Upfront;0.114;m3.large;RHE
+Reserved 1y Partial Upfront;0.111;c1.medium;RHE
+Reserved 1y Partial Upfront;0.104;r4.large;RHE
+Reserved 1y Partial Upfront;0.172;i3.large;RHE
+Reserved 1y Partial Upfront;0.101;r3.large;RHE
+Reserved 1y Partial Upfront;0.124;m1.large;RHE
+Reserved 1y Partial Upfront;0.129;t2.xlarge;RHE
+Reserved 1y Partial Upfront;0.134;c4.xlarge;RHE
+Reserved 1y Partial Upfront;0.137;m4.xlarge;RHE
+Reserved 1y Partial Upfront;0.143;c3.xlarge;RHE
+Reserved 1y Partial Upfront;0.121;m2.xlarge;RHE
+Reserved 1y Partial Upfront;0.167;m3.xlarge;RHE
+Reserved 1y Partial Upfront;0.149;r4.xlarge;RHE
+Reserved 1y Partial Upfront;0.284;i3.xlarge;RHE
+Reserved 1y Partial Upfront;0.142;r3.xlarge;RHE
+Reserved 1y Partial Upfront;0.187;m1.xlarge;RHE
+Reserved 1y Partial Upfront;0.267;t2.2xlarge;RHE
+Reserved 1y Partial Upfront;0.278;c4.2xlarge;RHE
+Reserved 1y Partial Upfront;0.284;m4.2xlarge;RHE
+Reserved 1y Partial Upfront;0.295;c3.2xlarge;RHE
+Reserved 1y Partial Upfront;0.182;m2.2xlarge;RHE
+Reserved 1y Partial Upfront;0.344;m3.2xlarge;RHE
+Reserved 1y Partial Upfront;0.335;c1.xlarge;RHE
+Reserved 1y Partial Upfront;0.308;r4.2xlarge;RHE
+Reserved 1y Partial Upfront;0.578;i3.2xlarge;RHE
+Reserved 1y Partial Upfront;0.284;g2.2xlarge;RHE
+Reserved 1y Partial Upfront;0.251;d2.xlarge;RHE
+Reserved 1y Partial Upfront;0.293;r3.2xlarge;RHE
+Reserved 1y Partial Upfront;0.426;c4.4xlarge;RHE
+Reserved 1y Partial Upfront;0.293;i2.xlarge;RHE
+Reserved 1y Partial Upfront;0.438;m4.4xlarge;RHE
+Reserved 1y Partial Upfront;0.46;c3.4xlarge;RHE
+Reserved 1y Partial Upfront;0.377;p2.xlarge;RHE
+Reserved 1y Partial Upfront;0.375;m2.4xlarge;RHE
+Reserved 1y Partial Upfront;0.486;r4.4xlarge;RHE
+Reserved 1y Partial Upfront;1.024;i3.4xlarge;RHE
+Reserved 1y Partial Upfront;0.512;d2.2xlarge;RHE
+Reserved 1y Partial Upfront;0.457;r3.4xlarge;RHE
+Reserved 1y Partial Upfront;0.72;c4.8xlarge;RHE
+Reserved 1y Partial Upfront;0.596;i2.2xlarge;RHE
+Reserved 1y Partial Upfront;0.791;c3.8xlarge;RHE
+Reserved 1y Partial Upfront;0.74;cc2.8xlarge;RHE
+Reserved 1y Partial Upfront;2.49;cg1.4xlarge;RHE
+Reserved 1y Partial Upfront;0.841;r4.8xlarge;RHE
+Reserved 1y Partial Upfront;0.9;m4.10xlarge;RHE
+Reserved 1y Partial Upfront;1.918;i3.8xlarge;RHE
+Reserved 1y Partial Upfront;0.746;g2.8xlarge;RHE
+Reserved 1y Partial Upfront;0.894;d2.4xlarge;RHE
+Reserved 1y Partial Upfront;0.784;r3.8xlarge;RHE
+Reserved 1y Partial Upfront;0.751;hi1.4xlarge;RHE
+Reserved 1y Partial Upfront;0.872;cr1.8xlarge;RHE
+Reserved 1y Partial Upfront;1.061;i2.4xlarge;RHE
+Reserved 1y Partial Upfront;1.361;m4.16xlarge;RHE
+Reserved 1y Partial Upfront;1.553;r4.16xlarge;RHE
+Reserved 1y Partial Upfront;1.293;hs1.8xlarge;RHE
+Reserved 1y Partial Upfront;3.708;i3.16xlarge;RHE
+Reserved 1y Partial Upfront;1.658;d2.8xlarge;RHE
+Reserved 1y Partial Upfront;1.992;i2.8xlarge;RHE
+Reserved 1y Partial Upfront;2.666;p2.8xlarge;RHE
+Reserved 1y Partial Upfront;2.478;x1.16xlarge;RHE
+Reserved 1y Partial Upfront;5.202;p2.16xlarge;RHE
+Reserved 1y Partial Upfront;4.827;x1.32xlarge;RHE

@@ -1,2 +1,2 @@
 id;name;refined.id;mode;uiClasses;tag;tagUiClasses
-service:prov:aws;Provisioning AWS;service:prov;LINK;;;
+service:prov:aws;Provisioning AWS;service:prov;CREATE;;;

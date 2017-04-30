@@ -6,7 +6,6 @@ import java.util.List;
 
 import javax.transaction.Transactional;
 
-import org.apache.commons.lang3.NotImplementedException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,9 +23,9 @@ import org.ligoj.app.plugin.prov.model.ProvInstancePriceType;
 import org.ligoj.app.plugin.prov.model.ProvQuote;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
 import org.ligoj.app.plugin.prov.model.ProvQuoteStorage;
-import org.ligoj.app.plugin.prov.model.ProvStorage;
+import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.model.VmOs;
-import org.ligoj.app.plugin.prov.model.VmStorageType;
+import org.ligoj.app.plugin.prov.model.ProvStorageFrequency;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ContextConfiguration;
@@ -53,7 +52,7 @@ public class ProvAwsResourceTest extends AbstractAppTest {
 	public void prepareData() throws IOException {
 		persistSystemEntities();
 		persistEntities("csv",
-				new Class[] { Node.class, Project.class, Subscription.class, ProvQuote.class, ProvStorage.class,
+				new Class[] { Node.class, Project.class, Subscription.class, ProvQuote.class, ProvStorageType.class,
 						ProvInstancePriceType.class, ProvInstance.class, ProvInstancePrice.class,
 						ProvQuoteInstance.class, ProvQuoteStorage.class },
 				StandardCharsets.UTF_8.name());
@@ -97,38 +96,19 @@ public class ProvAwsResourceTest extends AbstractAppTest {
 		Assert.assertEquals("server1-root", quoteStorage.getName());
 		Assert.assertEquals(20, quoteStorage.getSize());
 		Assert.assertNotNull(quoteStorage.getQuoteInstance());
-		final ProvStorage storage = quoteStorage.getStorage();
+		final ProvStorageType storage = quoteStorage.getStorage();
 		Assert.assertNotNull(storage.getId());
 		Assert.assertEquals(0.11, storage.getCost(), 0.001);
 		Assert.assertEquals("gp2", storage.getName());
-		Assert.assertEquals(VmStorageType.HOT, storage.getType());
+		Assert.assertEquals(ProvStorageFrequency.HOT, storage.getFrequency());
 
 		// Not attached storage
 		Assert.assertNull(storages.get(3).getQuoteInstance());
 
 	}
 
-	/**
-	 * Too much requirements
-	 */
-	@Test
-	public void getInstalledEntities() {
-		Assert.assertTrue(resource.getInstalledEntities().contains(ProvInstance.class));
-	}
-
 	@Test
 	public void getKey() {
 		Assert.assertEquals("service:prov:aws", resource.getKey());
-	}
-
-	@Test(expected = NotImplementedException.class)
-	public void link(final int subscription) throws Exception {
-		resource.link(subscription);
-	}
-
-	@Test
-	public void create(final int subscription) throws Exception {
-		// Nothing for now
-		resource.create(subscription);
 	}
 }

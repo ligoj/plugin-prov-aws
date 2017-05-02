@@ -96,7 +96,7 @@ public class ProvAwsResourceTest extends AbstractAppTest {
 		Assert.assertEquals("server1-root", quoteStorage.getName());
 		Assert.assertEquals(20, quoteStorage.getSize());
 		Assert.assertNotNull(quoteStorage.getQuoteInstance());
-		final ProvStorageType storage = quoteStorage.getStorage();
+		final ProvStorageType storage = quoteStorage.getType();
 		Assert.assertNotNull(storage.getId());
 		Assert.assertEquals(0.11, storage.getCost(), 0.001);
 		Assert.assertEquals("gp2", storage.getName());

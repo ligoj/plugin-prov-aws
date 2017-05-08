@@ -813,3 +813,187 @@ Reserved 1y Partial Upfront;2.666;p2.8xlarge;RHE
 Reserved 1y Partial Upfront;2.478;x1.16xlarge;RHE
 Reserved 1y Partial Upfront;5.202;p2.16xlarge;RHE
 Reserved 1y Partial Upfront;4.827;x1.32xlarge;RHE
+On Demand;   0,030;t1.micro;SUSE
+On Demand;   0,016;t2.nano;SUSE
+On Demand;   0,023;t2.micro;SUSE
+On Demand;   0,055;t2.small;SUSE
+On Demand;   0,150;t2.medium;SUSE
+On Demand;   0,201;t2.large;SUSE
+On Demand;   0,302;t2.xlarge;SUSE
+On Demand;   0,504;t2.2xlarge;SUSE
+On Demand;   0,219;m4.large;SUSE
+On Demand;   0,338;m4.xlarge;SUSE
+On Demand;   0,575;m4.2xlarge;SUSE
+On Demand;   1,050;m4.4xlarge;SUSE
+On Demand;   2,477;m4.10xlarge;SUSE
+On Demand;   3,903;m4.16xlarge;SUSE
+On Demand;   0,173;m3.medium;SUSE
+On Demand;   0,246;m3.large;SUSE
+On Demand;   0,393;m3.xlarge;SUSE
+On Demand;   0,685;m3.2xlarge;SUSE
+On Demand;   0,213;c4.large;SUSE
+On Demand;   0,326;c4.xlarge;SUSE
+On Demand;   0,553;c4.2xlarge;SUSE
+On Demand;   1,005;c4.4xlarge;SUSE
+On Demand;   1,911;c4.8xlarge;SUSE
+On Demand;   0,220;c3.large;SUSE
+On Demand;   0,339;c3.xlarge;SUSE
+On Demand;   0,578;c3.2xlarge;SUSE
+On Demand;   1,056;c3.4xlarge;SUSE
+On Demand;   2,012;c3.8xlarge;SUSE
+On Demand;   1,072;p2.xlarge;SUSE
+On Demand;   7.876;p2.8xlarge;SUSE
+On Demand;  15.652;p2.16xlarge;SUSE
+On Demand;   0,802;g2.2xlarge;SUSE
+On Demand;   2,908;g2.8xlarge;SUSE
+On Demand;   0,285;r3.large;SUSE
+On Demand;   0,471;r3.xlarge;SUSE
+On Demand;   0,841;r3.2xlarge;SUSE
+On Demand;   1,582;r3.4xlarge;SUSE
+On Demand;   3,064;r3.8xlarge;SUSE
+On Demand;   0,248;r4.large;SUSE
+On Demand;   0,396;r4.xlarge;SUSE
+On Demand;   0,693;r4.2xlarge;SUSE
+On Demand;   1,286;r4.4xlarge;SUSE
+On Demand;   2,471;r4.8xlarge;SUSE
+On Demand;   4.842;r4.16xlarge;SUSE
+On Demand;   8.103;x1.16xlarge;SUSE
+On Demand;  16.106;x1.32xlarge;SUSE
+On Demand;   1,038;i2.xlarge;SUSE
+On Demand;   1,976;i2.2xlarge;SUSE
+On Demand;   3,851;i2.4xlarge;SUSE
+On Demand;   7.602;i2.8xlarge;SUSE
+On Demand;   0,272;i3.large;SUSE
+On Demand;   0,444;i3.xlarge;SUSE
+On Demand;   0,788;i3.2xlarge;SUSE
+On Demand;   1,476;i3.4xlarge;SUSE
+On Demand;   2,852;i3.8xlarge;SUSE
+On Demand;   5.604;i3.16xlarge;SUSE
+On Demand;   5.000;hs1.8xlarge;SUSE
+On Demand;   0,835;d2.xlarge;SUSE
+On Demand;   1,570;d2.2xlarge;SUSE
+On Demand;   3,040;d2.4xlarge;SUSE
+On Demand;   5.980;d2.8xlarge;SUSE
+On Demand;   0,077;m1.small;SUSE
+On Demand;   0,195;m1.medium;SUSE
+On Demand;   0,290;m1.large;SUSE
+On Demand;   0,479;m1.xlarge;SUSE
+On Demand;   0,248;c1.medium;SUSE
+On Demand;   0,692;c1.xlarge;SUSE
+On Demand;   2,350;cc2.8xlarge;SUSE
+On Demand;   2,460;cg1.4xlarge;SUSE
+On Demand;   0,375;m2.xlarge;SUSE
+On Demand;   0,650;m2.2xlarge;SUSE
+On Demand;   1,200;m2.4xlarge;SUSE
+On Demand;   3,850;cr1.8xlarge;SUSE
+On Demand;   3,200;hi1.4xlarge;SUSE
+Reserved 1y;0.014;t2.nano;SUSE
+Reserved 1y;0.018;t2.micro;SUSE
+Reserved 1y;0.029;t2.small;SUSE
+Reserved 1y;0.069;t2.medium;SUSE
+Reserved 1y;0.105;t2.large;SUSE
+Reserved 1y;0.178;t2.xlarge;SUSE
+Reserved 1y;0.322;t2.2xlarge;SUSE
+Reserved 1y;0.109;m4.large;SUSE
+Reserved 1y;0.184;m4.xlarge;SUSE
+Reserved 1y;0.335;m4.2xlarge;SUSE
+Reserved 1y;0.638;m4.4xlarge;SUSE
+Reserved 1y;1.545;m4.10xlarge;SUSE
+Reserved 1y;2.452;m4.16xlarge;SUSE
+Reserved 1y;0.088;m3.medium;SUSE
+Reserved 1y;0.143;m3.large;SUSE
+Reserved 1y;0.253;m3.xlarge;SUSE
+Reserved 1y;0.474;m3.2xlarge;SUSE
+Reserved 1y;0.111;c4.large;SUSE
+Reserved 1y;0.188;c4.xlarge;SUSE
+Reserved 1y;0.344;c4.2xlarge;SUSE
+Reserved 1y;0.655;c4.4xlarge;SUSE
+Reserved 1y;1.276;c4.8xlarge;SUSE
+Reserved 1y;0.126;c3.large;SUSE
+Reserved 1y;0.216;c3.xlarge;SUSE
+Reserved 1y;0.396;c3.2xlarge;SUSE
+Reserved 1y;0.756;c3.4xlarge;SUSE
+Reserved 1y;1.476;c3.8xlarge;SUSE
+Reserved 1y;0.550;g2.2xlarge;SUSE
+Reserved 1y;2.093;g2.8xlarge;SUSE
+Reserved 1y;4.965;x1.16xlarge;SUSE
+Reserved 1y;9.897;x1.32xlarge;SUSE
+Reserved 1y;0.169;r3.large;SUSE
+Reserved 1y;0.305;r3.xlarge;SUSE
+Reserved 1y;0.576;r3.2xlarge;SUSE
+Reserved 1y;1.120;r3.4xlarge;SUSE
+Reserved 1y;2.207;r3.8xlarge;SUSE
+Reserved 1y;0.126;r4.large;SUSE
+Reserved 1y;0.220;r4.xlarge;SUSE
+Reserved 1y;0.407;r4.2xlarge;SUSE
+Reserved 1y;0.781;r4.4xlarge;SUSE
+Reserved 1y;1.528;r4.8xlarge;SUSE
+Reserved 1y;3.023;r4.16xlarge;SUSE
+Reserved 1y;0.151;i3.large;SUSE
+Reserved 1y;0.268;i3.xlarge;SUSE
+Reserved 1y;0.503;i3.2xlarge;SUSE
+Reserved 1y;0.974;i3.4xlarge;SUSE
+Reserved 1y;1.915;i3.8xlarge;SUSE
+Reserved 1y;3.796;i3.16xlarge;SUSE
+Reserved 1y;0.484;d2.xlarge;SUSE
+Reserved 1y;0.931;d2.2xlarge;SUSE
+Reserved 1y;1.825;d2.4xlarge;SUSE
+Reserved 1y;3.613;d2.8xlarge;SUSE
+Reserved 1y;0.702;p2.xlarge;SUSE
+Reserved 1y;5.383;p2.8xlarge;SUSE
+Reserved 1y;10.733;p2.16xlarge;SUSE
+Reserved 1y Partial Upfront;0.013;t2.nano;SUSE
+Reserved 1y Partial Upfront;0.018;t2.micro;SUSE
+Reserved 1y Partial Upfront;0.040;t2.small;SUSE
+Reserved 1y Partial Upfront;0.067;t2.medium;SUSE
+Reserved 1y Partial Upfront;0.101;t2.large;SUSE
+Reserved 1y Partial Upfront;0.170;t2.xlarge;SUSE
+Reserved 1y Partial Upfront;0.307;t2.2xlarge;SUSE
+Reserved 1y Partial Upfront;0.105;m4.large;SUSE
+Reserved 1y Partial Upfront;0.177;m4.xlarge;SUSE
+Reserved 1y Partial Upfront;0.321;m4.2xlarge;SUSE
+Reserved 1y Partial Upfront;0.609;m4.4xlarge;SUSE
+Reserved 1y Partial Upfront;1.473;m4.10xlarge;SUSE
+Reserved 1y Partial Upfront;2.337;m4.16xlarge;SUSE
+Reserved 1y Partial Upfront;0.085;m3.medium;SUSE
+Reserved 1y Partial Upfront;0.135;m3.large;SUSE
+Reserved 1y Partial Upfront;0.236;m3.xlarge;SUSE
+Reserved 1y Partial Upfront;0.439;m3.2xlarge;SUSE
+Reserved 1y Partial Upfront;0.107;c4.large;SUSE
+Reserved 1y Partial Upfront;0.181;c4.xlarge;SUSE
+Reserved 1y Partial Upfront;0.328;c4.2xlarge;
+Reserved 1y Partial Upfront;0.624;c4.4xlarge;
+Reserved 1y Partial Upfront;1.213;c4.8xlarge;
+Reserved 1y Partial Upfront;0.109;c3.large;
+Reserved 1y Partial Upfront;0.189;c3.xlarge;
+Reserved 1y Partial Upfront;0.345;c3.2xlarge;
+Reserved 1y Partial Upfront;0.659;c3.4xlarge;
+Reserved 1y Partial Upfront;1.288;c3.8xlarge;
+Reserved 1y Partial Upfront;0.472;g2.2xlarge;
+Reserved 1y Partial Upfront;1.791;g2.8xlarge;
+Reserved 1y Partial Upfront;4.730;x1.16xlarge;
+Reserved 1y Partial Upfront;9.426;x1.32xlarge;
+Reserved 1y Partial Upfront;0.150;r3.large;
+Reserved 1y Partial Upfront;0.266;r3.xlarge;
+Reserved 1y Partial Upfront;0.499;r3.2xlarge;
+Reserved 1y Partial Upfront;0.965;r3.4xlarge;
+Reserved 1y Partial Upfront;1.897;r3.8xlarge;
+Reserved 1y Partial Upfront;0.122;r4.large;
+Reserved 1y Partial Upfront;0.211;r4.xlarge;
+Reserved 1y Partial Upfront;0.389;r4.2xlarge;
+Reserved 1y Partial Upfront;0.744;r4.4xlarge;
+Reserved 1y Partial Upfront;1.456;r4.8xlarge;
+Reserved 1y Partial Upfront;2.879;r4.16xlarge;
+Reserved 1y Partial Upfront;0.145;i3.large;
+Reserved 1y Partial Upfront;0.257;i3.xlarge;
+Reserved 1y Partial Upfront;0.481;i3.2xlarge;
+Reserved 1y Partial Upfront;0.927;i3.4xlarge;
+Reserved 1y Partial Upfront;1.821;i3.8xlarge;
+Reserved 1y Partial Upfront;3.611;i3.16xlarge;
+Reserved 1y Partial Upfront;0.415;d2.xlarge;
+Reserved 1y Partial Upfront;0.797;d2.2xlarge;
+Reserved 1y Partial Upfront;1.561;d2.4xlarge;
+Reserved 1y Partial Upfront;3.088;d2.8xlarge;
+Reserved 1y Partial Upfront;0.667;p2.xlarge;
+Reserved 1y Partial Upfront;5.105;p2.8xlarge;
+Reserved 1y Partial Upfront;10.177;p2.16xlarge;

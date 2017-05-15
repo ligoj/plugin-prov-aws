@@ -1,6 +1,7 @@
 package org.ligoj.app.plugin.prov.aws;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -23,9 +24,9 @@ import org.ligoj.app.plugin.prov.model.ProvInstancePriceType;
 import org.ligoj.app.plugin.prov.model.ProvQuote;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
 import org.ligoj.app.plugin.prov.model.ProvQuoteStorage;
+import org.ligoj.app.plugin.prov.model.ProvStorageFrequency;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.model.VmOs;
-import org.ligoj.app.plugin.prov.model.ProvStorageFrequency;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ContextConfiguration;
@@ -110,5 +111,10 @@ public class ProvAwsResourceTest extends AbstractAppTest {
 	@Test
 	public void getKey() {
 		Assert.assertEquals("service:prov:aws", resource.getKey());
+	}
+	
+	@Test
+	public void installReservedPrices() throws IOException, URISyntaxException {
+		resource.installReservedPrices();
 	}
 }

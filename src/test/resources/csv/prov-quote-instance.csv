@@ -1,4 +1,0 @@
-configuration.name;instancePrice.id!;name;cost;cpu;ram
-quote1;592;s-cg1.4xlarge-WINDOWS-Spot-26;0;1;2048
-quote1;667;s-t2.nano-RHE-Reserved 1y-0,065;0;0.5;256
-quote1;222;s-x1.32xlarge-LINUX-Reserved 1y Partial Upfront-4,697;0;1;16048

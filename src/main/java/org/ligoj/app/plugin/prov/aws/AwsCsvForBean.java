@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.ligoj.bootstrap.core.csv.AbstractCsvManager;
 import org.ligoj.bootstrap.core.csv.CsvBeanReader;
@@ -14,10 +15,12 @@ import org.ligoj.bootstrap.core.csv.CsvBeanReader;
 public class AwsCsvForBean extends AbstractCsvManager {
 
 	private final CsvBeanReader<AwsInstancePrice> beanReader;
+	private static final Pattern SKU_PATTERN = Pattern.compile("^\"?SKU");
 
 	/**
-	 * Build the reader parsing the CSV file from AWS to build {@link AwsInstancePrice}
-	 * instances. Non AWS instances data are skipped, and headers are ignored.
+	 * Build the reader parsing the CSV file from AWS to build
+	 * {@link AwsInstancePrice} instances. Non AWS instances data are skipped,
+	 * and headers are ignored.
 	 * 
 	 * @param reader
 	 *            The original AWS CSV input.
@@ -29,7 +32,7 @@ public class AwsCsvForBean extends AbstractCsvManager {
 		String line;
 		do {
 			line = reader.readLine();
-		} while (line != null && !line.startsWith("\"SKU\""));
+		} while (line != null && !SKU_PATTERN.matcher(line).find());
 	}
 
 	/**

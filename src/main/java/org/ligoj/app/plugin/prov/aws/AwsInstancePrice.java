@@ -16,7 +16,7 @@ public class AwsInstancePrice {
 	private String drop;
 	private String offerTermCode;
 	private String termType;
-	private String pricePerUnit;
+	private double pricePerUnit;
 	private String leaseContractLength;
 	private String purchaseOption;
 	private String offeringClass;
@@ -28,4 +28,8 @@ public class AwsInstancePrice {
 	private String tenancy;
 	private String os;
 	private String ecu;
+	private String priceUnit;
+	private String sku;
+	private String licenseModel;
+	private String software;
 }

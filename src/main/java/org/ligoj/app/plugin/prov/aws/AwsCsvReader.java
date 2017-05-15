@@ -12,11 +12,12 @@ import org.ligoj.bootstrap.core.csv.CsvReader;
  */
 public class AwsCsvReader extends CsvBeanReader<AwsInstancePrice> {
 
-	private static final String AWS_EC2_HEADERS = "drop;offerTermCode;drop;termType;drop;drop;drop;drop;drop;pricePerUnit;drop;leaseContractLength;"
-			+ "purchaseOption;offeringClass;drop;drop;drop;drop;instanceType;drop;drop;cpu;physicalProcessor;clockSpeed;memory;"
-			+ "drop;drop;drop;drop;drop;drop;drop;drop;drop;drop;tenancy;drop;os;licenseModel;"
-			+ "drop;drop;drop;drop;drop;drop;drop;drop;drop"
-			+ ";drop;drop;ecu";
+	private static final String AWS_EC2_HEADERS = "sku,offerTermCode,drop,termType,drop,drop,drop,drop,priceUnit,pricePerUnit,drop,"
+			+ "leaseContractLength,purchaseOption,offeringClass,drop,drop,drop,drop,instanceType,drop,drop,"
+			+ "cpu,physicalProcessor,clockSpeed,memory,"
+			+ "drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,tenancy,drop,os,licenseModel,"
+			+ "drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,ecu,"
+			+ "drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,software,drop,drop";
 
 	/**
 	 * CSV raw data reader.
@@ -31,11 +32,11 @@ public class AwsCsvReader extends CsvBeanReader<AwsInstancePrice> {
 	 *            raw.
 	 */
 	public AwsCsvReader(Reader reader) {
-		super(reader, AwsInstancePrice.class, AWS_EC2_HEADERS);
+		super(reader, AwsInstancePrice.class, AWS_EC2_HEADERS.split(","));
 
 		// Makes visible this entry
 		// TODO Remove with LB 1.6.3+
-		this.csvReaderProxy = new CsvReader(reader);
+		this.csvReaderProxy = new CsvReader(reader, ',');
 	}
 
 	@Override
@@ -57,7 +58,15 @@ public class AwsCsvReader extends CsvBeanReader<AwsInstancePrice> {
 	 */
 	private boolean isValidRaw(final List<String> rawValues) {
 		// Only Compute Instance with a valid OS
-		return rawValues.size() > 30 && "Compute Instance".equals(rawValues.get(14)) && rawValues.get(28) != null
-				&& "NA".equals(rawValues.get(28));
+		return rawValues.size() > 38
+
+				// Only compute instance for now
+				&& "Compute Instance".equals(rawValues.get(14))
+
+				// Only OS compliant
+				&& rawValues.get(37) != null && !"NA".equals(rawValues.get(37))
+
+				// Only shared or dedicated tenancy
+				&& !"Host".equals(rawValues.get(35));
 	}
 }

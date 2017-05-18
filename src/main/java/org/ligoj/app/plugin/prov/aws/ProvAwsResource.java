@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Formatter;
 import java.util.HashMap;
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -35,11 +37,15 @@ import org.ligoj.app.plugin.prov.model.ProvInstancePriceType;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.model.ProvTenancy;
 import org.ligoj.app.plugin.prov.model.VmOs;
-import org.ligoj.bootstrap.core.dao.csv.CsvForJpa;
+import org.ligoj.app.resource.plugin.CurlProcessor;
 import org.ligoj.bootstrap.resource.system.configuration.ConfigurationResource;
 import org.mockito.internal.util.io.IOUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -69,11 +75,21 @@ public class ProvAwsResource extends AbstractProvResource {
 	private static final String DEFAULT_REGION = "eu-west-1";
 
 	/**
+	 * The default region for spot instances, fixed for now.
+	 */
+	private static final String DEFAULT_REGION_SPOT = "eu-ireland";
+
+	/**
 	 * The EC2 reserved and on-demand price end-point, a CSV file, accepting the
 	 * region code with {@link Formatter}
 	 */
 	private static final String EC2_PRICES = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/%s/index.csv";
 
+	/**
+	 * The EC2 spot price end-point, a JSON file. The region code will be used
+	 * to filter the JSON prices.
+	 */
+	private static final String EC2_PRICES_SPOT = "https://spot-price.s3.amazonaws.com/spot.js";
 	private static final Pattern LEASING_TIME = Pattern.compile("(\\d)yr");
 
 	/**
@@ -82,15 +98,29 @@ public class ProvAwsResource extends AbstractProvResource {
 	public static final String CONF_URL_PRICES = SERVICE_KEY + ":reserved-ec2-prices-url";
 
 	/**
+	 * Configuration key used for {@link #EC2_PRICES_SPOT}
+	 */
+	public static final String CONF_URL_PRICES_SPOT = SERVICE_KEY + ":reserved-ec2-prices-spot-url";
+
+	/**
 	 * Configuration key used for {@link #DEFAULT_REGION}
 	 */
 	public static final String CONF_REGION = SERVICE_KEY + ":region";
 
-	@Autowired
-	private ConfigurationResource configuration;
+	/**
+	 * Configuration key used for {@link #DEFAULT_REGION_SPOT}
+	 */
+	public static final String CONF_REGION_SPOT = SERVICE_KEY + ":region-spot";
+
+	/**
+	 * Jackson type reference for Spot price
+	 */
+	private static final TypeReference<Collection<Collection<AwsInstanceSpotPrice>>> TYPE_PRICE_REF = new TypeReference<Collection<Collection<AwsInstanceSpotPrice>>>() {
+		// Nothing to override
+	};
 
 	@Autowired
-	private CsvForJpa csvForJpa;
+	private ConfigurationResource configuration;
 
 	@Autowired
 	private NodeRepository nodeRepository;
@@ -119,21 +149,115 @@ public class ProvAwsResource extends AbstractProvResource {
 	 */
 	@Override
 	public void install() throws IOException, URISyntaxException {
-		installEC2Prices();
-		installEC2SpotPrices();
+
+		// Node is already persisted
+		final Node node = nodeRepository.findOneExpected(SERVICE_KEY);
+		installEC2SpotPrices(installEC2Prices(node), node);
 	}
 
 	/**
 	 * Install EC2 spot prices from local CSV files.
+	 * 
+	 * @param instances
+	 *            The previously installed instances. Key is the instance name.
+	 * @param node
+	 *            The related AWS {@link Node}
 	 */
-	private void installEC2SpotPrices() throws IOException {
-		csvForJpa.insert("csv", ProvInstancePriceType.class, ProvInstancePrice.class);
+	private void installEC2SpotPrices(final Map<String, ProvInstance> instances, final Node node)
+			throws IOException, URISyntaxException {
+		log.info("AWS EC2 Spot import started...");
+
+		// Create the Spot instance price type
+		final ProvInstancePriceType spotPriceType = newSpotInstanceType(node);
+
+		// Track the created instance to cache instance and price type
+		final String region = configuration.get(CONF_REGION_SPOT, DEFAULT_REGION_SPOT);
+		final String endpoint = configuration.get(CONF_URL_PRICES_SPOT, EC2_PRICES_SPOT).replace("%s", region);
+		int priceCounter = 0;
+
+		try {
+			// Get the remote prices stream
+			String rawJson = StringUtils.defaultString(new CurlProcessor().get(endpoint),
+					"callback({\"config\":{\"regions\":[]}});");
+
+			// Remove the useless data to save massive memory footprint
+			final int regionIndex = rawJson.indexOf(region);
+			final Stream<AwsInstanceSpotPrice> spotPrices;
+			if (regionIndex < 0) {
+				// Region has not been found, spot will not be available
+				spotPrices = Stream.empty();
+				log.warn("No spot available for region {} from endpoint {}", region, endpoint);
+			} else {
+				final int instancesTypesIndex = rawJson.indexOf("[", regionIndex);
+				final Matcher closeMatcher = Pattern
+						.compile("\\]\\s*\\}\\s*(,\\s*\\{\\s*\"region\"|\\]\\s*\\}\\s*\\}\\);)", Pattern.MULTILINE)
+						.matcher(rawJson);
+				Assert.isTrue(closeMatcher.find(regionIndex), "Closing postion of region '" + region + "' not found");
+
+				// Build the smallest JSON containing only the specified region
+				rawJson = rawJson.substring(instancesTypesIndex, closeMatcher.start() + 1);
+
+				// Build the stream of prices
+				final ObjectMapper mapper = new ObjectMapper();
+				final Collection<Collection<AwsInstanceSpotPrice>> prices = mapper
+						.convertValue(mapper.readTree(rawJson).findValues("sizes"), TYPE_PRICE_REF);
+				spotPrices = prices.stream().flatMap(Collection::stream);
+			}
+
+			// Install the spot instances and collect the amount
+			priceCounter = spotPrices.mapToInt(j -> install(j, instances, spotPriceType)).sum();
+		} finally {
+			// Report
+			log.info("AWS EC2 Spot import finished : {} prices", priceCounter);
+		}
 	}
 
 	/**
-	 * Download and install EC2 prices from AWS server
+	 * Create a new {@link ProvInstancePriceType} for Spot.
 	 */
-	protected void installEC2Prices() throws IOException, URISyntaxException {
+	private ProvInstancePriceType newSpotInstanceType(final Node node) {
+		final ProvInstancePriceType spotPriceType = new ProvInstancePriceType();
+		spotPriceType.setName("Spot");
+		spotPriceType.setNode(node);
+		spotPriceType.setPeriod(60); // 1h
+		iptRepository.saveAndFlush(spotPriceType);
+		return spotPriceType;
+	}
+
+	/**
+	 * Install the install the instance type (if needed), the instance price
+	 * type (if needed) and the price.
+	 * 
+	 * @param json
+	 *            The current JSON entry.
+	 * @param instances
+	 *            The previously installed instances. Key is the instance name.
+	 * @param spotPriceType
+	 *            The related AWS Spot instance price type.
+	 * @return The amount of installed prices. Only for the report.
+	 */
+	private int install(final AwsInstanceSpotPrice json, final Map<String, ProvInstance> instances,
+			final ProvInstancePriceType spotPriceType) {
+		return (int) json.getOsPrices().stream()
+				.filter(op -> !StringUtils.startsWithIgnoreCase(op.getPrices().get("USD"), "N/A")).map(op -> {
+					final ProvInstancePrice price = new ProvInstancePrice();
+					price.setInstance(instances.get(json.getName()));
+					price.setType(spotPriceType);
+					price.setOs(op.getName().equals("mswin") ? VmOs.WINDOWS : VmOs.LINUX);
+					price.setCost(Double.valueOf(op.getPrices().get("USD")));
+					ipRepository.save(price);
+					return price;
+				}).count();
+	}
+
+	/**
+	 * Download and install EC2 prices from AWS server.
+	 * 
+	 * @param node
+	 *            The related AWS {@link Node}
+	 * @return The installed instances. Key is the instance name.
+	 */
+	protected Map<String, ProvInstance> installEC2Prices(final Node node) throws IOException, URISyntaxException {
 		log.info("AWS EC2 OnDemand/Reserved import started...");
 
 		// Track the created instance to cache instance and price type
@@ -141,124 +265,135 @@ public class ProvAwsResource extends AbstractProvResource {
 		final Map<String, ProvInstance> instances = new HashMap<>();
 		final Map<String, ProvInstancePrice> partialCost = new HashMap<>();
 		final String region = configuration.get(CONF_REGION, DEFAULT_REGION);
-		final String priceEndpoint = configuration.get(CONF_URL_PRICES, EC2_PRICES).replace("%s", region);
-		int prices = 0;
+		final String endpoint = configuration.get(CONF_URL_PRICES, EC2_PRICES).replace("%s", region);
+		int priceCounter = 0;
 
 		BufferedReader reader = null;
 		try {
 			// Get the remote prices stream
-			reader = new BufferedReader(new InputStreamReader(new URI(priceEndpoint).toURL().openStream()));
+			reader = new BufferedReader(new InputStreamReader(new URI(endpoint).toURL().openStream()));
 			// Pipe to the CSV reader
 			final AwsCsvForBean csvReader = new AwsCsvForBean(reader);
 
-			// Node is already persisted
-			final Node awsNode = nodeRepository.findOneExpected(SERVICE_KEY);
-
-			// Build the AWS instance prices
-			AwsInstancePrice instancePrice = null;
+			// Build the AWS instance prices from the CSV
+			AwsInstancePrice csv = null;
 			do {
 				// Read the next one
-				instancePrice = csvReader.read();
-				if (instancePrice == null) {
+				csv = csvReader.read();
+				if (csv == null) {
 					break;
 				}
 
 				// Persist this price
-				prices += install(instancePrice, instances, priceTypes, partialCost, awsNode);
+				priceCounter += install(csv, instances, priceTypes, partialCost, node);
 			} while (true);
-
 		} finally {
 			// Report
 			log.info("AWS EC2 OnDemand/Reserved import finished : {} instance, {} price types, {} prices",
-					instances.size(), priceTypes.size(), prices);
+					instances.size(), priceTypes.size(), priceCounter);
 			IOUtil.closeQuietly(reader);
 		}
+
+		// Return the available instances types
+		return instances;
 	}
 
-	private int install(final AwsInstancePrice csvPrice, final Map<String, ProvInstance> instances,
+	/**
+	 * Install the install the instance type (if needed), the instance price
+	 * type (if needed) and the price.
+	 * 
+	 * @param csv
+	 *            The current CSV entry.
+	 * @param instances
+	 *            The previously installed instances. Key is the instance name.
+	 * @param priceTypes
+	 *            The previously installed price types.
+	 * @param partialCost
+	 *            The current partial cost for up-front options.
+	 * @param node
+	 *            The related {@link Node}
+	 * @return The amount of installed prices. Only for the report.
+	 */
+	private int install(final AwsInstancePrice csv, final Map<String, ProvInstance> instances,
 			final Map<String, ProvInstancePriceType> priceTypes, final Map<String, ProvInstancePrice> partialCost,
-			final Node awsNode) {
+			final Node node) {
 		// Upfront, partial or not
-		int prices = 0;
-		if (StringUtils.equalsAnyIgnoreCase(csvPrice.getPurchaseOption(), "All Upfront", "Partial Upfront")) {
-			final String partialCostKey = csvPrice.getSku() + csvPrice.getOfferTermCode();
+		int priceCounter = 0;
+		if (StringUtils.equalsAnyIgnoreCase(csv.getPurchaseOption(), "All Upfront", "Partial Upfront")) {
+			final String partialCostKey = csv.getSku() + csv.getOfferTermCode();
 			if (partialCost.containsKey(partialCostKey)) {
 				final ProvInstancePrice ipUpfront = partialCost.get(partialCostKey);
-				handleUpfront(csvPrice, ipUpfront);
+				handleUpfront(csv, ipUpfront);
 
 				// The is completed, cleanup and persist
 				partialCost.remove(partialCostKey);
-				prices++;
-				ipRepository.saveAndFlush(ipUpfront);
+				priceCounter++;
+				ipRepository.save(ipUpfront);
 			} else {
 				// First time, save this instance for a future completion
-				handleUpfront(csvPrice, partialCost.computeIfAbsent(partialCostKey,
-						k -> newProvInstancePrice(csvPrice, instances, priceTypes, awsNode)));
+				handleUpfront(csv, partialCost.computeIfAbsent(partialCostKey,
+						k -> newProvInstancePrice(csv, instances, priceTypes, node)));
 			}
 		} else {
 			// No leasing, cost is fixed
-			prices++;
-			final ProvInstancePrice instancePrice = newProvInstancePrice(csvPrice, instances, priceTypes, awsNode);
-			instancePrice.setCost(csvPrice.getPricePerUnit());
-			ipRepository.saveAndFlush(instancePrice);
+			priceCounter++;
+			final ProvInstancePrice price = newProvInstancePrice(csv, instances, priceTypes, node);
+			price.setCost(csv.getPricePerUnit());
+			ipRepository.save(price);
 		}
-		return prices;
+		return priceCounter;
 	}
 
-	private void handleUpfront(final AwsInstancePrice csvPrice, final ProvInstancePrice ipUpfront) {
+	private void handleUpfront(final AwsInstancePrice csv, final ProvInstancePrice ipUpfront) {
 		final double hourlyCost;
-		if (csvPrice.getPriceUnit().equals("Quantity")) {
+		if (csv.getPriceUnit().equals("Quantity")) {
 			// Upfront price part , update the effective hourly cost
-			ipUpfront.setInitialCost(Double.valueOf(csvPrice.getPricePerUnit()));
+			ipUpfront.setInitialCost(Double.valueOf(csv.getPricePerUnit()));
 			hourlyCost = ipUpfront.getCost() + ipUpfront.getInitialCost() * 60 / ipUpfront.getType().getPeriod();
 		} else {
 			// Remaining hourly cost of the leasing
-			hourlyCost = csvPrice.getPricePerUnit() + ipUpfront.getCost();
+			hourlyCost = csv.getPricePerUnit() + ipUpfront.getCost();
 		}
 
 		// Round the computed hourly cost
 		ipUpfront.setCost(round3Decimals(hourlyCost));
 	}
 
-	private ProvInstancePrice newProvInstancePrice(final AwsInstancePrice csvPrice,
+	private ProvInstancePrice newProvInstancePrice(final AwsInstancePrice csv,
 			final Map<String, ProvInstance> instances, final Map<String, ProvInstancePriceType> priceTypes,
-			final Node awsNode) {
+			final Node node) {
 
-		final ProvInstancePrice instancePrice = new ProvInstancePrice();
+		final ProvInstancePrice price = new ProvInstancePrice();
 
 		// Initial price is 0, and is updated depending on the leasing
-		instancePrice.setCost(0d);
+		price.setCost(0d);
 
 		// Associate the instance
-		instancePrice.setInstance(
-				instances.computeIfAbsent(csvPrice.getInstanceType(), k -> newProvInstance(csvPrice, awsNode)));
+		price.setInstance(instances.computeIfAbsent(csv.getInstanceType(), k -> newProvInstance(csv, node)));
 
 		// Associate the instance price type
-		instancePrice.setType(priceTypes.computeIfAbsent(csvPrice.getOfferTermCode(),
-				k -> newProvInstancePriceType(csvPrice, awsNode)));
+		price.setType(priceTypes.computeIfAbsent(csv.getOfferTermCode(), k -> newProvInstancePriceType(csv, node)));
 
 		// Fill the price variable
-		instancePrice.setOs(VmOs.valueOf(csvPrice.getOs().toUpperCase(Locale.ENGLISH).replace("RHEL", "RHE")));
-		instancePrice.setTenancy(ProvTenancy.valueOf(StringUtils.upperCase(csvPrice.getTenancy())));
-		instancePrice.setLicense(StringUtils.trimToNull(
-				StringUtils.remove(csvPrice.getLicenseModel().replace("License Included", csvPrice.getSoftware())
-						.replace("NA", "License Included"), "No License required")));
-		return instancePrice;
+		price.setOs(VmOs.valueOf(csv.getOs().toUpperCase(Locale.ENGLISH).replace("RHEL", "RHE")));
+		price.setTenancy(ProvTenancy.valueOf(StringUtils.upperCase(csv.getTenancy())));
+		price.setLicense(StringUtils.trimToNull(StringUtils.remove(
+				csv.getLicenseModel().replace("License Included", csv.getSoftware()).replace("NA", "License Included"),
+				"No License required")));
+		return price;
 	}
 
-	private ProvInstance newProvInstance(final AwsInstancePrice csvPrice, final Node awsNode) {
+	private ProvInstance newProvInstance(final AwsInstancePrice csv, final Node node) {
 		final ProvInstance instance = new ProvInstance();
-		instance.setNode(awsNode);
-		instance.setCpu(csvPrice.getCpu());
-		instance.setName(csvPrice.getInstanceType());
+		instance.setNode(node);
+		instance.setCpu(csv.getCpu());
+		instance.setName(csv.getInstanceType());
 
 		// Convert GiB to MiB, and rounded
 		instance.setRam((int) Math.round(
-				Double.parseDouble(StringUtils.removeEndIgnoreCase(csvPrice.getMemory(), " GiB").replace(",", ""))
-						* 1024d));
-		instance.setConstant(!"Variable".equals(csvPrice.getEcu()));
-		instance.setDescription(
-				ArrayUtils.toString(new String[] { csvPrice.getPhysicalProcessor(), csvPrice.getClockSpeed() }));
+				Double.parseDouble(StringUtils.removeEndIgnoreCase(csv.getMemory(), " GiB").replace(",", "")) * 1024d));
+		instance.setConstant(!"Variable".equals(csv.getEcu()));
+		instance.setDescription(ArrayUtils.toString(new String[] { csv.getPhysicalProcessor(), csv.getClockSpeed() }));
 		instanceRepository.saveAndFlush(instance);
 		return instance;
 	}
@@ -273,9 +408,9 @@ public class ProvAwsResource extends AbstractProvResource {
 	/**
 	 * Build a new instance price type from the CSV line.
 	 */
-	private ProvInstancePriceType newProvInstancePriceType(final AwsInstancePrice csvPrice, final Node awsNode) {
+	private ProvInstancePriceType newProvInstancePriceType(final AwsInstancePrice csvPrice, final Node node) {
 		final ProvInstancePriceType result = new ProvInstancePriceType();
-		result.setNode(awsNode);
+		result.setNode(node);
 
 		// Build the name from the leasing, purchase option and offering class
 		result.setName(Arrays

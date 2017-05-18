@@ -1,0 +1,27 @@
+callback({
+   "config":{
+      "regions":[
+         {
+            "region":"eu-ireland",
+            "instanceTypes":[
+               {
+                  "type":"generalCurrentGen",
+                  "sizes":[
+                     {
+                        "size":"m3.medium",
+                        "valueColumns":[
+                           {
+                              "name":"linux",
+                              "prices":{
+                                 "USD":"AAAAAA"
+                              }
+                           }
+                        ]
+                     }
+                    ]
+               }
+           ]
+         }
+      ]
+   }
+});

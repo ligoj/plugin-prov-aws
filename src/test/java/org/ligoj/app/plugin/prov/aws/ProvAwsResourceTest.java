@@ -25,11 +25,15 @@ import org.ligoj.app.iam.model.CacheUser;
 import org.ligoj.app.model.DelegateNode;
 import org.ligoj.app.model.Node;
 import org.ligoj.app.model.Project;
+import org.ligoj.app.plugin.prov.ComputedInstancePrice;
 import org.ligoj.app.plugin.prov.LowestInstancePrice;
 import org.ligoj.app.plugin.prov.ProvResource;
 import org.ligoj.app.plugin.prov.QuoteInstanceEditionVo;
 import org.ligoj.app.plugin.prov.QuoteVo;
+import org.ligoj.app.plugin.prov.dao.ProvInstancePriceTypeRepository;
+import org.ligoj.app.plugin.prov.dao.ProvInstanceRepository;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
+import org.ligoj.app.plugin.prov.model.ProvInstancePriceType;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.model.ProvTenancy;
@@ -65,6 +69,12 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 	private ProjectRepository projectRepository;
 
 	@Autowired
+	private ProvInstancePriceTypeRepository iptRepository;
+
+	@Autowired
+	private ProvInstanceRepository instanceRepository;
+
+	@Autowired
 	private ConfigurationResource configuration;
 
 	@Before
@@ -85,53 +95,157 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		Assert.assertEquals("service:prov:aws", resource.getKey());
 	}
 
-	private int newSubscription() throws Exception {
-		final SubscriptionEditionVo vo = new SubscriptionEditionVo();
-		vo.setMode(SubscriptionMode.CREATE);
-		vo.setNode("service:prov:aws:account");
-		vo.setProject(projectRepository.findByNameExpected("gStack").getId());
-		return subscriptionResource.create(vo);
-	}
-
 	@Test
 	public void installOffLine() throws Exception {
 		initSpringSecurityContext(DEFAULT_USER);
 		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
+		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/spot.js");
 		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
 				IOUtils.toString(new ClassPathResource("mock-server/aws/index.csv").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
+				IOUtils.toString(new ClassPathResource("mock-server/aws/spot.js").getInputStream(), "UTF-8"))));
 		httpServer.start();
-		final QuoteVo quote = check();
-		Assert.assertEquals(2.928, quote.getCost(), 0.001);
-		Assert.assertEquals(2.928, quote.getInstances().get(0).getCost(), 0.001);
-		Assert.assertNull(quote.getInstances().get(0).getInstancePrice().getInitialCost());
-		Assert.assertEquals(ProvTenancy.SHARED, quote.getInstances().get(0).getInstancePrice().getTenancy());
-		Assert.assertEquals(0.0035, quote.getInstances().get(0).getInstancePrice().getCost(), 0.001);
-		Assert.assertEquals("t1.micro", quote.getInstances().get(0).getInstancePrice().getInstance().getName());
-	}
 
-	@Test(expected = ConnectException.class)
-	public void installFailed() throws Exception {
-		initSpringSecurityContext(DEFAULT_USER);
-		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
-		check();
+		// Check the reserved
+		final QuoteVo quote = check();
+		Assert.assertEquals(46.848d, quote.getCost(), 0.001);
+		ProvQuoteInstance instance = quote.getInstances().get(0);
+		Assert.assertEquals(46.848d, instance.getCost(), 0.001);
+		final ProvInstancePrice price = instance.getInstancePrice();
+		Assert.assertEquals(1680d, price.getInitialCost(), 0.001);
+		Assert.assertEquals(VmOs.LINUX, price.getOs());
+		Assert.assertEquals(ProvTenancy.SHARED, price.getTenancy());
+		Assert.assertEquals(0.064, price.getCost(), 0.001);
+		ProvInstancePriceType priceType = price.getType();
+		Assert.assertEquals("Reserved, 3yr, All Upfront", priceType.getName());
+		Assert.assertEquals(1576800, priceType.getPeriod().intValue());
+		Assert.assertEquals("c1.medium", price.getInstance().getName());
+
+		// Check the spot
+		final ComputedInstancePrice spotPrice = provResource
+				.lookupInstance(instance.getConfiguration().getSubscription().getId(), 2, 1741, true, VmOs.LINUX, null,
+						null)
+				.getInstance();
+		Assert.assertEquals(12.444, spotPrice.getCost(), 0.001);
+		Assert.assertEquals(0.0173d, spotPrice.getInstance().getCost(), 0.0001);
+		Assert.assertEquals("Spot", spotPrice.getInstance().getType().getName());
+		Assert.assertEquals("r4.large", spotPrice.getInstance().getInstance().getName());
 	}
 
 	@Test
 	public void installOnLine() throws Exception {
 		configuration.delete(ProvAwsResource.CONF_URL_PRICES);
-		final QuoteVo quote = check();
+		configuration.delete(ProvAwsResource.CONF_URL_PRICES_SPOT);
 
 		// Aligned to :
 		// https://aws.amazon.com/fr/ec2/pricing/reserved-instances/pricing/
-		final ProvQuoteInstance instance = quote.getInstances().get(0);
-		Assert.assertEquals(2.196, instance.getCost(), 0.001);
+		// Check the reserved
+		final QuoteVo quote = check();
+		Assert.assertEquals(46.848d, quote.getCost(), 0.001);
+		ProvQuoteInstance instance = quote.getInstances().get(0);
+		Assert.assertEquals(46.848d, instance.getCost(), 0.001);
 		final ProvInstancePrice price = instance.getInstancePrice();
-		Assert.assertEquals(0.003, price.getCost(), 0.001);
-		Assert.assertEquals(77d, price.getInitialCost(), 0.001);
+		Assert.assertEquals(1680d, price.getInitialCost(), 0.001);
 		Assert.assertEquals(ProvTenancy.SHARED, price.getTenancy());
-		Assert.assertEquals("Reserved, 3yr, All Upfront", price.getType().getName());
-		Assert.assertEquals(1576800, price.getType().getPeriod().intValue());
-		Assert.assertEquals("t2.nano", price.getInstance().getName());
+		Assert.assertEquals(0.064, price.getCost(), 0.001);
+		ProvInstancePriceType priceType = price.getType();
+		Assert.assertEquals("Reserved, 3yr, All Upfront", priceType.getName());
+		Assert.assertEquals(1576800, priceType.getPeriod().intValue());
+		Assert.assertEquals("c1.medium", price.getInstance().getName());
+
+		// Check the spot
+		final ComputedInstancePrice spotPrice = provResource
+				.lookupInstance(instance.getConfiguration().getSubscription().getId(), 2, 1741, false,
+						VmOs.LINUX, instanceRepository
+								.findByName(instance.getConfiguration().getSubscription().getId(), "r4.large").getId(),
+						null)
+				.getInstance();
+		Assert.assertTrue(spotPrice.getCost() > 5d);
+		Assert.assertTrue(spotPrice.getCost() < 100d);
+		final ProvInstancePrice instance2 = spotPrice.getInstance();
+		Assert.assertTrue(instance2.getCost() > 0.005d);
+		Assert.assertTrue(instance2.getCost() < 1d);
+		Assert.assertEquals("Spot", instance2.getType().getName());
+		Assert.assertEquals("r4.large", instance2.getInstance().getName());
+	}
+
+	@Test(expected = ConnectException.class)
+	public void installErrorCsv() throws Exception {
+		initSpringSecurityContext(DEFAULT_USER);
+		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/any.csv");
+		check();
+	}
+
+	/**
+	 * Reserved prices are available but not the spot instances.
+	 */
+	@Test
+	public void installSpotEmpty() throws Exception {
+		initSpringSecurityContext(DEFAULT_USER);
+		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
+		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/any.js");
+		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
+				IOUtils.toString(new ClassPathResource("mock-server/aws/index-empty.csv").getInputStream(), "UTF-8"))));
+		httpServer.start();
+
+		// Check the reserved
+		resource.install();
+		em.flush();
+		em.clear();
+		final int subscription = newSubscription();
+		em.flush();
+		em.clear();
+		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost(), 0.001);
+
+		// Request an instance that would not be a Spot
+		Assert.assertNull(iptRepository.findByName("Reserved, 3yr, All Upfront"));
+
+		// Check the spot
+		Assert.assertNull(provResource.lookupInstance(subscription, 1, 1, false, VmOs.LINUX, null, null).getInstance());
+	}
+
+	/**
+	 * Reserved prices are valid, but not the spot instances.
+	 */
+	@Test(expected = NumberFormatException.class)
+	public void installSpotError() throws Exception {
+		initSpringSecurityContext(DEFAULT_USER);
+		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
+		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/spot.js");
+		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
+				IOUtils.toString(new ClassPathResource("mock-server/aws/index-empty.csv").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
+				IOUtils.toString(new ClassPathResource("mock-server/aws/spot-error.js").getInputStream(), "UTF-8"))));
+		httpServer.start();
+
+		// Parse error expected
+		resource.install();
+	}
+
+	/**
+	 * No data available from the AWS end-points
+	 */
+	@Test
+	public void installSpotRegionNotFound() throws Exception {
+		initSpringSecurityContext(DEFAULT_USER);
+		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
+		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/spot.js");
+		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
+				IOUtils.toString(new ClassPathResource("mock-server/aws/index-empty.csv").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
+				IOUtils.toString(new ClassPathResource("mock-server/aws/spot-empty.js").getInputStream(), "UTF-8"))));
+		httpServer.start();
+
+		resource.install();
+		em.flush();
+		em.clear();
+		final int subscription = newSubscription();
+		em.flush();
+		em.clear();
+		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost(), 0.001);
+
+		// Check no instance can be found
+		Assert.assertNull(provResource.lookupInstance(subscription, 1, 1, false, VmOs.LINUX, null, null).getInstance());
 	}
 
 	private QuoteVo check() throws IOException, URISyntaxException, Exception {
@@ -143,8 +257,10 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		em.clear();
 		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost(), 0.001);
 
-		final LowestInstancePrice price = provResource.lookupInstance(subscription, 1, 1, false, VmOs.LINUX, null,
-				null);
+		// Request an instance that would not be a Spot
+		final LowestInstancePrice price = provResource.lookupInstance(subscription, 2, 1741, true, VmOs.LINUX,
+				instanceRepository.findByName(subscription, "c1.medium").getId(),
+				iptRepository.findByNameExpected("Reserved, 3yr, All Upfront").getId());
 		final QuoteInstanceEditionVo vo = new QuoteInstanceEditionVo();
 		vo.setCpu(1d);
 		vo.setRam(1);
@@ -155,5 +271,13 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		em.flush();
 		em.clear();
 		return provResource.getConfiguration(subscription);
+	}
+
+	private int newSubscription() throws Exception {
+		final SubscriptionEditionVo vo = new SubscriptionEditionVo();
+		vo.setMode(SubscriptionMode.CREATE);
+		vo.setNode("service:prov:aws:account");
+		vo.setProject(projectRepository.findByNameExpected("gStack").getId());
+		return subscriptionResource.create(vo);
 	}
 }

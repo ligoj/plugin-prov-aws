@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
+import java.util.Formatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -62,9 +63,28 @@ public class ProvAwsResource extends AbstractProvResource {
 	 */
 	public static final String SERVICE_KEY = SERVICE_URL.replace('/', ':').substring(1);
 
-	private static final String AWS_EC2_PRICES = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/eu-west-1/index.csv";
+	/**
+	 * The default region, fixed for now.
+	 */
+	private static final String DEFAULT_REGION = "eu-west-1";
+
+	/**
+	 * The EC2 reserved and on-demand price end-point, a CSV file, accepting the
+	 * region code with {@link Formatter}
+	 */
+	private static final String EC2_PRICES = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/%s/index.csv";
+
 	private static final Pattern LEASING_TIME = Pattern.compile("(\\d)yr");
+
+	/**
+	 * Configuration key used for {@link #EC2_PRICES}
+	 */
 	public static final String CONF_URL_PRICES = SERVICE_KEY + ":reserved-ec2-prices-url";
+
+	/**
+	 * Configuration key used for {@link #DEFAULT_REGION}
+	 */
+	public static final String CONF_REGION = SERVICE_KEY + ":region";
 
 	@Autowired
 	private ConfigurationResource configuration;
@@ -114,19 +134,20 @@ public class ProvAwsResource extends AbstractProvResource {
 	 * Download and install EC2 prices from AWS server
 	 */
 	protected void installEC2Prices() throws IOException, URISyntaxException {
-		log.info("AWS EC2 import started...");
+		log.info("AWS EC2 OnDemand/Reserved import started...");
 
 		// Track the created instance to cache instance and price type
 		final Map<String, ProvInstancePriceType> priceTypes = new HashMap<>();
 		final Map<String, ProvInstance> instances = new HashMap<>();
 		final Map<String, ProvInstancePrice> partialCost = new HashMap<>();
+		final String region = configuration.get(CONF_REGION, DEFAULT_REGION);
+		final String priceEndpoint = configuration.get(CONF_URL_PRICES, EC2_PRICES).replace("%s", region);
 		int prices = 0;
 
 		BufferedReader reader = null;
 		try {
-			// Get the remote prices strem
-			reader = new BufferedReader(new InputStreamReader(
-					new URI(configuration.get(CONF_URL_PRICES, AWS_EC2_PRICES)).toURL().openStream()));
+			// Get the remote prices stream
+			reader = new BufferedReader(new InputStreamReader(new URI(priceEndpoint).toURL().openStream()));
 			// Pipe to the CSV reader
 			final AwsCsvForBean csvReader = new AwsCsvForBean(reader);
 
@@ -148,8 +169,8 @@ public class ProvAwsResource extends AbstractProvResource {
 
 		} finally {
 			// Report
-			log.info("AWS EC2 import finished : {} instance, {} price types, {} prices", instances.size(),
-					priceTypes.size(), prices);
+			log.info("AWS EC2 OnDemand/Reserved import finished : {} instance, {} price types, {} prices",
+					instances.size(), priceTypes.size(), prices);
 			IOUtil.closeQuietly(reader);
 		}
 	}

@@ -1,8 +1,8 @@
-node.id;name;frequency;optimized;cost;description;minimal;maximal
-service:prov:aws;gp2;HOT;IOPS;0.11;SSD;1;16384
-service:prov:aws;io1;HOT;IOPS;0.138;SSD Provisioned;4;16384
-service:prov:aws;st1;COLD;THROUGHPUT;0.05;HDD;500;16384
-service:prov:aws;sc1;COLD;THROUGHPUT;0.028;HDD Cold;500;16384
+node.id;name;frequency;optimized;cost;description;minimal;maximal;instanceCompatible
+service:prov:aws;gp2;HOT;IOPS;0.11;SSD;1;16384;true
+service:prov:aws;io1;HOT;IOPS;0.138;SSD Provisioned;4;16384;true
+service:prov:aws;st1;COLD;THROUGHPUT;0.05;HDD;500;16384;true
+service:prov:aws;sc1;COLD;THROUGHPUT;0.028;HDD Cold;500;16384;true
 service:prov:aws;S3 Snapshots;ARCHIVE;;0.05;Snapshot;0;
 service:prov:aws;S3;ARCHIVE;;0.023;Very Cold;0;
 service:prov:aws;S3 IA;ARCHIVE;;0.0125;X Cold;0;

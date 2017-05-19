@@ -22,6 +22,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.dao.NodeRepository;
@@ -39,7 +40,6 @@ import org.ligoj.app.plugin.prov.model.ProvTenancy;
 import org.ligoj.app.plugin.prov.model.VmOs;
 import org.ligoj.app.resource.plugin.CurlProcessor;
 import org.ligoj.bootstrap.resource.system.configuration.ConfigurationResource;
-import org.mockito.internal.util.io.IOUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
@@ -163,8 +163,7 @@ public class ProvAwsResource extends AbstractProvResource {
 	 * @param node
 	 *            The related AWS {@link Node}
 	 */
-	private void installEC2SpotPrices(final Map<String, ProvInstance> instances, final Node node)
-			throws IOException, URISyntaxException {
+	private void installEC2SpotPrices(final Map<String, ProvInstance> instances, final Node node) throws IOException {
 		log.info("AWS EC2 Spot import started...");
 
 		// Create the Spot instance price type
@@ -291,7 +290,7 @@ public class ProvAwsResource extends AbstractProvResource {
 			// Report
 			log.info("AWS EC2 OnDemand/Reserved import finished : {} instance, {} price types, {} prices",
 					instances.size(), priceTypes.size(), priceCounter);
-			IOUtil.closeQuietly(reader);
+			IOUtils.closeQuietly(reader);
 		}
 
 		// Return the available instances types

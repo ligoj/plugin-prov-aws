@@ -155,7 +155,7 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 
 		// Check the spot
 		final ComputedInstancePrice spotPrice = provResource
-				.lookupInstance(instance.getConfiguration().getSubscription().getId(), 2, 1741, false,
+				.lookupInstance(instance.getConfiguration().getSubscription().getId(), 2, 1741, null,
 						VmOs.LINUX, instanceRepository
 								.findByName(instance.getConfiguration().getSubscription().getId(), "r4.large").getId(),
 						null)

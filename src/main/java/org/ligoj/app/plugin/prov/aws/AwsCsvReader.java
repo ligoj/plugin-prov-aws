@@ -35,7 +35,6 @@ public class AwsCsvReader extends CsvBeanReader<AwsInstancePrice> {
 		super(reader, AwsInstancePrice.class, AWS_EC2_HEADERS.split(","));
 
 		// Makes visible this entry
-		// TODO Remove with LB 1.6.3+
 		this.csvReaderProxy = new CsvReader(reader, ',');
 	}
 

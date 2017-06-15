@@ -324,6 +324,6 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		final QuoteVo vo = install();
 		resource.terraform(bos, subscription, vo);
 		final String content = IOUtils.toString(new ByteArrayInputStream(bos.toByteArray()), "UTF-8");
-		Assert.assertTrue(content.startsWith("# TODO : gStack(1)"));
+		Assert.assertTrue(content.startsWith("variable publickey {"));
 	}
 }

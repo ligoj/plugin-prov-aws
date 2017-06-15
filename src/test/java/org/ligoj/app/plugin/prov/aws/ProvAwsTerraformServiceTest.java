@@ -2,6 +2,7 @@ package org.ligoj.app.plugin.prov.aws;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 
 import javax.transaction.Transactional;
@@ -15,10 +16,10 @@ import org.ligoj.app.dao.ProjectRepository;
 import org.ligoj.app.model.Node;
 import org.ligoj.app.model.Project;
 import org.ligoj.app.model.Subscription;
+import org.ligoj.app.plugin.prov.QuoteVo;
 import org.ligoj.app.plugin.prov.model.ProvInstance;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceType;
-import org.ligoj.app.plugin.prov.model.ProvQuote;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
 import org.ligoj.app.plugin.prov.model.VmOs;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 
 @RunWith(SpringJUnit4ClassRunner.class)
@@ -57,10 +59,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	public void testTerraformGeneration() throws Exception {
 		final Subscription subscription = new Subscription();
 		subscription.setProject(projectRepository.findByNameExpected("gStack"));
-		final ProvQuote quote = new ProvQuote();
-		quote.setSubscription(subscription);
 		final ProvQuoteInstance quoteInstance = new ProvQuoteInstance();
-		quoteInstance.setConfiguration(quote);
 		quoteInstance.setName("dev");
 		final ProvInstance instance = new ProvInstance();
 		instance.setName("t2.micro");
@@ -71,8 +70,13 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 		instancePriceType.setName("spot");
 		instancePrice.setType(instancePriceType);
 		quoteInstance.setInstancePrice(instancePrice);
+		final QuoteVo quoteVo = new QuoteVo();
+		quoteVo.setInstances(Lists.newArrayList(quoteInstance));
 
-		final String terraform = service.getTerraform(quoteInstance);
+		final StringWriter writer = new StringWriter();
+		service.writeTerraform(writer, quoteVo, subscription);
+		
+		final String terraform = writer.toString();
 		Assert.assertNotNull(terraform);
 		Assert.assertEquals(Files.toString(
 				new File(Thread.currentThread().getContextClassLoader().getResource("terraform/terraform.tf").toURI()),

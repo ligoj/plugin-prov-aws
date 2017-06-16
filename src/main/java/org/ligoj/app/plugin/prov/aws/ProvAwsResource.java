@@ -31,6 +31,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.dao.NodeRepository;
+import org.ligoj.app.dao.SubscriptionRepository;
 import org.ligoj.app.model.Node;
 import org.ligoj.app.plugin.prov.AbstractProvResource;
 import org.ligoj.app.plugin.prov.ProvResource;
@@ -141,6 +142,12 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	@Autowired
 	private ProvInstancePriceRepository ipRepository;
 
+	@Autowired
+	private SubscriptionRepository sRepository;
+
+	@Autowired
+	private ProvAwsTerraformService terraformService;
+
 	@Override
 	public String getKey() {
 		return SERVICE_KEY;
@@ -183,7 +190,8 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 
 		try {
 			// Get the remote prices stream
-			String rawJson = StringUtils.defaultString(new CurlProcessor().get(endpoint), "callback({\"config\":{\"regions\":[]}});");
+			String rawJson = StringUtils.defaultString(new CurlProcessor().get(endpoint),
+					"callback({\"config\":{\"regions\":[]}});");
 
 			// Remove the useless data to save massive memory footprint
 			final int regionIndex = rawJson.indexOf(region);
@@ -195,7 +203,8 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 			} else {
 				final int instancesTypesIndex = rawJson.indexOf("[", regionIndex);
 				final Matcher closeMatcher = Pattern
-						.compile("\\]\\s*\\}\\s*(,\\s*\\{\\s*\"region\"|\\]\\s*\\}\\s*\\}\\);)", Pattern.MULTILINE).matcher(rawJson);
+						.compile("\\]\\s*\\}\\s*(,\\s*\\{\\s*\"region\"|\\]\\s*\\}\\s*\\}\\);)", Pattern.MULTILINE)
+						.matcher(rawJson);
 				Assert.isTrue(closeMatcher.find(regionIndex), "Closing postion of region '" + region + "' not found");
 
 				// Build the smallest JSON containing only the specified region
@@ -242,8 +251,8 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	 */
 	private int install(final AwsInstanceSpotPrice json, final Map<String, ProvInstance> instances,
 			final ProvInstancePriceType spotPriceType) {
-		return (int) json.getOsPrices().stream().filter(op -> !StringUtils.startsWithIgnoreCase(op.getPrices().get("USD"), "N/A"))
-				.map(op -> {
+		return (int) json.getOsPrices().stream()
+				.filter(op -> !StringUtils.startsWithIgnoreCase(op.getPrices().get("USD"), "N/A")).map(op -> {
 					final ProvInstancePrice price = new ProvInstancePrice();
 					price.setInstance(instances.get(json.getName()));
 					price.setType(spotPriceType);
@@ -293,8 +302,8 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 			} while (true);
 		} finally {
 			// Report
-			log.info("AWS EC2 OnDemand/Reserved import finished : {} instance, {} price types, {} prices", instances.size(),
-					priceTypes.size(), priceCounter);
+			log.info("AWS EC2 OnDemand/Reserved import finished : {} instance, {} price types, {} prices",
+					instances.size(), priceTypes.size(), priceCounter);
 			IOUtils.closeQuietly(reader);
 		}
 
@@ -319,7 +328,8 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	 * @return The amount of installed prices. Only for the report.
 	 */
 	private int install(final AwsInstancePrice csv, final Map<String, ProvInstance> instances,
-			final Map<String, ProvInstancePriceType> priceTypes, final Map<String, ProvInstancePrice> partialCost, final Node node) {
+			final Map<String, ProvInstancePriceType> priceTypes, final Map<String, ProvInstancePrice> partialCost,
+			final Node node) {
 		// Upfront, partial or not
 		int priceCounter = 0;
 		if (StringUtils.equalsAnyIgnoreCase(csv.getPurchaseOption(), "All Upfront", "Partial Upfront")) {
@@ -334,8 +344,8 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 				ipRepository.save(ipUpfront);
 			} else {
 				// First time, save this instance for a future completion
-				handleUpfront(csv,
-						partialCost.computeIfAbsent(partialCostKey, k -> newProvInstancePrice(csv, instances, priceTypes, node)));
+				handleUpfront(csv, partialCost.computeIfAbsent(partialCostKey,
+						k -> newProvInstancePrice(csv, instances, priceTypes, node)));
 			}
 		} else {
 			// No leasing, cost is fixed
@@ -362,8 +372,9 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 		ipUpfront.setCost(round3Decimals(hourlyCost));
 	}
 
-	private ProvInstancePrice newProvInstancePrice(final AwsInstancePrice csv, final Map<String, ProvInstance> instances,
-			final Map<String, ProvInstancePriceType> priceTypes, final Node node) {
+	private ProvInstancePrice newProvInstancePrice(final AwsInstancePrice csv,
+			final Map<String, ProvInstance> instances, final Map<String, ProvInstancePriceType> priceTypes,
+			final Node node) {
 
 		final ProvInstancePrice price = new ProvInstancePrice();
 
@@ -379,9 +390,9 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 		// Fill the price variable
 		price.setOs(VmOs.valueOf(csv.getOs().toUpperCase(Locale.ENGLISH).replace("RHEL", "RHE")));
 		price.setTenancy(ProvTenancy.valueOf(StringUtils.upperCase(csv.getTenancy())));
-		price.setLicense(StringUtils.trimToNull(
-				StringUtils.remove(csv.getLicenseModel().replace("License Included", csv.getSoftware()).replace("NA", "License Included"),
-						"No License required")));
+		price.setLicense(StringUtils.trimToNull(StringUtils.remove(
+				csv.getLicenseModel().replace("License Included", csv.getSoftware()).replace("NA", "License Included"),
+				"No License required")));
 		return price;
 	}
 
@@ -392,8 +403,8 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 		instance.setName(csv.getInstanceType());
 
 		// Convert GiB to MiB, and rounded
-		instance.setRam(
-				(int) Math.round(Double.parseDouble(StringUtils.removeEndIgnoreCase(csv.getMemory(), " GiB").replace(",", "")) * 1024d));
+		instance.setRam((int) Math.round(
+				Double.parseDouble(StringUtils.removeEndIgnoreCase(csv.getMemory(), " GiB").replace(",", "")) * 1024d));
 		instance.setConstant(!"Variable".equals(csv.getEcu()));
 		instance.setDescription(ArrayUtils.toString(new String[] { csv.getPhysicalProcessor(), csv.getClockSpeed() }));
 		instanceRepository.saveAndFlush(instance);
@@ -437,10 +448,7 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	@Override
 	public void terraform(final OutputStream output, final int subscription, final QuoteVo quote) throws IOException {
 		final Writer writer = new BufferedWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8));
-		writer.write("# TODO : " + quote.getName() + "(" + subscription + ")");
-		writer.write("provider \"aws\" {");
-		writer.write("  region = \"${var.aws_region}\"");
-		writer.write("}");
+		terraformService.writeTerraform(writer, quote, sRepository.findOne(subscription));
 		writer.flush();
 	}
 }

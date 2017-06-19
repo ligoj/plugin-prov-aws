@@ -56,9 +56,55 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	 *             unexpected exception
 	 */
 	@Test
-	public void testTerraformGeneration() throws Exception {
+	public void testTerraformGenerationOnDemandType() throws Exception {
 		final Subscription subscription = new Subscription();
 		subscription.setProject(projectRepository.findByNameExpected("gStack"));
+		final ProvQuoteInstance quoteInstance = generateQuoteInstance("OnDemand");
+		final QuoteVo quoteVo = new QuoteVo();
+		quoteVo.setInstances(Lists.newArrayList(quoteInstance));
+
+		final StringWriter writer = new StringWriter();
+		service.writeTerraform(writer, quoteVo, subscription);
+
+		final String terraform = writer.toString();
+		Assert.assertNotNull(terraform);
+		Assert.assertEquals(Files.toString(
+				new File(Thread.currentThread().getContextClassLoader().getResource("terraform/terraform.tf").toURI()),
+				Charsets.UTF_8), terraform);
+	}
+
+	/**
+	 * check generated terraform
+	 * 
+	 * @throws Exception
+	 *             unexpected exception
+	 */
+	@Test
+	public void testTerraformGenerationSpotType() throws Exception {
+		final Subscription subscription = new Subscription();
+		subscription.setProject(projectRepository.findByNameExpected("gStack"));
+		final ProvQuoteInstance quoteInstance = generateQuoteInstance("Spot");
+		final QuoteVo quoteVo = new QuoteVo();
+		quoteVo.setInstances(Lists.newArrayList(quoteInstance));
+
+		final StringWriter writer = new StringWriter();
+		service.writeTerraform(writer, quoteVo, subscription);
+
+		final String terraform = writer.toString();
+		Assert.assertNotNull(terraform);
+		Assert.assertEquals(Files.toString(
+				new File(Thread.currentThread().getContextClassLoader().getResource("terraform/terraform-spot.tf").toURI()),
+				Charsets.UTF_8), terraform);
+	}
+
+	/**
+	 * generate a quote instace for test purpose
+	 * 
+	 * @param type
+	 *            instance type (Spot or OnDemand
+	 * @return quote instance
+	 */
+	private ProvQuoteInstance generateQuoteInstance(final String type) {
 		final ProvQuoteInstance quoteInstance = new ProvQuoteInstance();
 		quoteInstance.setName("dev");
 		final ProvInstance instance = new ProvInstance();
@@ -67,19 +113,9 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 		instancePrice.setInstance(instance);
 		instancePrice.setOs(VmOs.LINUX);
 		final ProvInstancePriceType instancePriceType = new ProvInstancePriceType();
-		instancePriceType.setName("spot");
+		instancePriceType.setName(type);
 		instancePrice.setType(instancePriceType);
 		quoteInstance.setInstancePrice(instancePrice);
-		final QuoteVo quoteVo = new QuoteVo();
-		quoteVo.setInstances(Lists.newArrayList(quoteInstance));
-
-		final StringWriter writer = new StringWriter();
-		service.writeTerraform(writer, quoteVo, subscription);
-		
-		final String terraform = writer.toString();
-		Assert.assertNotNull(terraform);
-		Assert.assertEquals(Files.toString(
-				new File(Thread.currentThread().getContextClassLoader().getResource("terraform/terraform.tf").toURI()),
-				Charsets.UTF_8), terraform);
+		return quoteInstance;
 	}
 }

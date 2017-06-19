@@ -21,6 +21,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class ProvAwsTerraformService {
 
+	private static final String SPOT_INSTANCE_PRICE_TYPE = "Spot";
+	
 	/**
 	 * mapping between os name and ami search string.
 	 */
@@ -75,9 +77,15 @@ public class ProvAwsTerraformService {
 		final VmOs os = instance.getInstancePrice().getOs();
 		final String instanceName = instance.getName();
 		final String instanceType = instance.getInstancePrice().getInstance().getName();
+		final boolean spot = SPOT_INSTANCE_PRICE_TYPE.equals(instance.getInstancePrice().getType().getName());
 
 		writer.write("/* instance */\n");
-		writer.write("resource \"aws_instance\" \"vm-" + instanceName + "\" {\n");
+		if(spot){
+			writer.write("resource \"aws_spot_instance_request\" \"vm-" + instanceName + "\" {\n");
+			writer.write("  spot_price    = \"0.03\"\n");
+		} else {
+			writer.write("resource \"aws_instance\" \"vm-" + instanceName + "\" {\n");
+		}
 		writer.write("  ami           = \"${data.aws_ami.ami-" + os.name() + ".id}\"\n");
 		writer.write("  instance_type = \"" + instanceType + "\"\n");
 		writer.write("  key_name    	= \"" + projectName + "-key\"\n");

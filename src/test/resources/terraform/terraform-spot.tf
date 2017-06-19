@@ -1,8 +1,8 @@
+provider "aws" {
+  region = "eu-west-1"
+}
 variable publickey {
   description = "SSH Public key used to access nginx EC2 Server"
-}
-provider "aws" { 
-  region = "eu-west-1"
 }
 /* security group */
 resource "aws_security_group" "vm-sg" {
@@ -20,8 +20,8 @@ resource "aws_security_group" "vm-sg" {
     protocol = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  tags          = { 
-    Project = "gStack"   
+  tags = {
+    Project = "gStack"
     Name = "gStack"
   }
 }
@@ -37,7 +37,7 @@ resource "aws_spot_instance_request" "vm-dev" {
   instance_type = "t2.micro"
   key_name    	= "gStack-key"
   vpc_security_group_ids = [ "${aws_security_group.vm-sg.id}" ]
-  tags          = { 
+  tags = {
     Project = "gStack"
     Name = "gStack-dev"
   }

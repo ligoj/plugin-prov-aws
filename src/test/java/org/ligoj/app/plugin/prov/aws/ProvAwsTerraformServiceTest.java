@@ -1,12 +1,12 @@
 package org.ligoj.app.plugin.prov.aws;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 
 import javax.transaction.Transactional;
 
+import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -29,7 +29,6 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
-import com.google.common.io.Files;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = "classpath:/META-INF/spring/application-context-test.xml")
@@ -75,11 +74,10 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 
 		final StringWriter writer = new StringWriter();
 		service.writeTerraform(writer, quoteVo, subscription);
-		
+
 		final String terraform = writer.toString();
 		Assert.assertNotNull(terraform);
-		Assert.assertEquals(Files.toString(
-				new File(Thread.currentThread().getContextClassLoader().getResource("terraform/terraform.tf").toURI()),
-				Charsets.UTF_8), terraform);
+		Assert.assertEquals(terraform,
+				IOUtils.toString(Thread.currentThread().getContextClassLoader().getResource("terraform/terraform.tf"), Charsets.UTF_8));
 	}
 }

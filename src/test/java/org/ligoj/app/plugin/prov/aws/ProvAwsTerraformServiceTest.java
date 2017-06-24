@@ -34,9 +34,7 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 
 /**
- * Test terraform generation service
- * 
- * @author alocquet
+ * Test class of {@link ProvAwsTerraformService}
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = "classpath:/META-INF/spring/application-context-test.xml")
@@ -151,7 +149,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	}
 
 	/**
-	 * generate a quote instace for test purpose
+	 * generate a quote instance for test purpose
 	 * 
 	 * @param type
 	 *            instance type (Spot or OnDemand

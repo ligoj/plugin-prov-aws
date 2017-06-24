@@ -17,9 +17,7 @@ import org.ligoj.app.plugin.prov.model.VmOs;
 import org.springframework.stereotype.Service;
 
 /**
- * Service in charge of terraform generation for AWS.
- * 
- * @author alocquet
+ * Service in charge of Terraform generation for AWS.
  */
 @Service
 public class ProvAwsTerraformService {
@@ -27,7 +25,7 @@ public class ProvAwsTerraformService {
 	private static final String SPOT_INSTANCE_PRICE_TYPE = "Spot";
 
 	/**
-	 * mapping between os name and ami search string.
+	 * mapping between OS name and AMI search string.
 	 */
 	private final static Map<VmOs, String> MAPPING_OS_AMI = new HashMap<>();
 
@@ -39,16 +37,16 @@ public class ProvAwsTerraformService {
 	}
 
 	/**
-	 * generate terraform from a quote instance.
+	 * Write Terraform content from a quote instance.
 	 * 
-	 * @param quoteInstance
+	 * @param writer
+	 *            Target output of Terraform content.
+	 * @param quote
 	 *            quote instance
-	 * 
-	 * @return terraform as string
-	 * @throws IOException
+	 * @param subscription
+	 *            The related subscription.
 	 */
-	public void writeTerraform(final Writer writer, final QuoteVo quote, final Subscription subscription)
-			throws IOException {
+	public void writeTerraform(final Writer writer, final QuoteVo quote, final Subscription subscription) throws IOException {
 		final String projectName = subscription.getProject().getName();
 		writeProvider(writer);
 		if (!quote.getInstances().isEmpty()) {
@@ -68,12 +66,12 @@ public class ProvAwsTerraformService {
 	}
 
 	/**
-	 * write an instance in terraform
+	 * Write an instance.
 	 * 
 	 * @param writer
-	 *            where we write
+	 *            Target output of Terraform content.
 	 * @param quote
-	 *            global quote
+	 *            quote instance
 	 * @param instance
 	 *            instance definition
 	 * @param projectName
@@ -81,8 +79,8 @@ public class ProvAwsTerraformService {
 	 * @throws IOException
 	 *             exception thrown during write
 	 */
-	private void writeInstance(final Writer writer, final QuoteVo quote, final ProvQuoteInstance instance,
-			final String projectName) throws IOException {
+	private void writeInstance(final Writer writer, final QuoteVo quote, final ProvQuoteInstance instance, final String projectName)
+			throws IOException {
 		final VmOs os = instance.getInstancePrice().getOs();
 		final String instanceName = instance.getName();
 		final String instanceType = instance.getInstancePrice().getInstance().getName();
@@ -105,12 +103,12 @@ public class ProvAwsTerraformService {
 	}
 
 	/**
-	 * write an ami search in terraform
+	 * Write an AMI search Terraform query.
 	 * 
 	 * @param writer
-	 *            where we write
+	 *            Target output of Terraform content.
 	 * @param os
-	 *            instance os
+	 *            Instance OS.
 	 * @throws IOException
 	 *             exception thrown during write
 	 */
@@ -131,10 +129,10 @@ public class ProvAwsTerraformService {
 	}
 
 	/**
-	 * write a key pair in terraform
+	 * Write a key pair.
 	 * 
 	 * @param writer
-	 *            where we write
+	 *            Target output of Terraform content.
 	 * @param projectName
 	 *            project Name
 	 * @throws IOException
@@ -149,10 +147,10 @@ public class ProvAwsTerraformService {
 	}
 
 	/**
-	 * write a security group in terraform
+	 * Write a security group.
 	 * 
 	 * @param writer
-	 *            where we write
+	 *            Target output of Terraform content.
 	 * @param projectName
 	 *            project Name
 	 * @throws IOException
@@ -180,10 +178,10 @@ public class ProvAwsTerraformService {
 	}
 
 	/**
-	 * write public key
+	 * Write public key.
 	 * 
 	 * @param writer
-	 *            where we write
+	 *            Target output of Terraform content.
 	 * @throws IOException
 	 *             exception thrown during write
 	 */
@@ -194,10 +192,10 @@ public class ProvAwsTerraformService {
 	}
 
 	/**
-	 * write provider
+	 * Write provider.
 	 * 
 	 * @param writer
-	 *            where we write
+	 *            Target output of Terraform content.
 	 * @throws IOException
 	 *             exception thrown during write
 	 */
@@ -208,22 +206,21 @@ public class ProvAwsTerraformService {
 	}
 
 	/**
-	 * write storages in terraform
+	 * Write instance storages.
 	 * 
 	 * @param writer
-	 *            where we write
+	 *            Target output of Terraform content.
 	 * @param quote
-	 *            original quote
+	 *            quote instance
 	 * @param instance
 	 *            instance
 	 * @throws IOException
 	 *             exception thrown during write
 	 */
-	private void writeInstanceStorages(final Writer writer, final QuoteVo quote, final ProvQuoteInstance instance)
-			throws IOException {
+	private void writeInstanceStorages(final Writer writer, final QuoteVo quote, final ProvQuoteInstance instance) throws IOException {
 		int idx = 0;
-		for (final QuoteStorageVo storage : quote.getStorages().stream()
-				.filter(storage -> storage.getQuoteInstance() == instance.getId()).collect(Collectors.toList())) {
+		for (final QuoteStorageVo storage : quote.getStorages().stream().filter(storage -> storage.getQuoteInstance() == instance.getId())
+				.collect(Collectors.toList())) {
 			if (idx == 0) {
 				writer.write("  root_block_device {\n");
 			} else {
@@ -238,10 +235,10 @@ public class ProvAwsTerraformService {
 	}
 
 	/**
-	 * write storages in terraform
+	 * Write standalone storages.
 	 * 
 	 * @param writer
-	 *            where we write
+	 *            Target output of Terraform content.
 	 * @param projectName
 	 *            project name
 	 * @param storages
@@ -249,8 +246,8 @@ public class ProvAwsTerraformService {
 	 * @throws IOException
 	 *             exception thrown during write
 	 */
-	private void writeStandaloneStorages(final Writer writer, final String projectName,
-			final List<QuoteStorageVo> storages) throws IOException {
+	private void writeStandaloneStorages(final Writer writer, final String projectName, final List<QuoteStorageVo> storages)
+			throws IOException {
 		for (final QuoteStorageVo storage : storages) {
 			if (storage.getQuoteInstance() == null) {
 				writer.write("resource \"aws_ebs_volume\" \"" + storage.getName() + "\" {\n");
@@ -264,10 +261,10 @@ public class ProvAwsTerraformService {
 	}
 
 	/**
-	 * write an instance in terraform
+	 * Write a tag.
 	 * 
 	 * @param writer
-	 *            where we write
+	 *            Target output of Terraform content.
 	 * @param project
 	 *            project name
 	 * @param name

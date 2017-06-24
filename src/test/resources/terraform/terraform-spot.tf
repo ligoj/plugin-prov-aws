@@ -31,20 +31,12 @@ resource "aws_key_pair" "vm-keypair" {
   public_key = "${var.publickey}"
 }
 /* instance */
-resource "aws_instance" "vm-dev" {
+resource "aws_spot_instance_request" "vm-dev" {
+  spot_price    = "0.03"
   ami           = "${data.aws_ami.ami-LINUX.id}"
   instance_type = "t2.micro"
   key_name    	= "gStack-key"
   vpc_security_group_ids = [ "${aws_security_group.vm-sg.id}" ]
-  root_block_device {
-    volume_type = "gp2"
-    volume_size = 5
-  }
-  ebs_block_device {
-    device_name = "/dev/sda1"
-    volume_type = "gp2"
-    volume_size = 50
-  }
   tags = {
     Project = "gStack"
     Name = "gStack-dev"

@@ -122,7 +122,18 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	public static final String CONF_REGION_SPOT = SERVICE_KEY + ":region-spot";
 
 	/**
+	 * Configuration key used for AWS authentification
+	 */
+	public static final String CONF_AWS_ACCESS_KEY_ID = SERVICE_KEY + ":access-key-id";
+
+	/**
+	 * Configuration key used for AWS authentification
+	 */
+	public static final String CONF_AWS_SECRET_ACCESS_KEY = SERVICE_KEY + ":secret-access-key";
+
+	/**
 	 * Jackson type reference for Spot price
+	 *
 	 */
 	private static final TypeReference<Collection<Collection<AwsInstanceSpotPrice>>> TYPE_PRICE_REF = new TypeReference<Collection<Collection<AwsInstanceSpotPrice>>>() {
 		// Nothing to override
@@ -451,5 +462,12 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 		final Writer writer = new BufferedWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8));
 		terraformService.writeTerraform(writer, quote, sRepository.findOne(subscription));
 		writer.flush();
+	}
+
+	@Override
+	public String[] commandLineParameters(final int subscription) {
+		final Map<String, String> parameters = subscriptionResource.getParameters(subscription);
+		return new String[] { "-var", "'AWS_ACCESS_KEY_ID=" + parameters.get(CONF_AWS_ACCESS_KEY_ID) + "'", "-var",
+				"'AWS_SECRET_ACCESS_KEY=" + parameters.get(CONF_AWS_SECRET_ACCESS_KEY) + "'" };
 	}
 }

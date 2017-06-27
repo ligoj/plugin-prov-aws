@@ -26,6 +26,7 @@ import org.ligoj.app.iam.model.CacheCompany;
 import org.ligoj.app.iam.model.CacheUser;
 import org.ligoj.app.model.DelegateNode;
 import org.ligoj.app.model.Node;
+import org.ligoj.app.model.Parameter;
 import org.ligoj.app.model.Project;
 import org.ligoj.app.plugin.prov.ComputedInstancePrice;
 import org.ligoj.app.plugin.prov.ComputedStoragePrice;
@@ -44,6 +45,7 @@ import org.ligoj.app.plugin.prov.model.ProvStorageFrequency;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.model.ProvTenancy;
 import org.ligoj.app.plugin.prov.model.VmOs;
+import org.ligoj.app.resource.node.ParameterValueCreateVo;
 import org.ligoj.app.resource.subscription.SubscriptionEditionVo;
 import org.ligoj.app.resource.subscription.SubscriptionResource;
 import org.ligoj.bootstrap.resource.system.configuration.ConfigurationResource;
@@ -52,6 +54,8 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+
+import com.google.common.collect.Lists;
 
 /**
  * Test class of {@link ProvAwsResource}
@@ -86,7 +90,8 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 	@Before
 	public void prepareData() throws IOException {
 		persistSystemEntities();
-		persistEntities("csv", new Class[] { Node.class, Project.class, CacheCompany.class, CacheUser.class, DelegateNode.class },
+		persistEntities("csv",
+				new Class[] { Node.class, Project.class, CacheCompany.class, CacheUser.class, DelegateNode.class, Parameter.class },
 				StandardCharsets.UTF_8.name());
 	}
 
@@ -314,6 +319,13 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		vo.setMode(SubscriptionMode.CREATE);
 		vo.setNode("service:prov:aws:account");
 		vo.setProject(projectRepository.findByNameExpected("gStack").getId());
+		final ParameterValueCreateVo awsid = new ParameterValueCreateVo();
+		awsid.setParameter(ProvAwsResource.CONF_AWS_ACCESS_KEY_ID);
+		awsid.setText("KEY");
+		final ParameterValueCreateVo awssecret = new ParameterValueCreateVo();
+		awssecret.setParameter(ProvAwsResource.CONF_AWS_SECRET_ACCESS_KEY);
+		awssecret.setText("SECRET");
+		vo.setParameters(Lists.newArrayList(awsid, awssecret));
 		return subscriptionResource.create(vo);
 	}
 
@@ -324,6 +336,15 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		final QuoteVo vo = install();
 		resource.terraform(bos, subscription, vo);
 		final String content = IOUtils.toString(new ByteArrayInputStream(bos.toByteArray()), "UTF-8");
-		Assert.assertTrue(content.startsWith("variable publickey {"));
+		Assert.assertTrue(content.startsWith("variable \"AWS_ACCESS_KEY_ID\""));
+	}
+
+	@Test
+	public void terraformCommandLineParameters() throws Exception {
+		final int subscription = newSubscription();
+		final String[] parameters = resource.commandLineParameters(subscription);
+		Assert.assertTrue(parameters.length == 4);
+		Assert.assertTrue("'AWS_ACCESS_KEY_ID=KEY'".equals(parameters[1]));
+		Assert.assertTrue("'AWS_SECRET_ACCESS_KEY=SECRET'".equals(parameters[3]));
 	}
 }

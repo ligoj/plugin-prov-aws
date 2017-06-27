@@ -33,6 +33,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.dao.NodeRepository;
 import org.ligoj.app.dao.SubscriptionRepository;
 import org.ligoj.app.model.Node;
+import org.ligoj.app.model.Parameter;
 import org.ligoj.app.plugin.prov.AbstractProvResource;
 import org.ligoj.app.plugin.prov.ProvResource;
 import org.ligoj.app.plugin.prov.QuoteVo;
@@ -155,7 +156,7 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 
 	@Override
 	public List<Class<?>> getInstalledEntities() {
-		return Arrays.asList(Node.class, ProvStorageType.class);
+		return Arrays.asList(Node.class, ProvStorageType.class, Parameter.class);
 	}
 
 	/**

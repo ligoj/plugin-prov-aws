@@ -200,8 +200,13 @@ public class ProvAwsTerraformService {
 	 *             exception thrown during write
 	 */
 	private void writeProvider(final Writer writer) throws IOException {
+		writer.write("variable \"AWS_ACCESS_KEY_ID\" {}\n");
+		writer.write("variable \"AWS_SECRET_ACCESS_KEY\" {}\n");
+		
 		writer.write("provider \"aws\" {\n");
 		writer.write("  region = \"eu-west-1\"\n");
+		writer.write("  access_key = \"${var.AWS_ACCESS_KEY_ID}\"\n");
+		writer.write("  secret_key = \"${var.AWS_SECRET_ACCESS_KEY}\"\n");
 		writer.write("}\n");
 	}
 

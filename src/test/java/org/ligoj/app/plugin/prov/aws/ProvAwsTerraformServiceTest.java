@@ -2,7 +2,6 @@ package org.ligoj.app.plugin.prov.aws;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 
 import javax.transaction.Transactional;
@@ -69,8 +68,8 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 		final QuoteVo quoteVo = new QuoteVo();
 		final ProvQuoteInstance instance = generateQuoteInstance("OnDemand");
 		quoteVo.setInstances(Lists.newArrayList(instance));
-		quoteVo.setStorages(
-				Lists.newArrayList(generateStorage(instance.getId(), "dev", 5), generateStorage(instance.getId(), "dev-1", 50)));
+		quoteVo.setStorages(Lists.newArrayList(generateStorage(instance.getId(), "dev", 5),
+				generateStorage(instance.getId(), "dev-1", 50)));
 
 		testTerraformGeneration(subscription, quoteVo, "terraform/terraform.tf");
 	}
@@ -106,8 +105,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	}
 
 	/**
-	 * Call terraform generation and check the result is same as input file
-	 * content
+	 * Call terraform generation and check the result is same as input file content
 	 * 
 	 * @param subscription
 	 *            subscription
@@ -116,15 +114,16 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	 * @param expectedResultFileName
 	 *            expected result
 	 */
-	private void testTerraformGeneration(final Subscription subscription, final QuoteVo quoteVo, final String expectedResultFileName)
-			throws IOException, URISyntaxException {
+	private void testTerraformGeneration(final Subscription subscription, final QuoteVo quoteVo,
+			final String expectedResultFileName) throws IOException {
 		final StringWriter writer = new StringWriter();
 		service.writeTerraform(writer, quoteVo, subscription);
 
 		final String terraform = writer.toString();
 		Assert.assertNotNull(terraform);
 		Assert.assertEquals(
-				IOUtils.toString(Thread.currentThread().getContextClassLoader().getResource(expectedResultFileName), Charsets.UTF_8),
+				IOUtils.toString(Thread.currentThread().getContextClassLoader().getResource(expectedResultFileName),
+						Charsets.UTF_8),
 				terraform);
 	}
 

@@ -122,12 +122,12 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	public static final String CONF_REGION_SPOT = SERVICE_KEY + ":region-spot";
 
 	/**
-	 * Configuration key used for AWS authentification
+	 * Configuration key used for AWS authentication
 	 */
 	public static final String CONF_AWS_ACCESS_KEY_ID = SERVICE_KEY + ":access-key-id";
 
 	/**
-	 * Configuration key used for AWS authentification
+	 * Configuration key used for AWS authentication
 	 */
 	public static final String CONF_AWS_SECRET_ACCESS_KEY = SERVICE_KEY + ":secret-access-key";
 
@@ -245,6 +245,7 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 		spotPriceType.setName("Spot");
 		spotPriceType.setNode(node);
 		spotPriceType.setPeriod(60); // 1h
+		spotPriceType.setVariable(true);
 		iptRepository.saveAndFlush(spotPriceType);
 		return spotPriceType;
 	}
@@ -350,7 +351,7 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 				final ProvInstancePrice ipUpfront = partialCost.get(partialCostKey);
 				handleUpfront(csv, ipUpfront);
 
-				// The is completed, cleanup and persist
+				// The price is completed, cleanup and persist
 				partialCost.remove(partialCostKey);
 				priceCounter++;
 				ipRepository.save(ipUpfront);
@@ -381,7 +382,7 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 		}
 
 		// Round the computed hourly cost
-		ipUpfront.setCost(round3Decimals(hourlyCost));
+		ipUpfront.setCost(round5Decimals(hourlyCost));
 	}
 
 	private ProvInstancePrice newProvInstancePrice(final AwsInstancePrice csv,
@@ -424,10 +425,10 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	}
 
 	/**
-	 * Round up to 3 decimals the given value.
+	 * Round up to 5 decimals the given value.
 	 */
-	private double round3Decimals(final double value) {
-		return Math.round(value * 1000d) / 1000d;
+	private double round5Decimals(final double value) {
+		return Math.round(value * 100000d) / 100000d;
 	}
 
 	/**

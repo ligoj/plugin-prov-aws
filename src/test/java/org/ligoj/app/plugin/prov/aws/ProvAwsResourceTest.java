@@ -116,20 +116,20 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		// Check the spot
 		final ComputedInstancePrice spotPrice = provResource
 				.lookupInstance(instance.getConfiguration().getSubscription().getId(), 2, 1741, true, VmOs.LINUX, null, null).getInstance();
-		Assert.assertEquals(12.444, spotPrice.getCost(), 0.001);
+		Assert.assertEquals(12.629, spotPrice.getCost(), 0.001);
 		Assert.assertEquals(0.0173d, spotPrice.getInstance().getCost(), 0.0001);
 		Assert.assertEquals("Spot", spotPrice.getInstance().getType().getName());
 		Assert.assertEquals("r4.large", spotPrice.getInstance().getInstance().getName());
 	}
 
 	private ProvQuoteInstance check(final QuoteVo quote) {
-		Assert.assertEquals(46.958d, quote.getCost(), 0.001);
+		Assert.assertEquals(47.219d, quote.getCost().getMin(), 0.001);
 		checkStorage(quote.getStorages().get(0));
 		return checkInstance(quote.getInstances().get(0));
 	}
 
 	private QuoteStorageVo checkStorage(final QuoteStorageVo storage) {
-		Assert.assertEquals(0.11d, storage.getCost(), 0.001);
+		Assert.assertEquals(0.55d, storage.getCost(), 0.001);
 		Assert.assertEquals(5, storage.getSize(), 0.001);
 		Assert.assertNotNull(storage.getQuoteInstance());
 		Assert.assertEquals("gp2", storage.getType().getName());
@@ -138,7 +138,7 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 	}
 
 	private ProvQuoteInstance checkInstance(final ProvQuoteInstance instance) {
-		Assert.assertEquals(46.848d, instance.getCost(), 0.001);
+		Assert.assertEquals(46.669d, instance.getCost(), 0.001);
 		final ProvInstancePrice price = instance.getInstancePrice();
 		Assert.assertEquals(1680d, price.getInitialCost(), 0.001);
 		Assert.assertEquals(VmOs.LINUX, price.getOs());
@@ -221,7 +221,7 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		final int subscription = newSubscription();
 		em.flush();
 		em.clear();
-		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost(), 0.001);
+		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), 0.001);
 
 		// Request an instance that would not be a Spot
 		Assert.assertNull(iptRepository.findByName("Reserved, 3yr, All Upfront"));
@@ -268,7 +268,7 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		final int subscription = newSubscription();
 		em.flush();
 		em.clear();
-		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost(), 0.001);
+		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), 0.001);
 
 		// Check no instance can be found
 		Assert.assertNull(provResource.lookupInstance(subscription, 1, 1, false, VmOs.LINUX, null, null).getInstance());
@@ -285,7 +285,7 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		final int subscription = newSubscription();
 		em.flush();
 		em.clear();
-		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost(), 0.001);
+		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), 0.001);
 
 		// Request an instance that would not be a Spot
 		final LowestInstancePrice price = provResource.lookupInstance(subscription, 2, 1741, true, VmOs.LINUX,
@@ -297,11 +297,11 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		ivo.setInstancePrice(price.getInstance().getInstance().getId());
 		ivo.setName("server1");
 		ivo.setSubscription(subscription);
-		final int instance = provResource.createInstance(ivo);
+		final int instance = provResource.createInstance(ivo).getId();
 		em.flush();
 		em.clear();
 
-		// Request an instance that would not be a Spot
+		// Add storage to this instance
 		final ComputedStoragePrice sprice = provResource.lookupStorage(subscription, 5, ProvStorageFrequency.HOT, instance, null).get(0);
 		final QuoteStorageEditionVo svo = new QuoteStorageEditionVo();
 		svo.setQuoteInstance(instance);

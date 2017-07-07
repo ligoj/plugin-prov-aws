@@ -28,7 +28,7 @@ public abstract class AWS4SignerBase {
 	 * the signature. For AWS4, all header names must be included in the process
 	 * in sorted canonicalized order.
 	 */
-	protected static String getCanonicalizeHeaderNames(final Map<String, String> headers) {
+	protected String getCanonicalizeHeaderNames(final Map<String, String> headers) {
 		return headers.keySet().stream().sorted(String.CASE_INSENSITIVE_ORDER).map(header -> header.toLowerCase()).collect(Collectors.joining(";"));
 	}
 
@@ -36,7 +36,7 @@ public abstract class AWS4SignerBase {
 	 * Computes the canonical headers with values for the request. For AWS4, all
 	 * headers must be included in the signing process.
 	 */
-	protected static String getCanonicalizedHeaderString(final Map<String, String> headers) {
+	protected String getCanonicalizedHeaderString(final Map<String, String> headers) {
 		if (headers == null || headers.isEmpty()) {
 			return "";
 		}
@@ -55,7 +55,7 @@ public abstract class AWS4SignerBase {
 	 *
 	 * @return
 	 */
-	protected static String getCanonicalRequest(final String path, final String httpMethod, final String queryParameters,
+	protected String getCanonicalRequest(final String path, final String httpMethod, final String queryParameters,
 			final String canonicalizedHeaderNames, final String canonicalizedHeaders, final String bodyHash) {
 		final String canonicalRequest = httpMethod + LF + getCanonicalizedResourcePath(path) + LF + queryParameters + LF + canonicalizedHeaders + LF
 				+ canonicalizedHeaderNames + LF + bodyHash;
@@ -65,7 +65,7 @@ public abstract class AWS4SignerBase {
 	/**
 	 * Returns the canonicalized resource path for the service endpoint.
 	 */
-	protected static String getCanonicalizedResourcePath(final String path) {
+	protected String getCanonicalizedResourcePath(final String path) {
 		if (path == null || path.isEmpty()) {
 			return "/";
 		}
@@ -95,7 +95,7 @@ public abstract class AWS4SignerBase {
 	 *
 	 * @return A canonicalized form for the specified query string parameters.
 	 */
-	public static String getCanonicalizedQueryString(final Map<String, String> parameters) {
+	public String getCanonicalizedQueryString(final Map<String, String> parameters) {
 		if (parameters == null || parameters.isEmpty()) {
 			return "";
 		}
@@ -120,7 +120,7 @@ public abstract class AWS4SignerBase {
 	 *            canonical Request
 	 * @return string to sign
 	 */
-	protected static String getStringToSign(final String dateTime, final String scope, final String canonicalRequest) {
+	protected String getStringToSign(final String dateTime, final String scope, final String canonicalRequest) {
 		return SCHEME + "-" + ALGORITHM + LF + dateTime + LF + scope + LF + Hex.encodeHexString(hash(canonicalRequest));
 	}
 
@@ -128,7 +128,7 @@ public abstract class AWS4SignerBase {
 	 * Hashes the string contents (assumed to be UTF-8) using the SHA-256
 	 * algorithm.
 	 */
-	public static byte[] hash(final String text) {
+	public byte[] hash(final String text) {
 		return DigestUtils.getSha256Digest().digest(StringUtils.getBytesUtf8(text));
 	}
 
@@ -141,7 +141,7 @@ public abstract class AWS4SignerBase {
 	 *            key
 	 * @return signature
 	 */
-	protected static byte[] sign(final String stringData, final byte[] key) {
+	protected byte[] sign(final String stringData, final byte[] key) {
 		return HmacUtils.hmacSha256(key, StringUtils.getBytesUtf8(stringData));
 	}
 }

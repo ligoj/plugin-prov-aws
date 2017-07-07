@@ -1,8 +1,8 @@
 package org.ligoj.app.plugin.prov.aws.auth;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.SimpleTimeZone;
+import java.time.Clock;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 
 import org.apache.commons.codec.binary.Hex;
 import org.springframework.stereotype.Service;
@@ -18,6 +18,11 @@ public class AWS4SignerForAuthorizationHeader extends AWS4SignerBase {
 	 **/
 	public static final String ISO8601BasicFormat = "yyyyMMdd'T'HHmmss'Z'";
 	public static final String DateStringFormat = "yyyyMMdd";
+	
+	/**
+	 * clock used to date query
+	 */
+	private Clock clock = Clock.systemUTC();
 
 	/**
 	 * Computes an AWS4 signature for a request, ready for inclusion as an
@@ -32,12 +37,9 @@ public class AWS4SignerForAuthorizationHeader extends AWS4SignerBase {
 	public String computeSignature(final AWS4SignatureQuery query) {
 		// first get the date and time for the subsequent request, and convert
 		// to ISO 8601 format for use in signature generation
-		final Date now = new Date();
-		final SimpleDateFormat dateTimeFormat = new SimpleDateFormat(ISO8601BasicFormat);
-		dateTimeFormat.setTimeZone(new SimpleTimeZone(0, "UTC"));
-
-		final String dateTimeStamp = dateTimeFormat.format(now);
-
+		final ZonedDateTime now = ZonedDateTime.now(clock);
+		
+		final String dateTimeStamp = DateTimeFormatter.ofPattern(ISO8601BasicFormat).format(now);
 		// update the headers with required 'x-amz-date' and 'host' values
 		query.getHeaders().put("x-amz-date", dateTimeStamp);
 		query.getHeaders().put("x-amz-content-sha256", query.getBodyHash());
@@ -57,10 +59,7 @@ public class AWS4SignerForAuthorizationHeader extends AWS4SignerBase {
 				canonicalizedHeaderNames, canonicalizedHeaders, query.getBodyHash());
 
 		// construct the string to be signed
-		final SimpleDateFormat dateStampFormat = new SimpleDateFormat(DateStringFormat);
-		dateStampFormat.setTimeZone(new SimpleTimeZone(0, "UTC"));
-
-		final String dateStamp = dateStampFormat.format(now);
+		final String dateStamp = DateTimeFormatter.ofPattern(DateStringFormat).format(now);
 		final String scope = dateStamp + "/" + query.getRegionName() + "/" + query.getServiceName() + "/" + TERMINATOR;
 		final String stringToSign = getStringToSign(dateTimeStamp, scope, canonicalRequest);
 

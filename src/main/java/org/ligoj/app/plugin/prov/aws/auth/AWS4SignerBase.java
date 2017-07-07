@@ -22,6 +22,7 @@ public abstract class AWS4SignerBase {
 	public static final String SCHEME = "AWS4";
 	public static final String ALGORITHM = "HMAC-SHA256";
 	public static final String TERMINATOR = "aws4_request";
+	private URLCodec urlCodec = new URLCodec();
 
 	/**
 	 * Returns the canonical collection of header names that will be included in
@@ -37,7 +38,7 @@ public abstract class AWS4SignerBase {
 	 * headers must be included in the signing process.
 	 */
 	protected String getCanonicalizedHeaderString(final Map<String, String> headers) {
-		if (headers == null || headers.isEmpty()) {
+		if (headers.isEmpty()) {
 			return "";
 		}
 		// step1: sort the headers by case-insensitive order
@@ -69,16 +70,15 @@ public abstract class AWS4SignerBase {
 		if (path == null || path.isEmpty()) {
 			return "/";
 		}
-		String encodedPath;
 		try {
-			encodedPath = new URLCodec().encode(path).replace("%2F", "/");
+			final String encodedPath = urlCodec.encode(path).replace("%2F", "/");
+			if (encodedPath.startsWith("/")) {
+				return encodedPath;
+			} else {
+				return "/".concat(encodedPath);
+			}
 		} catch (final EncoderException e) {
 			throw new TechnicalException("Error during resource path encoding", e);
-		}
-		if (encodedPath.startsWith("/")) {
-			return encodedPath;
-		} else {
-			return "/".concat(encodedPath);
 		}
 	}
 
@@ -96,13 +96,12 @@ public abstract class AWS4SignerBase {
 	 * @return A canonicalized form for the specified query string parameters.
 	 */
 	public String getCanonicalizedQueryString(final Map<String, String> parameters) {
-		if (parameters == null || parameters.isEmpty()) {
+		if (parameters.isEmpty()) {
 			return "";
 		}
-		final URLCodec codec = new URLCodec();
 		return parameters.keySet().stream().sorted().map(key -> {
 			try {
-				return codec.encode(key) + "=" + codec.encode(parameters.get(key));
+				return urlCodec.encode(key) + "=" + urlCodec.encode(parameters.get(key));
 			} catch (final EncoderException e) {
 				throw new TechnicalException("Error during parameters encoding", e);
 			}

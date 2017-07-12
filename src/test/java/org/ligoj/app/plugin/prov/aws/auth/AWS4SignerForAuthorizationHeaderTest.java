@@ -37,4 +37,19 @@ public class AWS4SignerForAuthorizationHeaderTest {
 				signer.computeSignature(signatureQuery));
 	}
 
+	/**
+	 * Test method for
+	 * {@link org.ligoj.app.plugin.prov.aws.auth.AWS4SignerForAuthorizationHeader#computeSignature(org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery)}.
+	 */
+	@Test
+	public void testComputeSignatureWithBody() throws Exception {
+		ReflectionTestUtils.setField(signer, "clock",
+				Clock.fixed(LocalDateTime.of(2017, 5, 29, 22, 15).toInstant(ZoneOffset.UTC), ZoneOffset.UTC.normalized()));
+		final AWS4SignatureQuery signatureQuery = AWS4SignatureQuery.builder().awsAccessKey("awsAccessKey").awsSecretKey("awsSecretKey")
+				.regionName("eu-west-1").httpMethod("GET").serviceName("s3").host("host").path("path").body("body").build();
+		Assert.assertEquals(
+				"AWS4-HMAC-SHA256 Credential=awsAccessKey/20170529/eu-west-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=6862bf8a9d43b2a6fca8da129608243e2edde64a98a187eddf4d7e79ddb65bfc",
+				signer.computeSignature(signatureQuery));
+	}
+
 }

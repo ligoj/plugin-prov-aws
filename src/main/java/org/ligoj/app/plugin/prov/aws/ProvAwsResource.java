@@ -10,6 +10,7 @@ import java.io.Writer;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Formatter;
@@ -23,7 +24,9 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
@@ -38,6 +41,9 @@ import org.ligoj.app.plugin.prov.AbstractProvResource;
 import org.ligoj.app.plugin.prov.ProvResource;
 import org.ligoj.app.plugin.prov.QuoteVo;
 import org.ligoj.app.plugin.prov.Terraforming;
+import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery;
+import org.ligoj.app.plugin.prov.aws.auth.AWS4SignerForAuthorizationHeader;
+import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery.AWS4SignatureQueryBuilder;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceRepository;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceTypeRepository;
 import org.ligoj.app.plugin.prov.dao.ProvInstanceRepository;
@@ -48,6 +54,8 @@ import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.model.ProvTenancy;
 import org.ligoj.app.plugin.prov.model.VmOs;
 import org.ligoj.app.resource.plugin.CurlProcessor;
+import org.ligoj.app.resource.plugin.CurlRequest;
+import org.ligoj.bootstrap.core.NamedBean;
 import org.ligoj.bootstrap.resource.system.configuration.ConfigurationResource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -159,6 +167,9 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 
 	@Autowired
 	private ProvAwsTerraformService terraformService;
+
+	@Autowired
+	private AWS4SignerForAuthorizationHeader signer;
 
 	@Override
 	public String getKey() {
@@ -470,5 +481,54 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 		final Map<String, String> parameters = subscriptionResource.getParameters(subscription);
 		return new String[] { "-var", "'AWS_ACCESS_KEY_ID=" + parameters.get(CONF_AWS_ACCESS_KEY_ID) + "'", "-var",
 				"'AWS_SECRET_ACCESS_KEY=" + parameters.get(CONF_AWS_SECRET_ACCESS_KEY) + "'" };
+	}
+
+	/**
+	 * 
+	 * @param subscription
+	 * @return
+	 */
+	@Path("ec2/keys/{subscription:\\d+}")
+	@GET
+	public List<NamedBean<String>> getEC2Keys(@PathParam("subscription") final int subscription) {
+		// call describeKeyPairs service
+		final String query = "Action=DescribeKeyPairs&Version=2016-11-15";
+		final AWS4SignatureQueryBuilder signatureQueryBuilder = AWS4SignatureQuery.builder().httpMethod("POST").serviceName("ec2")
+				.host("ec2." + DEFAULT_REGION + ".amazonaws.com").path("/").body(query);
+		final CurlRequest request = callAWSService(signatureQueryBuilder, subscription);
+		new CurlProcessor().process(request);
+		// extract keypairs from response
+		final Matcher keyNames = Pattern.compile("<keyName>(.*)</keyName>").matcher(request.getResponse());
+		final List<NamedBean<String>> keys = new ArrayList<>();
+		while (keyNames.find()) {
+			final NamedBean<String> bean = new NamedBean<>();
+			bean.setName(keyNames.group(1));
+			keys.add(bean);
+		}
+		return keys;
+	}
+
+	/**
+	 * Create Curl request for aws service. Initialize default values for
+	 * awsAccessKey, awsSecretKey and regionName and compute signature.
+	 * 
+	 * @param signatureQueryBuilder
+	 *            signatureQueryBuilder initialized with values used for this
+	 *            call (headers, parameters, host, ...)
+	 * @param subscription
+	 *            subscription id
+	 * @return initialized request
+	 */
+	private CurlRequest callAWSService(final AWS4SignatureQueryBuilder signatureQueryBuilder, final int subscription) {
+		final Map<String, String> parameters = subscriptionResource.getParameters(subscription);
+		final AWS4SignatureQuery signatureQuery = signatureQueryBuilder.awsAccessKey(parameters.get(CONF_AWS_ACCESS_KEY_ID))
+				.awsSecretKey(parameters.get(CONF_AWS_SECRET_ACCESS_KEY)).regionName(DEFAULT_REGION).build();
+		final String authorization = signer.computeSignature(signatureQuery);
+		final CurlRequest request = new CurlRequest(signatureQuery.getHttpMethod(), "https://" + signatureQuery.getHost() + signatureQuery.getPath(),
+				signatureQuery.getBody());
+		request.getHeaders().putAll(signatureQuery.getHeaders());
+		request.getHeaders().put("Authorization", authorization);
+		request.setSaveResponse(true);
+		return request;
 	}
 }

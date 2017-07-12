@@ -16,9 +16,6 @@ import lombok.NonNull;
 @Getter
 public class AWS4SignatureQuery {
 
-	/** SHA256 hash of an empty request body **/
-	public static final String EMPTY_BODY_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-
 	/**
 	 * query host
 	 */
@@ -63,9 +60,9 @@ public class AWS4SignatureQuery {
 	 */
 	private Map<String, String> queryParameters;
 	/**
-	 * query body SHA-256 hash
+	 * query body
 	 */
-	private String bodyHash;
+	private String body;
 
 	/**
 	 * builder class : used to initialize some attributes with defautl values
@@ -81,10 +78,6 @@ public class AWS4SignatureQuery {
 		 * query parameters
 		 */
 		private Map<String, String> queryParameters = new HashMap<>();
-		/**
-		 * query body SHA-256 hash
-		 */
-		private String bodyHash = EMPTY_BODY_SHA256;
 	}
 
 }

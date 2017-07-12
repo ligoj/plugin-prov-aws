@@ -120,15 +120,15 @@ public abstract class AWS4SignerBase {
 	 * @return string to sign
 	 */
 	protected String getStringToSign(final String dateTime, final String scope, final String canonicalRequest) {
-		return SCHEME + "-" + ALGORITHM + LF + dateTime + LF + scope + LF + Hex.encodeHexString(hash(canonicalRequest));
+		return SCHEME + "-" + ALGORITHM + LF + dateTime + LF + scope + LF + hash(canonicalRequest);
 	}
 
 	/**
 	 * Hashes the string contents (assumed to be UTF-8) using the SHA-256
 	 * algorithm.
 	 */
-	public byte[] hash(final String text) {
-		return DigestUtils.getSha256Digest().digest(StringUtils.getBytesUtf8(text));
+	public String hash(final String text) {
+		return Hex.encodeHexString(DigestUtils.getSha256Digest().digest(StringUtils.getBytesUtf8(text)));
 	}
 
 	/**

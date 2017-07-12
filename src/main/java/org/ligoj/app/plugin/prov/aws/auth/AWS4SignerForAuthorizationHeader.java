@@ -13,6 +13,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class AWS4SignerForAuthorizationHeader extends AWS4SignerBase {
 
+	/** SHA256 hash of an empty request body **/
+	public static final String EMPTY_BODY_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
 	/**
 	 * format strings for the date/time and date stamps required during signing
 	 **/
@@ -40,9 +43,15 @@ public class AWS4SignerForAuthorizationHeader extends AWS4SignerBase {
 		final ZonedDateTime now = ZonedDateTime.now(clock);
 		
 		final String dateTimeStamp = DateTimeFormatter.ofPattern(ISO8601BasicFormat).format(now);
+		final String bodyHash;
+		if(query.getBody()==null){
+			bodyHash = EMPTY_BODY_SHA256;
+		} else {
+			bodyHash = hash(query.getBody());
+		}
 		// update the headers with required 'x-amz-date' and 'host' values
 		query.getHeaders().put("x-amz-date", dateTimeStamp);
-		query.getHeaders().put("x-amz-content-sha256", query.getBodyHash());
+		query.getHeaders().put("x-amz-content-sha256", bodyHash);
 		query.getHeaders().put("Host", query.getHost());
 
 		// canonicalize the headers; we need the set of header names as well as
@@ -56,7 +65,7 @@ public class AWS4SignerForAuthorizationHeader extends AWS4SignerBase {
 
 		// canonicalize the various components of the request
 		final String canonicalRequest = getCanonicalRequest(query.getPath(), query.getHttpMethod(), canonicalizedQueryParameters,
-				canonicalizedHeaderNames, canonicalizedHeaders, query.getBodyHash());
+				canonicalizedHeaderNames, canonicalizedHeaders, bodyHash);
 
 		// construct the string to be signed
 		final String dateStamp = DateTimeFormatter.ofPattern(DateStringFormat).format(now);

@@ -33,6 +33,7 @@ import javax.ws.rs.core.MediaType;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.ligoj.app.api.SubscriptionStatusWithData;
 import org.ligoj.app.dao.NodeRepository;
 import org.ligoj.app.dao.SubscriptionRepository;
 import org.ligoj.app.model.Node;
@@ -42,8 +43,8 @@ import org.ligoj.app.plugin.prov.ProvResource;
 import org.ligoj.app.plugin.prov.QuoteVo;
 import org.ligoj.app.plugin.prov.Terraforming;
 import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery;
-import org.ligoj.app.plugin.prov.aws.auth.AWS4SignerForAuthorizationHeader;
 import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery.AWS4SignatureQueryBuilder;
+import org.ligoj.app.plugin.prov.aws.auth.AWS4SignerForAuthorizationHeader;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceRepository;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceTypeRepository;
 import org.ligoj.app.plugin.prov.dao.ProvInstanceRepository;
@@ -56,6 +57,7 @@ import org.ligoj.app.plugin.prov.model.VmOs;
 import org.ligoj.app.resource.plugin.CurlProcessor;
 import org.ligoj.app.resource.plugin.CurlRequest;
 import org.ligoj.bootstrap.core.NamedBean;
+import org.ligoj.bootstrap.core.resource.BusinessException;
 import org.ligoj.bootstrap.resource.system.configuration.ConfigurationResource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -179,6 +181,38 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	@Override
 	public List<Class<?>> getInstalledEntities() {
 		return Arrays.asList(Node.class, ProvStorageType.class, Parameter.class);
+	}
+
+	@Override
+	public void create(final int subscription) throws Exception {
+		if (!checkAwsConnection(subscription)) {
+			throw new BusinessException("Cannot access to AWS services with these parameters");
+		}
+	}
+
+	@Override
+	public SubscriptionStatusWithData checkSubscriptionStatus(final int subscription, final String node,
+			final Map<String, String> parameters) throws Exception {
+		if (checkAwsConnection(subscription)) {
+			return super.checkSubscriptionStatus(subscription, node, parameters);
+		}
+		return new SubscriptionStatusWithData(false);
+	}
+
+	/**
+	 * check AWS connection
+	 * 
+	 * @param subscription
+	 *            subscription
+	 * @return true if aws connection is up
+	 * @throws Exception
+	 */
+	public boolean checkAwsConnection(final int subscription) throws Exception {
+		// call s3 ls service
+		final AWS4SignatureQueryBuilder signatureQueryBuilder = AWS4SignatureQuery.builder().httpMethod("GET")
+				.serviceName("s3").host("s3-" + DEFAULT_REGION + ".amazonaws.com").path("/");
+		final CurlRequest request = prepareCallAWSService(signatureQueryBuilder, subscription);
+		return new CurlProcessor().process(request);
 	}
 
 	/**
@@ -496,10 +530,10 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 		final AWS4SignatureQueryBuilder signatureQueryBuilder = AWS4SignatureQuery.builder().httpMethod("POST")
 				.serviceName("ec2").host("ec2." + DEFAULT_REGION + ".amazonaws.com").path("/").body(query);
 		final CurlRequest request = prepareCallAWSService(signatureQueryBuilder, subscription);
-		new CurlProcessor().process(request);
+		final boolean httpResult = new CurlProcessor().process(request);
 		// extract keypairs from response
 		final List<NamedBean<String>> keys = new ArrayList<>();
-		if (request.getResponse() != null) {
+		if (httpResult) {
 			final Matcher keyNames = Pattern.compile("<keyName>(.*)</keyName>").matcher(request.getResponse());
 			while (keyNames.find()) {
 				final NamedBean<String> bean = new NamedBean<>();

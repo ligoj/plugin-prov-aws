@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
 
 import javax.transaction.Transactional;
@@ -22,6 +23,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ligoj.app.AbstractServerTest;
 import org.ligoj.app.api.SubscriptionMode;
+import org.ligoj.app.api.SubscriptionStatusWithData;
 import org.ligoj.app.dao.ProjectRepository;
 import org.ligoj.app.iam.model.CacheCompany;
 import org.ligoj.app.iam.model.CacheUser;
@@ -53,9 +55,12 @@ import org.ligoj.app.resource.plugin.CurlRequest;
 import org.ligoj.app.resource.subscription.SubscriptionEditionVo;
 import org.ligoj.app.resource.subscription.SubscriptionResource;
 import org.ligoj.bootstrap.core.NamedBean;
+import org.ligoj.bootstrap.core.resource.BusinessException;
 import org.ligoj.bootstrap.resource.system.configuration.ConfigurationResource;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ContextConfiguration;
@@ -98,6 +103,24 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		persistSystemEntities();
 		persistEntities("csv", new Class[] { Node.class, Project.class, CacheCompany.class, CacheUser.class,
 				DelegateNode.class, Parameter.class }, StandardCharsets.UTF_8.name());
+	}
+
+	/**
+	 * configuration class used to mock AWS calls
+	 * 
+	 * @author alocquet
+	 */
+	@Configuration
+	public static class MockConfiguration {
+		@Bean
+		ProvAwsResource provAwsResource() {
+			return new ProvAwsResource() {
+				@Override
+				public boolean checkAwsConnection(int subscription) throws Exception {
+					return true;
+				}
+			};
+		}
 	}
 
 	@Test
@@ -368,13 +391,11 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 	public void testGetEC2Keys() throws Exception {
 		final int subscription = newSubscription();
 
-		final ProvAwsResource resourceMock = Mockito.mock(ProvAwsResource.class);
-		Mockito.when(resourceMock.getEC2Keys(Mockito.eq(subscription))).thenCallRealMethod();
-
+		final ProvAwsResource resourceMock = Mockito.spy(resource);
 		final CurlRequest mockRequest = new CurlRequest("GET", "http://localhost:" + MOCK_PORT + "/mock", null);
 		mockRequest.setSaveResponse(true);
-		Mockito.when(resourceMock.prepareCallAWSService(Mockito.any(AWS4SignatureQueryBuilder.class),
-				Mockito.eq(subscription))).thenReturn(mockRequest);
+		Mockito.doReturn(mockRequest).when(resourceMock).prepareCallAWSService(Mockito.any(AWS4SignatureQueryBuilder.class),
+				Mockito.eq(subscription));
 		httpServer.stubFor(get(urlEqualTo("/mock"))
 				.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody("<keyName>my-key</keyName>")));
 		httpServer.start();
@@ -414,4 +435,54 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		Assert.assertEquals("POST", request.getMethod());
 		Assert.assertEquals("body", request.getContent());
 	}
+
+	@Test(expected = BusinessException.class)
+	public void testCreateFailed() throws Exception {
+		final ProvAwsResource resourceMock = Mockito.spy(ProvAwsResource.class);
+		Mockito.doReturn(false).when(resourceMock).checkAwsConnection(Mockito.anyInt());
+		resourceMock.create(1);
+	}
+
+	@Test
+	public void testCheckSubscriptionStatusUp() throws Exception {
+		final int subscription = newSubscription();
+		final SubscriptionStatusWithData status = resource.checkSubscriptionStatus(subscription, null,
+				new HashMap<String, String>());
+		Assert.assertTrue(status.getStatus().isUp());
+	}
+
+	@Test
+	public void testCheckSubscriptionStatusDown() throws Exception {
+		final int subscription = newSubscription();
+		final ProvAwsResource resourceMock = Mockito.spy(ProvAwsResource.class);
+		Mockito.doReturn(false).when(resourceMock).checkAwsConnection(Mockito.anyInt());
+		final SubscriptionStatusWithData status = resourceMock.checkSubscriptionStatus(subscription, null,
+				new HashMap<String, String>());
+		Assert.assertFalse(status.getStatus().isUp());
+	}
+
+	@Test
+	public void testCheckAwsConnectionUp() throws Exception {
+		Assert.assertTrue(checkAwsConnection(HttpStatus.SC_OK));
+	}
+
+	@Test
+	public void testCheckAwsConnectionDown() throws Exception {
+		Assert.assertFalse(checkAwsConnection(HttpStatus.SC_FORBIDDEN));
+	}
+
+	private boolean checkAwsConnection(int status) throws Exception {
+		final int subscription = newSubscription();
+
+		final ProvAwsResource resourceMock = Mockito.spy(new ProvAwsResource());
+		final CurlRequest mockRequest = new CurlRequest("GET", "http://localhost:" + MOCK_PORT + "/mock", null);
+		mockRequest.setSaveResponse(true);
+		Mockito.doReturn(mockRequest).when(resourceMock)
+				.prepareCallAWSService(Mockito.any(AWS4SignatureQueryBuilder.class), Mockito.eq(subscription));
+
+		httpServer.stubFor(get(urlEqualTo("/mock")).willReturn(aResponse().withStatus(status)));
+		httpServer.start();
+		return resourceMock.checkAwsConnection(subscription);
+	}
+
 }

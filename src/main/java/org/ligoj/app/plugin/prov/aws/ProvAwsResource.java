@@ -493,17 +493,19 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	public List<NamedBean<String>> getEC2Keys(@PathParam("subscription") final int subscription) {
 		// call describeKeyPairs service
 		final String query = "Action=DescribeKeyPairs&Version=2016-11-15";
-		final AWS4SignatureQueryBuilder signatureQueryBuilder = AWS4SignatureQuery.builder().httpMethod("POST").serviceName("ec2")
-				.host("ec2." + DEFAULT_REGION + ".amazonaws.com").path("/").body(query);
-		final CurlRequest request = callAWSService(signatureQueryBuilder, subscription);
+		final AWS4SignatureQueryBuilder signatureQueryBuilder = AWS4SignatureQuery.builder().httpMethod("POST")
+				.serviceName("ec2").host("ec2." + DEFAULT_REGION + ".amazonaws.com").path("/").body(query);
+		final CurlRequest request = prepareCallAWSService(signatureQueryBuilder, subscription);
 		new CurlProcessor().process(request);
 		// extract keypairs from response
-		final Matcher keyNames = Pattern.compile("<keyName>(.*)</keyName>").matcher(request.getResponse());
 		final List<NamedBean<String>> keys = new ArrayList<>();
-		while (keyNames.find()) {
-			final NamedBean<String> bean = new NamedBean<>();
-			bean.setName(keyNames.group(1));
-			keys.add(bean);
+		if (request.getResponse() != null) {
+			final Matcher keyNames = Pattern.compile("<keyName>(.*)</keyName>").matcher(request.getResponse());
+			while (keyNames.find()) {
+				final NamedBean<String> bean = new NamedBean<>();
+				bean.setName(keyNames.group(1));
+				keys.add(bean);
+			}
 		}
 		return keys;
 	}
@@ -519,13 +521,15 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	 *            subscription id
 	 * @return initialized request
 	 */
-	private CurlRequest callAWSService(final AWS4SignatureQueryBuilder signatureQueryBuilder, final int subscription) {
+	protected CurlRequest prepareCallAWSService(final AWS4SignatureQueryBuilder signatureQueryBuilder,
+			final int subscription) {
 		final Map<String, String> parameters = subscriptionResource.getParameters(subscription);
-		final AWS4SignatureQuery signatureQuery = signatureQueryBuilder.awsAccessKey(parameters.get(CONF_AWS_ACCESS_KEY_ID))
+		final AWS4SignatureQuery signatureQuery = signatureQueryBuilder
+				.awsAccessKey(parameters.get(CONF_AWS_ACCESS_KEY_ID))
 				.awsSecretKey(parameters.get(CONF_AWS_SECRET_ACCESS_KEY)).regionName(DEFAULT_REGION).build();
 		final String authorization = signer.computeSignature(signatureQuery);
-		final CurlRequest request = new CurlRequest(signatureQuery.getHttpMethod(), "https://" + signatureQuery.getHost() + signatureQuery.getPath(),
-				signatureQuery.getBody());
+		final CurlRequest request = new CurlRequest(signatureQuery.getHttpMethod(),
+				"https://" + signatureQuery.getHost() + signatureQuery.getPath(), signatureQuery.getBody());
 		request.getHeaders().putAll(signatureQuery.getHeaders());
 		request.getHeaders().put("Authorization", authorization);
 		request.setSaveResponse(true);

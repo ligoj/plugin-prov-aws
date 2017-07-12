@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import javax.transaction.Transactional;
 
@@ -36,6 +37,8 @@ import org.ligoj.app.plugin.prov.QuoteInstanceEditionVo;
 import org.ligoj.app.plugin.prov.QuoteStorageEditionVo;
 import org.ligoj.app.plugin.prov.QuoteStorageVo;
 import org.ligoj.app.plugin.prov.QuoteVo;
+import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery;
+import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery.AWS4SignatureQueryBuilder;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceTypeRepository;
 import org.ligoj.app.plugin.prov.dao.ProvInstanceRepository;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
@@ -46,9 +49,12 @@ import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.model.ProvTenancy;
 import org.ligoj.app.plugin.prov.model.VmOs;
 import org.ligoj.app.resource.node.ParameterValueCreateVo;
+import org.ligoj.app.resource.plugin.CurlRequest;
 import org.ligoj.app.resource.subscription.SubscriptionEditionVo;
 import org.ligoj.app.resource.subscription.SubscriptionResource;
+import org.ligoj.bootstrap.core.NamedBean;
 import org.ligoj.bootstrap.resource.system.configuration.ConfigurationResource;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.annotation.Rollback;
@@ -90,9 +96,8 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 	@Before
 	public void prepareData() throws IOException {
 		persistSystemEntities();
-		persistEntities("csv",
-				new Class[] { Node.class, Project.class, CacheCompany.class, CacheUser.class, DelegateNode.class, Parameter.class },
-				StandardCharsets.UTF_8.name());
+		persistEntities("csv", new Class[] { Node.class, Project.class, CacheCompany.class, CacheUser.class,
+				DelegateNode.class, Parameter.class }, StandardCharsets.UTF_8.name());
 	}
 
 	@Test
@@ -115,7 +120,9 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 
 		// Check the spot
 		final ComputedInstancePrice spotPrice = provResource
-				.lookupInstance(instance.getConfiguration().getSubscription().getId(), 2, 1741, true, VmOs.LINUX, null, null).getInstance();
+				.lookupInstance(instance.getConfiguration().getSubscription().getId(), 2, 1741, true, VmOs.LINUX, null,
+						null)
+				.getInstance();
 		Assert.assertEquals(12.629, spotPrice.getCost(), 0.001);
 		Assert.assertEquals(0.0173d, spotPrice.getInstance().getCost(), 0.0001);
 		Assert.assertEquals("Spot", spotPrice.getInstance().getType().getName());
@@ -160,10 +167,10 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		initSpringSecurityContext(DEFAULT_USER);
 		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
 		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/spot.js");
-		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/index.csv").getInputStream(), "UTF-8"))));
-		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/spot.js").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
+				IOUtils.toString(new ClassPathResource("mock-server/aws/index.csv").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
+				IOUtils.toString(new ClassPathResource("mock-server/aws/spot.js").getInputStream(), "UTF-8"))));
 		httpServer.start();
 
 		// Check the basic quote
@@ -183,8 +190,10 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 
 		// Check the spot
 		final ComputedInstancePrice spotPrice = provResource
-				.lookupInstance(instance.getConfiguration().getSubscription().getId(), 2, 1741, null, VmOs.LINUX,
-						instanceRepository.findByName(instance.getConfiguration().getSubscription().getId(), "r4.large").getId(), null)
+				.lookupInstance(instance.getConfiguration().getSubscription().getId(), 2, 1741, null,
+						VmOs.LINUX, instanceRepository
+								.findByName(instance.getConfiguration().getSubscription().getId(), "r4.large").getId(),
+						null)
 				.getInstance();
 		Assert.assertTrue(spotPrice.getCost() > 5d);
 		Assert.assertTrue(spotPrice.getCost() < 100d);
@@ -210,8 +219,8 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		initSpringSecurityContext(DEFAULT_USER);
 		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
 		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/any.js");
-		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/index-empty.csv").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
+				IOUtils.toString(new ClassPathResource("mock-server/aws/index-empty.csv").getInputStream(), "UTF-8"))));
 		httpServer.start();
 
 		// Check the reserved
@@ -238,10 +247,10 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		initSpringSecurityContext(DEFAULT_USER);
 		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
 		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/spot.js");
-		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/index-empty.csv").getInputStream(), "UTF-8"))));
-		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/spot-error.js").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
+				IOUtils.toString(new ClassPathResource("mock-server/aws/index-empty.csv").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
+				IOUtils.toString(new ClassPathResource("mock-server/aws/spot-error.js").getInputStream(), "UTF-8"))));
 		httpServer.start();
 
 		// Parse error expected
@@ -256,10 +265,10 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		initSpringSecurityContext(DEFAULT_USER);
 		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
 		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/spot.js");
-		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/index-empty.csv").getInputStream(), "UTF-8"))));
-		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/spot-empty.js").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
+				IOUtils.toString(new ClassPathResource("mock-server/aws/index-empty.csv").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
+				IOUtils.toString(new ClassPathResource("mock-server/aws/spot-empty.js").getInputStream(), "UTF-8"))));
 		httpServer.start();
 
 		resource.install();
@@ -302,7 +311,8 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		em.clear();
 
 		// Add storage to this instance
-		final ComputedStoragePrice sprice = provResource.lookupStorage(subscription, 5, ProvStorageFrequency.HOT, instance, null).get(0);
+		final ComputedStoragePrice sprice = provResource
+				.lookupStorage(subscription, 5, ProvStorageFrequency.HOT, instance, null).get(0);
 		final QuoteStorageEditionVo svo = new QuoteStorageEditionVo();
 		svo.setQuoteInstance(instance);
 		svo.setSize(5);
@@ -346,5 +356,62 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		Assert.assertTrue(parameters.length == 4);
 		Assert.assertTrue("'AWS_ACCESS_KEY_ID=KEY'".equals(parameters[1]));
 		Assert.assertTrue("'AWS_SECRET_ACCESS_KEY=SECRET'".equals(parameters[3]));
+	}
+
+	/**
+	 * retrieve keys from AWS
+	 * 
+	 * @throws Exception
+	 *             exception
+	 */
+	@Test
+	public void testGetEC2Keys() throws Exception {
+		final int subscription = newSubscription();
+
+		final ProvAwsResource resourceMock = Mockito.mock(ProvAwsResource.class);
+		Mockito.when(resourceMock.getEC2Keys(Mockito.eq(subscription))).thenCallRealMethod();
+
+		final CurlRequest mockRequest = new CurlRequest("GET", "http://localhost:" + MOCK_PORT + "/mock", null);
+		mockRequest.setSaveResponse(true);
+		Mockito.when(resourceMock.prepareCallAWSService(Mockito.any(AWS4SignatureQueryBuilder.class),
+				Mockito.eq(subscription))).thenReturn(mockRequest);
+		httpServer.stubFor(get(urlEqualTo("/mock"))
+				.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody("<keyName>my-key</keyName>")));
+		httpServer.start();
+
+		final List<NamedBean<String>> keys = resourceMock.getEC2Keys(subscription);
+		Assert.assertFalse(keys.isEmpty());
+		Assert.assertEquals(1, keys.size());
+		Assert.assertEquals("my-key", keys.get(0).getName());
+	}
+
+	/**
+	 * error when we retrieve keys from AWS
+	 * 
+	 * @throws Exception
+	 *             exception
+	 */
+	@Test
+	public void testGetEC2KeysAWSError() throws Exception {
+		final int subscription = newSubscription();
+		Assert.assertTrue(resource.getEC2Keys(subscription).isEmpty());
+	}
+
+	/**
+	 * prepare call to AWS
+	 * 
+	 * @throws Exception
+	 *             exception
+	 */
+	@Test
+	public void testPrepareCallAWSService() throws Exception {
+		final int subscription = newSubscription();
+		final CurlRequest request = resource.prepareCallAWSService(
+				AWS4SignatureQuery.builder().httpMethod("POST").host("mock").path("/").body("body").serviceName("s3"),
+				subscription);
+		Assert.assertTrue(request.getHeaders().containsKey("Authorization"));
+		Assert.assertEquals("https://mock/", request.getUrl());
+		Assert.assertEquals("POST", request.getMethod());
+		Assert.assertEquals("body", request.getContent());
 	}
 }

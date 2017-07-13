@@ -55,8 +55,7 @@ public class AWS4SignerForAuthorizationHeader extends AWS4SignerBase {
 		query.getHeaders().put("Host", query.getHost());
 
 		// canonicalize the headers; we need the set of header names as well as
-		// the
-		// names and values to go into the signature process
+		// the names and values to go into the signature process
 		final String canonicalizedHeaderNames = getCanonicalizeHeaderNames(query.getHeaders());
 		final String canonicalizedHeaders = getCanonicalizedHeaderString(query.getHeaders());
 

@@ -57,6 +57,7 @@ import org.ligoj.app.resource.subscription.SubscriptionResource;
 import org.ligoj.bootstrap.core.NamedBean;
 import org.ligoj.bootstrap.core.resource.BusinessException;
 import org.ligoj.bootstrap.resource.system.configuration.ConfigurationResource;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -213,9 +214,9 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 
 		// Check the spot
 		final ComputedInstancePrice spotPrice = provResource
-				.lookupInstance(instance.getConfiguration().getSubscription().getId(), 2, 1741, null,
-						VmOs.LINUX, instanceRepository
-								.findByName(instance.getConfiguration().getSubscription().getId(), "r4.large").getId(),
+				.lookupInstance(instance.getConfiguration().getSubscription().getId(), 2, 1741, null, VmOs.LINUX,
+						instanceRepository.findByName(instance.getConfiguration().getSubscription().getId(), "r4.large")
+								.getId(),
 						null)
 				.getInstance();
 		Assert.assertTrue(spotPrice.getCost() > 5d);
@@ -394,8 +395,8 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		final ProvAwsResource resourceMock = Mockito.spy(resource);
 		final CurlRequest mockRequest = new CurlRequest("GET", "http://localhost:" + MOCK_PORT + "/mock", null);
 		mockRequest.setSaveResponse(true);
-		Mockito.doReturn(mockRequest).when(resourceMock).prepareCallAWSService(Mockito.any(AWS4SignatureQueryBuilder.class),
-				Mockito.eq(subscription));
+		Mockito.doReturn(mockRequest).when(resourceMock)
+				.prepareCallAWSService(ArgumentMatchers.any(AWS4SignatureQueryBuilder.class), ArgumentMatchers.eq(subscription));
 		httpServer.stubFor(get(urlEqualTo("/mock"))
 				.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody("<keyName>my-key</keyName>")));
 		httpServer.start();
@@ -439,7 +440,7 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 	@Test(expected = BusinessException.class)
 	public void testCreateFailed() throws Exception {
 		final ProvAwsResource resourceMock = Mockito.spy(ProvAwsResource.class);
-		Mockito.doReturn(false).when(resourceMock).checkAwsConnection(Mockito.anyInt());
+		Mockito.doReturn(false).when(resourceMock).checkAwsConnection(ArgumentMatchers.anyInt());
 		resourceMock.create(1);
 	}
 
@@ -455,7 +456,7 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 	public void testCheckSubscriptionStatusDown() throws Exception {
 		final int subscription = newSubscription();
 		final ProvAwsResource resourceMock = Mockito.spy(ProvAwsResource.class);
-		Mockito.doReturn(false).when(resourceMock).checkAwsConnection(Mockito.anyInt());
+		Mockito.doReturn(false).when(resourceMock).checkAwsConnection(ArgumentMatchers.anyInt());
 		final SubscriptionStatusWithData status = resourceMock.checkSubscriptionStatus(subscription, null,
 				new HashMap<String, String>());
 		Assert.assertFalse(status.getStatus().isUp());
@@ -477,8 +478,8 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		final ProvAwsResource resourceMock = Mockito.spy(new ProvAwsResource());
 		final CurlRequest mockRequest = new CurlRequest("GET", "http://localhost:" + MOCK_PORT + "/mock", null);
 		mockRequest.setSaveResponse(true);
-		Mockito.doReturn(mockRequest).when(resourceMock)
-				.prepareCallAWSService(Mockito.any(AWS4SignatureQueryBuilder.class), Mockito.eq(subscription));
+		Mockito.doReturn(mockRequest).when(resourceMock).prepareCallAWSService(
+				ArgumentMatchers.any(AWS4SignatureQueryBuilder.class), ArgumentMatchers.eq(subscription));
 
 		httpServer.stubFor(get(urlEqualTo("/mock")).willReturn(aResponse().withStatus(status)));
 		httpServer.start();

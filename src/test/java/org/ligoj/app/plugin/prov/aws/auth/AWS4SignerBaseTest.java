@@ -11,6 +11,7 @@ import org.apache.commons.codec.net.URLCodec;
 import org.junit.Assert;
 import org.junit.Test;
 import org.ligoj.bootstrap.core.resource.TechnicalException;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -112,7 +113,7 @@ public class AWS4SignerBaseTest {
 		final AWS4SignerBase signer = new AWS4SignerForAuthorizationHeader();
 		final URLCodec urlCodec = Mockito.mock(URLCodec.class);
 		ReflectionTestUtils.setField(signer, "urlCodec", urlCodec);
-		Mockito.when(urlCodec.encode(Mockito.anyString())).thenThrow(new EncoderException());
+		Mockito.when(urlCodec.encode(ArgumentMatchers.anyString())).thenThrow(new EncoderException());
 		signer.getCanonicalizedResourcePath("/path");
 	}
 
@@ -143,7 +144,7 @@ public class AWS4SignerBaseTest {
 		final AWS4SignerBase signer = new AWS4SignerForAuthorizationHeader();
 		final URLCodec urlCodec = Mockito.mock(URLCodec.class);
 		ReflectionTestUtils.setField(signer, "urlCodec", urlCodec);
-		Mockito.when(urlCodec.encode(Mockito.anyString())).thenThrow(new EncoderException());
+		Mockito.when(urlCodec.encode(ArgumentMatchers.anyString())).thenThrow(new EncoderException());
 		signer.getCanonicalizedQueryString(ImmutableMap.of("q2", "v2", "q1", "v1"));
 	}
 

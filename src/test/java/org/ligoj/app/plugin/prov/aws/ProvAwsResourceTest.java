@@ -7,6 +7,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.Reader;
 import java.net.ConnectException;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
@@ -104,6 +105,10 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		persistSystemEntities();
 		persistEntities("csv", new Class[] { Node.class, Project.class, CacheCompany.class, CacheUser.class,
 				DelegateNode.class, Parameter.class }, StandardCharsets.UTF_8.name());
+		
+		// Coverage only
+		new AwsCsvForBean(null).toBean(null, (Reader)null);
+		new AwsInstancePrice().getDrop();
 	}
 
 	/**

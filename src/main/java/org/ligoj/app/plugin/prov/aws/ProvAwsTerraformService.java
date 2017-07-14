@@ -7,12 +7,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.ligoj.app.model.Subscription;
 import org.ligoj.app.plugin.prov.QuoteStorageVo;
 import org.ligoj.app.plugin.prov.QuoteVo;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
+import org.ligoj.app.plugin.prov.model.ProvQuoteStorage;
 import org.ligoj.app.plugin.prov.model.VmOs;
 import org.springframework.stereotype.Service;
 
@@ -224,8 +224,7 @@ public class ProvAwsTerraformService {
 	 */
 	private void writeInstanceStorages(final Writer writer, final QuoteVo quote, final ProvQuoteInstance instance) throws IOException {
 		int idx = 0;
-		for (final QuoteStorageVo storage : quote.getStorages().stream().filter(storage -> storage.getQuoteInstance() == instance.getId())
-				.collect(Collectors.toList())) {
+		for (final ProvQuoteStorage storage : instance.getStorages()) {
 			if (idx == 0) {
 				writer.write("  root_block_device {\n");
 			} else {

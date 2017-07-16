@@ -105,8 +105,8 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	private static final String EC2_PRICES = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/%s/index.csv";
 
 	/**
-	 * The EC2 spot price end-point, a JSON file. The region code will be used
-	 * to filter the JSON prices.
+	 * The EC2 spot price end-point, a JSON file. The region code will be used to
+	 * filter the JSON prices.
 	 */
 	private static final String EC2_PRICES_SPOT = "https://spot-price.s3.amazonaws.com/spot.js";
 	private static final Pattern LEASING_TIME = Pattern.compile("(\\d)yr");
@@ -275,7 +275,14 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 			}
 
 			// Install the spot instances and collect the amount
-			priceCounter = spotPrices.mapToInt(j -> install(j, instances, spotPriceType)).sum();
+			priceCounter = spotPrices.filter(j -> {
+				final boolean availability = instances.containsKey(j.getName());
+				if (!availability) {
+					// Unavailable instances type of spot are ignored
+					log.warn("Instance {} is refrenced from spot but not available", j.getName());
+				}
+				return availability;
+			}).mapToInt(j -> install(j, instances, spotPriceType)).sum();
 		} finally {
 			// Report
 			log.info("AWS EC2 Spot import finished : {} prices", priceCounter);
@@ -296,8 +303,8 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	}
 
 	/**
-	 * Install the install the instance type (if needed), the instance price
-	 * type (if needed) and the price.
+	 * Install the install the instance type (if needed), the instance price type
+	 * (if needed) and the price.
 	 * 
 	 * @param json
 	 *            The current JSON entry.
@@ -370,8 +377,8 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	}
 
 	/**
-	 * Install the install the instance type (if needed), the instance price
-	 * type (if needed) and the price.
+	 * Install the install the instance type (if needed), the instance price type
+	 * (if needed) and the price.
 	 * 
 	 * @param csv
 	 *            The current CSV entry.
@@ -545,12 +552,12 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	}
 
 	/**
-	 * Create Curl request for aws service. Initialize default values for
+	 * Create Curl request for AWS service. Initialize default values for
 	 * awsAccessKey, awsSecretKey and regionName and compute signature.
 	 * 
 	 * @param signatureQueryBuilder
-	 *            signatureQueryBuilder initialized with values used for this
-	 *            call (headers, parameters, host, ...)
+	 *            signatureQueryBuilder initialized with values used for this call
+	 *            (headers, parameters, host, ...)
 	 * @param subscription
 	 *            subscription id
 	 * @return initialized request

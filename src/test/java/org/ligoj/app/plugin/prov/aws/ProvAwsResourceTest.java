@@ -4,6 +4,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -42,6 +43,7 @@ import org.ligoj.app.plugin.prov.QuoteStorageVo;
 import org.ligoj.app.plugin.prov.QuoteVo;
 import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery;
 import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery.AWS4SignatureQueryBuilder;
+import org.ligoj.app.plugin.prov.dao.ProvInstancePriceRepository;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceTypeRepository;
 import org.ligoj.app.plugin.prov.dao.ProvInstanceRepository;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
@@ -95,6 +97,9 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 	private ProvInstancePriceTypeRepository iptRepository;
 
 	@Autowired
+	private ProvInstancePriceRepository ipRepository;
+
+	@Autowired
 	private ProvInstanceRepository instanceRepository;
 
 	@Autowired
@@ -105,9 +110,16 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		persistSystemEntities();
 		persistEntities("csv", new Class[] { Node.class, Project.class, CacheCompany.class, CacheUser.class,
 				DelegateNode.class, Parameter.class }, StandardCharsets.UTF_8.name());
-		
-		// Coverage only
-		new AwsCsvForBean(null).toBean(null, (Reader)null);
+	}
+
+	/**
+	 * Only for dead but necessary contracted code.
+	 * 
+	 * @throws IOException
+	 */
+	@Test
+	public void dummyCoverage() throws IOException {
+		new AwsCsvForBean(Mockito.mock(BufferedReader.class)).toBean(null, (Reader)null);
 		new AwsInstancePrice().getDrop();
 	}
 
@@ -156,6 +168,7 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		Assert.assertEquals(0.0173d, spotPrice.getInstance().getCost(), 0.0001);
 		Assert.assertEquals("Spot", spotPrice.getInstance().getType().getName());
 		Assert.assertEquals("r4.large", spotPrice.getInstance().getInstance().getName());
+		Assert.assertEquals(5, ipRepository.findAllBy("type.name","Spot").size());
 	}
 
 	private ProvQuoteInstance check(final QuoteVo quote) {
@@ -277,13 +290,36 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
 		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/spot.js");
 		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
-				IOUtils.toString(new ClassPathResource("mock-server/aws/index-empty.csv").getInputStream(), "UTF-8"))));
+				IOUtils.toString(new ClassPathResource("mock-server/aws/index.csv").getInputStream(), "UTF-8"))));
 		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
 				IOUtils.toString(new ClassPathResource("mock-server/aws/spot-error.js").getInputStream(), "UTF-8"))));
 		httpServer.start();
 
 		// Parse error expected
 		resource.install();
+	}
+
+	/**
+	 * Spot refers to a non existing/not available instance
+	 */
+	@Test
+	public void installSpotInstanceBrokenReference() throws Exception {
+		initSpringSecurityContext(DEFAULT_USER);
+		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
+		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/spot.js");
+		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
+				IOUtils.toString(new ClassPathResource("mock-server/aws/index.csv").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
+				.withBody(IOUtils.toString(
+						new ClassPathResource("mock-server/aws/spot-unavailable-instance.js").getInputStream(),
+						"UTF-8"))));
+		httpServer.start();
+
+		// Parse error expected
+		resource.install();
+
+		// The unique spot could not be installed
+		Assert.assertEquals(0, ipRepository.findAllBy("type.name","Spot").size());
 	}
 
 	/**
@@ -307,6 +343,7 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		em.flush();
 		em.clear();
 		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), 0.001);
+		Assert.assertEquals(0, ipRepository.findAllBy("type.name","Spot").size());
 
 		// Check no instance can be found
 		Assert.assertNull(provResource.lookupInstance(subscription, 1, 1, false, VmOs.LINUX, null, null).getInstance());
@@ -400,8 +437,8 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		final ProvAwsResource resourceMock = Mockito.spy(resource);
 		final CurlRequest mockRequest = new CurlRequest("GET", "http://localhost:" + MOCK_PORT + "/mock", null);
 		mockRequest.setSaveResponse(true);
-		Mockito.doReturn(mockRequest).when(resourceMock)
-				.prepareCallAWSService(ArgumentMatchers.any(AWS4SignatureQueryBuilder.class), ArgumentMatchers.eq(subscription));
+		Mockito.doReturn(mockRequest).when(resourceMock).prepareCallAWSService(
+				ArgumentMatchers.any(AWS4SignatureQueryBuilder.class), ArgumentMatchers.eq(subscription));
 		httpServer.stubFor(get(urlEqualTo("/mock"))
 				.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody("<keyName>my-key</keyName>")));
 		httpServer.start();

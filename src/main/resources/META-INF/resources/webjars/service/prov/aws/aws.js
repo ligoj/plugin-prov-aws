@@ -15,20 +15,20 @@ define(function () {
 			var result = '';
 			if (subscription.parameters && subscription.parameters['service:prov:aws:account']) {
 				// Add console login page
-				result += '<a href="https://'+ subscription.parameters['service:prov:aws:account'] + '.signin.aws.amazon.com/console"><i class="fa fa-home"></i></a>';
+				result += current.$super('renderServicelink')('home', 'https://'+ subscription.parameters['service:prov:aws:account'] + '.signin.aws.amazon.com/console', 'service:prov:aws:console', undefined, ' target="_blank"');
 			}
 			return result;
 		},
 
 		/**
-		 * Render AWS console login page.
+		 * Render AWS account.
 		 */
-		renderDetailsKey: function (subscription) {
-			return current.$super('generateCarousel')(subscription, [
+		renderDetailsKeyCallback: function (subscription) {
+			current.$super('generateCarousel')(subscription, [
 				[
 					'service:prov:aws:account', current.renderKey(subscription)
 				]
-			]);
+			], 0, 1);
 		}
 	};
 	return current;

@@ -396,12 +396,15 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		vo.setNode("service:prov:aws:account");
 		vo.setProject(projectRepository.findByNameExpected("gStack").getId());
 		final ParameterValueCreateVo awsid = new ParameterValueCreateVo();
-		awsid.setParameter(ProvAwsResource.CONF_AWS_ACCESS_KEY_ID);
+		awsid.setParameter(ProvAwsResource.PARAMETER_ACCESS_KEY_ID);
 		awsid.setText("KEY");
 		final ParameterValueCreateVo awssecret = new ParameterValueCreateVo();
-		awssecret.setParameter(ProvAwsResource.CONF_AWS_SECRET_ACCESS_KEY);
+		awssecret.setParameter(ProvAwsResource.PARAMETER_SECRET_ACCESS_KEY);
 		awssecret.setText("SECRET");
-		vo.setParameters(Lists.newArrayList(awsid, awssecret));
+		final ParameterValueCreateVo account = new ParameterValueCreateVo();
+		account.setParameter(ProvAwsResource.PARAMETER_ACCOUNT);
+		account.setText("000111222333444");
+		vo.setParameters(Lists.newArrayList(awsid, awssecret, account));
 		return subscriptionResource.create(vo);
 	}
 

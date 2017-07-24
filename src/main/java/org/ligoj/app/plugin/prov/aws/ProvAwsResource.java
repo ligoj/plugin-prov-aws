@@ -132,14 +132,19 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	public static final String CONF_REGION_SPOT = SERVICE_KEY + ":region-spot";
 
 	/**
-	 * Configuration key used for AWS authentication
+	 * Parameter used for AWS authentication
 	 */
-	public static final String CONF_AWS_ACCESS_KEY_ID = SERVICE_KEY + ":access-key-id";
+	public static final String PARAMETER_ACCESS_KEY_ID = SERVICE_KEY + ":access-key-id";
 
 	/**
-	 * Configuration key used for AWS authentication
+	 * Parameter used for AWS authentication
 	 */
-	public static final String CONF_AWS_SECRET_ACCESS_KEY = SERVICE_KEY + ":secret-access-key";
+	public static final String PARAMETER_SECRET_ACCESS_KEY = SERVICE_KEY + ":secret-access-key";
+
+	/**
+	 * AWS Account Id.
+	 */
+	public static final String PARAMETER_ACCOUNT = SERVICE_KEY + ":account";
 
 	/**
 	 * Jackson type reference for Spot price
@@ -453,7 +458,7 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 		price.setType(priceTypes.computeIfAbsent(csv.getOfferTermCode(), k -> newProvInstancePriceType(csv, node)));
 
 		// Fill the price variable
-		price.setOs(VmOs.valueOf(csv.getOs().toUpperCase(Locale.ENGLISH).replace("RHEL", "RHE")));
+		price.setOs(VmOs.valueOf(csv.getOs().toUpperCase(Locale.ENGLISH)));
 		price.setTenancy(ProvTenancy.valueOf(StringUtils.upperCase(csv.getTenancy())));
 		price.setLicense(StringUtils.trimToNull(StringUtils.remove(
 				csv.getLicenseModel().replace("License Included", csv.getSoftware()).replace("NA", "License Included"),
@@ -520,8 +525,8 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	@Override
 	public String[] commandLineParameters(final int subscription) {
 		final Map<String, String> parameters = subscriptionResource.getParameters(subscription);
-		return new String[] { "-var", "'AWS_ACCESS_KEY_ID=" + parameters.get(CONF_AWS_ACCESS_KEY_ID) + "'", "-var",
-				"'AWS_SECRET_ACCESS_KEY=" + parameters.get(CONF_AWS_SECRET_ACCESS_KEY) + "'" };
+		return new String[] { "-var", "'AWS_ACCESS_KEY_ID=" + parameters.get(PARAMETER_ACCESS_KEY_ID) + "'", "-var",
+				"'AWS_SECRET_ACCESS_KEY=" + parameters.get(PARAMETER_SECRET_ACCESS_KEY) + "'" };
 	}
 
 	/**
@@ -566,8 +571,8 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 			final int subscription) {
 		final Map<String, String> parameters = subscriptionResource.getParameters(subscription);
 		final AWS4SignatureQuery signatureQuery = signatureQueryBuilder
-				.awsAccessKey(parameters.get(CONF_AWS_ACCESS_KEY_ID))
-				.awsSecretKey(parameters.get(CONF_AWS_SECRET_ACCESS_KEY)).regionName(DEFAULT_REGION).build();
+				.awsAccessKey(parameters.get(PARAMETER_ACCESS_KEY_ID))
+				.awsSecretKey(parameters.get(PARAMETER_SECRET_ACCESS_KEY)).regionName(DEFAULT_REGION).build();
 		final String authorization = signer.computeSignature(signatureQuery);
 		final CurlRequest request = new CurlRequest(signatureQuery.getHttpMethod(),
 				"https://" + signatureQuery.getHost() + signatureQuery.getPath(), signatureQuery.getBody());

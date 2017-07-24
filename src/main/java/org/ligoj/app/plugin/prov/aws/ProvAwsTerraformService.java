@@ -14,6 +14,8 @@ import org.ligoj.app.plugin.prov.QuoteVo;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
 import org.ligoj.app.plugin.prov.model.ProvQuoteStorage;
 import org.ligoj.app.plugin.prov.model.VmOs;
+import org.ligoj.app.resource.subscription.SubscriptionResource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -21,19 +23,47 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class ProvAwsTerraformService {
+	@Autowired
+	private SubscriptionResource subscriptionResource;
 
 	private static final String SPOT_INSTANCE_PRICE_TYPE = "Spot";
 
 	/**
 	 * mapping between OS name and AMI search string.
 	 */
-	private final static Map<VmOs, String> MAPPING_OS_AMI = new HashMap<>();
+	private final static Map<VmOs, String[]> MAPPING_OS_AMI = new HashMap<>();
+
+	/**
+	 * mapping between OS name and AMI's owner search string.
+	 */
+	private final static Map<VmOs, String> MAPPING_OS_OWNER = new HashMap<>();
 
 	static {
-		MAPPING_OS_AMI.put(VmOs.WINDOWS, "Windows_Server-2016-English-Full-Base*");
-		MAPPING_OS_AMI.put(VmOs.SUSE, "suse-sles-12*hvm-ssd-x86_64");
-		MAPPING_OS_AMI.put(VmOs.RHE, "RHEL-7.4*");
-		MAPPING_OS_AMI.put(VmOs.LINUX, "amzn-ami-hvm-*-x86_64-gp2");
+		// AWS Images
+		MAPPING_OS_AMI.put(VmOs.WINDOWS, new String[] { "name", "Windows_Server-2016-English-Full-Base*" });
+		MAPPING_OS_AMI.put(VmOs.SUSE, new String[] { "name", "suse-sles-12*hvm-ssd-x86_64" });
+		MAPPING_OS_AMI.put(VmOs.RHEL, new String[] { "name", "RHEL-7.4*" });
+		MAPPING_OS_AMI.put(VmOs.LINUX, new String[] { "name", "amzn-ami-hvm-*-x86_64-gp2" });
+
+		// CentOS https://wiki.centos.org/Cloud/AWS
+		MAPPING_OS_AMI.put(VmOs.CENTOS, new String[] { "product-code", "aw0evgkw8e5c1q413zgy5pjce" });
+
+		// Debian https://wiki.debian.org/Cloud/AmazonEC2Image
+		MAPPING_OS_AMI.put(VmOs.DEBIAN, new String[] { "name", "debian-stretch-hvm-x86_64-gp2-*" });
+	}
+
+	static {
+		// AWS Images
+		MAPPING_OS_OWNER.put(VmOs.WINDOWS, "amazon");
+		MAPPING_OS_OWNER.put(VmOs.SUSE, "amazon");
+		MAPPING_OS_OWNER.put(VmOs.RHEL, "amazon");
+		MAPPING_OS_OWNER.put(VmOs.LINUX, "amazon");
+
+		// CentOS https://wiki.centos.org/Cloud/AWS
+		MAPPING_OS_OWNER.put(VmOs.CENTOS, "aws-marketplace");
+
+		// Debian https://wiki.debian.org/Cloud/AmazonEC2Image
+		MAPPING_OS_OWNER.put(VmOs.DEBIAN, "379101102735");
 	}
 
 	/**
@@ -58,8 +88,11 @@ public class ProvAwsTerraformService {
 				writeInstance(writer, quote, instance, projectName);
 				osToSearch.add(instance.getInstancePrice().getOs());
 			}
+
+			// AMI part
+			final String account = subscriptionResource.getParameters(subscription.getId()).get(ProvAwsResource.PARAMETER_ACCOUNT);
 			for (final VmOs os : osToSearch) {
-				writeAmiSearch(writer, os);
+				writeAmiSearch(writer, os, account);
 			}
 		}
 		writeStandaloneStorages(writer, projectName, quote.getStorages());
@@ -109,22 +142,34 @@ public class ProvAwsTerraformService {
 	 *            Target output of Terraform content.
 	 * @param os
 	 *            Instance OS.
+	 * @param account
+	 *            Target account Id used to filter the available AMI.
 	 * @throws IOException
 	 *             exception thrown during write
+	 * @see http://docs.aws.amazon.com/cli/latest/reference/ec2/describe-images.html
+	 * @see https://www.terraform.io/docs/providers/aws/d/ami.html
 	 */
-	private void writeAmiSearch(final Writer writer, final VmOs os) throws IOException {
+	private void writeAmiSearch(final Writer writer, final VmOs os, final String account) throws IOException {
 		writer.write("/* search ami id */\n");
 		writer.write("data \"aws_ami\" \"ami-" + os.name() + "\" {\n");
 		writer.write("  most_recent = true\n");
-		writer.write("  filter {\n");
-		writer.write("    name   = \"name\"\n");
-		writer.write("    values = [\"" + MAPPING_OS_AMI.get(os) + "\"]\n");
-		writer.write("  }\n");
+
+		// Add specific filters of this OS
+		for (int i = 0; i < MAPPING_OS_AMI.get(os).length; i += 2) {
+			writer.write("  filter {\n");
+			writer.write("    name   = \"" + MAPPING_OS_AMI.get(os)[i] + "\"\n");
+			writer.write("    values = [\"" + MAPPING_OS_AMI.get(os)[i + 1] + "\"]\n");
+			writer.write("  }\n");
+		}
+
+		// Add generic filters : HVM, ...
 		writer.write("  filter {\n");
 		writer.write("    name   = \"virtualization-type\"\n");
 		writer.write("    values = [\"hvm\"]\n");
 		writer.write("  }\n");
-		writer.write("  owners = [\"amazon\", \"309956199498\"]\n");
+
+		// Target account before the generic account
+		writer.write("  owners = [\"" + account + "\", \"" + MAPPING_OS_OWNER.get(os) + "\"]\n");
 		writer.write("}\n");
 	}
 
@@ -202,7 +247,7 @@ public class ProvAwsTerraformService {
 	private void writeProvider(final Writer writer) throws IOException {
 		writer.write("variable \"AWS_ACCESS_KEY_ID\" {}\n");
 		writer.write("variable \"AWS_SECRET_ACCESS_KEY\" {}\n");
-		
+
 		writer.write("provider \"aws\" {\n");
 		writer.write("  region = \"eu-west-1\"\n");
 		writer.write("  access_key = \"${var.AWS_ACCESS_KEY_ID}\"\n");

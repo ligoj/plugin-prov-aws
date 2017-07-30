@@ -1,4 +1,4 @@
 id;owner.id;data;mandatory;type;mode;secured
-service:prov:aws:access-key-id;service:prov:aws;{"pattern":"\\w{16,128}"};true;TEXT;;false
-service:prov:aws:secret-access-key;service:prov:aws;{"pattern":".{20,}"};true;TEXT;;true
-service:prov:aws:account;service:prov:aws;;true;TEXT;;false
+service:prov:aws:access-key-id;service:prov:aws;{"pattern":"\\w{16,128}"};true;TEXT;ALL;false
+service:prov:aws:secret-access-key;service:prov:aws;{"pattern":".{20,}"};true;TEXT;ALL;true
+service:prov:aws:account;service:prov:aws;;true;TEXT;ALL;false

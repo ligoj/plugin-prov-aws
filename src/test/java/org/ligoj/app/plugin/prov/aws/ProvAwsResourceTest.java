@@ -397,10 +397,10 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		vo.setProject(projectRepository.findByNameExpected("gStack").getId());
 		final ParameterValueCreateVo awsid = new ParameterValueCreateVo();
 		awsid.setParameter(ProvAwsResource.PARAMETER_ACCESS_KEY_ID);
-		awsid.setText("KEY");
+		awsid.setText("KEY____________________");
 		final ParameterValueCreateVo awssecret = new ParameterValueCreateVo();
 		awssecret.setParameter(ProvAwsResource.PARAMETER_SECRET_ACCESS_KEY);
-		awssecret.setText("SECRET");
+		awssecret.setText("SECRET____________________");
 		final ParameterValueCreateVo account = new ParameterValueCreateVo();
 		account.setParameter(ProvAwsResource.PARAMETER_ACCOUNT);
 		account.setText("000111222333444");
@@ -423,8 +423,8 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		final int subscription = newSubscription();
 		final String[] parameters = resource.commandLineParameters(subscription);
 		Assert.assertTrue(parameters.length == 4);
-		Assert.assertTrue("'AWS_ACCESS_KEY_ID=KEY'".equals(parameters[1]));
-		Assert.assertTrue("'AWS_SECRET_ACCESS_KEY=SECRET'".equals(parameters[3]));
+		Assert.assertTrue("'AWS_ACCESS_KEY_ID=KEY____________________'".equals(parameters[1]));
+		Assert.assertTrue("'AWS_SECRET_ACCESS_KEY=SECRET____________________'".equals(parameters[3]));
 	}
 
 	/**

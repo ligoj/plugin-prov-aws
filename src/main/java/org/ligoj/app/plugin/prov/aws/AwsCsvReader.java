@@ -17,7 +17,7 @@ public class AwsCsvReader extends CsvBeanReader<AwsInstancePrice> {
 			+ "cpu,physicalProcessor,clockSpeed,memory,"
 			+ "drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,tenancy,drop,os,licenseModel,"
 			+ "drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,ecu,"
-			+ "drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,software,drop,drop";
+			+ "drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,software,drop,drop";
 
 	/**
 	 * CSV raw data reader.

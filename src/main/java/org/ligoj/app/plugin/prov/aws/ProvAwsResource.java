@@ -105,8 +105,8 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	private static final String EC2_PRICES = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/%s/index.csv";
 
 	/**
-	 * The EC2 spot price end-point, a JSON file. The region code will be used to
-	 * filter the JSON prices.
+	 * The EC2 spot price end-point, a JSON file. The region code will be used
+	 * to filter the JSON prices.
 	 */
 	private static final String EC2_PRICES_SPOT = "https://spot-price.s3.amazonaws.com/spot.js";
 	private static final Pattern LEASING_TIME = Pattern.compile("(\\d)yr");
@@ -214,8 +214,8 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	 */
 	public boolean checkAwsConnection(final int subscription) throws Exception {
 		// call s3 ls service
-		final AWS4SignatureQueryBuilder signatureQueryBuilder = AWS4SignatureQuery.builder().httpMethod("GET")
-				.serviceName("s3").host("s3-" + DEFAULT_REGION + ".amazonaws.com").path("/");
+		final AWS4SignatureQueryBuilder signatureQueryBuilder = AWS4SignatureQuery.builder().httpMethod("GET").serviceName("s3")
+				.host("s3-" + DEFAULT_REGION + ".amazonaws.com").path("/");
 		final CurlRequest request = prepareCallAWSService(signatureQueryBuilder, subscription);
 		return new CurlProcessor().process(request);
 	}
@@ -252,8 +252,7 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 
 		try {
 			// Get the remote prices stream
-			String rawJson = StringUtils.defaultString(new CurlProcessor().get(endpoint),
-					"callback({\"config\":{\"regions\":[]}});");
+			String rawJson = StringUtils.defaultString(new CurlProcessor().get(endpoint), "callback({\"config\":{\"regions\":[]}});");
 
 			// Remove the useless data to save massive memory footprint
 			final int regionIndex = rawJson.indexOf(region);
@@ -265,8 +264,7 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 			} else {
 				final int instancesTypesIndex = rawJson.indexOf("[", regionIndex);
 				final Matcher closeMatcher = Pattern
-						.compile("\\]\\s*\\}\\s*(,\\s*\\{\\s*\"region\"|\\]\\s*\\}\\s*\\}\\);)", Pattern.MULTILINE)
-						.matcher(rawJson);
+						.compile("\\]\\s*\\}\\s*(,\\s*\\{\\s*\"region\"|\\]\\s*\\}\\s*\\}\\);)", Pattern.MULTILINE).matcher(rawJson);
 				Assert.isTrue(closeMatcher.find(regionIndex), "Closing postion of region '" + region + "' not found");
 
 				// Build the smallest JSON containing only the specified region
@@ -308,8 +306,8 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	}
 
 	/**
-	 * Install the install the instance type (if needed), the instance price type
-	 * (if needed) and the price.
+	 * Install the install the instance type (if needed), the instance price
+	 * type (if needed) and the price.
 	 * 
 	 * @param json
 	 *            The current JSON entry.
@@ -321,8 +319,8 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	 */
 	private int install(final AwsInstanceSpotPrice json, final Map<String, ProvInstance> instances,
 			final ProvInstancePriceType spotPriceType) {
-		return (int) json.getOsPrices().stream()
-				.filter(op -> !StringUtils.startsWithIgnoreCase(op.getPrices().get("USD"), "N/A")).map(op -> {
+		return (int) json.getOsPrices().stream().filter(op -> !StringUtils.startsWithIgnoreCase(op.getPrices().get("USD"), "N/A"))
+				.map(op -> {
 					final ProvInstancePrice price = new ProvInstancePrice();
 					price.setInstance(instances.get(json.getName()));
 					price.setType(spotPriceType);
@@ -372,8 +370,8 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 			} while (true);
 		} finally {
 			// Report
-			log.info("AWS EC2 OnDemand/Reserved import finished : {} instance, {} price types, {} prices",
-					instances.size(), priceTypes.size(), priceCounter);
+			log.info("AWS EC2 OnDemand/Reserved import finished : {} instance, {} price types, {} prices", instances.size(),
+					priceTypes.size(), priceCounter);
 			IOUtils.closeQuietly(reader);
 		}
 
@@ -382,8 +380,8 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	}
 
 	/**
-	 * Install the install the instance type (if needed), the instance price type
-	 * (if needed) and the price.
+	 * Install the install the instance type (if needed), the instance price
+	 * type (if needed) and the price.
 	 * 
 	 * @param csv
 	 *            The current CSV entry.
@@ -398,8 +396,7 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	 * @return The amount of installed prices. Only for the report.
 	 */
 	private int install(final AwsInstancePrice csv, final Map<String, ProvInstance> instances,
-			final Map<String, ProvInstancePriceType> priceTypes, final Map<String, ProvInstancePrice> partialCost,
-			final Node node) {
+			final Map<String, ProvInstancePriceType> priceTypes, final Map<String, ProvInstancePrice> partialCost, final Node node) {
 		// Upfront, partial or not
 		int priceCounter = 0;
 		if (StringUtils.equalsAnyIgnoreCase(csv.getPurchaseOption(), "All Upfront", "Partial Upfront")) {
@@ -412,12 +409,12 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 				partialCost.remove(partialCostKey);
 				priceCounter++;
 				ipRepository.save(ipUpfront);
-			} else {
+			} else if (csv.getMemory() != null) {
 				// First time, save this instance for a future completion
-				handleUpfront(csv, partialCost.computeIfAbsent(partialCostKey,
-						k -> newProvInstancePrice(csv, instances, priceTypes, node)));
+				handleUpfront(csv,
+						partialCost.computeIfAbsent(partialCostKey, k -> newProvInstancePrice(csv, instances, priceTypes, node)));
 			}
-		} else {
+		} else if (csv.getMemory() != null) {
 			// No leasing, cost is fixed
 			priceCounter++;
 			final ProvInstancePrice price = newProvInstancePrice(csv, instances, priceTypes, node);
@@ -442,9 +439,8 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 		ipUpfront.setCost(round5Decimals(hourlyCost));
 	}
 
-	private ProvInstancePrice newProvInstancePrice(final AwsInstancePrice csv,
-			final Map<String, ProvInstance> instances, final Map<String, ProvInstancePriceType> priceTypes,
-			final Node node) {
+	private ProvInstancePrice newProvInstancePrice(final AwsInstancePrice csv, final Map<String, ProvInstance> instances,
+			final Map<String, ProvInstancePriceType> priceTypes, final Node node) {
 
 		final ProvInstancePrice price = new ProvInstancePrice();
 
@@ -460,9 +456,9 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 		// Fill the price variable
 		price.setOs(VmOs.valueOf(csv.getOs().toUpperCase(Locale.ENGLISH)));
 		price.setTenancy(ProvTenancy.valueOf(StringUtils.upperCase(csv.getTenancy())));
-		price.setLicense(StringUtils.trimToNull(StringUtils.remove(
-				csv.getLicenseModel().replace("License Included", csv.getSoftware()).replace("NA", "License Included"),
-				"No License required")));
+		price.setLicense(StringUtils.trimToNull(
+				StringUtils.remove(csv.getLicenseModel().replace("License Included", StringUtils.defaultString(csv.getSoftware(), ""))
+						.replace("NA", "License Included"), "No License required")));
 		return price;
 	}
 
@@ -473,8 +469,8 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 		instance.setName(csv.getInstanceType());
 
 		// Convert GiB to MiB, and rounded
-		instance.setRam((int) Math.round(
-				Double.parseDouble(StringUtils.removeEndIgnoreCase(csv.getMemory(), " GiB").replace(",", "")) * 1024d));
+		instance.setRam(
+				(int) Math.round(Double.parseDouble(StringUtils.removeEndIgnoreCase(csv.getMemory(), " GiB").replace(",", "")) * 1024d));
 		instance.setConstant(!"Variable".equals(csv.getEcu()));
 		instance.setDescription(ArrayUtils.toString(new String[] { csv.getPhysicalProcessor(), csv.getClockSpeed() }));
 		instanceRepository.saveAndFlush(instance);
@@ -539,8 +535,8 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	public List<NamedBean<String>> getEC2Keys(@PathParam("subscription") final int subscription) {
 		// call describeKeyPairs service
 		final String query = "Action=DescribeKeyPairs&Version=2016-11-15";
-		final AWS4SignatureQueryBuilder signatureQueryBuilder = AWS4SignatureQuery.builder().httpMethod("POST")
-				.serviceName("ec2").host("ec2." + DEFAULT_REGION + ".amazonaws.com").path("/").body(query);
+		final AWS4SignatureQueryBuilder signatureQueryBuilder = AWS4SignatureQuery.builder().httpMethod("POST").serviceName("ec2")
+				.host("ec2." + DEFAULT_REGION + ".amazonaws.com").path("/").body(query);
 		final CurlRequest request = prepareCallAWSService(signatureQueryBuilder, subscription);
 		final boolean httpResult = new CurlProcessor().process(request);
 		// extract keypairs from response
@@ -561,17 +557,15 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	 * awsAccessKey, awsSecretKey and regionName and compute signature.
 	 * 
 	 * @param signatureQueryBuilder
-	 *            signatureQueryBuilder initialized with values used for this call
-	 *            (headers, parameters, host, ...)
+	 *            signatureQueryBuilder initialized with values used for this
+	 *            call (headers, parameters, host, ...)
 	 * @param subscription
 	 *            subscription id
 	 * @return initialized request
 	 */
-	protected CurlRequest prepareCallAWSService(final AWS4SignatureQueryBuilder signatureQueryBuilder,
-			final int subscription) {
+	protected CurlRequest prepareCallAWSService(final AWS4SignatureQueryBuilder signatureQueryBuilder, final int subscription) {
 		final Map<String, String> parameters = subscriptionResource.getParameters(subscription);
-		final AWS4SignatureQuery signatureQuery = signatureQueryBuilder
-				.awsAccessKey(parameters.get(PARAMETER_ACCESS_KEY_ID))
+		final AWS4SignatureQuery signatureQuery = signatureQueryBuilder.awsAccessKey(parameters.get(PARAMETER_ACCESS_KEY_ID))
 				.awsSecretKey(parameters.get(PARAMETER_SECRET_ACCESS_KEY)).regionName(DEFAULT_REGION).build();
 		final String authorization = signer.computeSignature(signatureQuery);
 		final CurlRequest request = new CurlRequest(signatureQuery.getHttpMethod(),

@@ -12,13 +12,6 @@ import org.ligoj.bootstrap.core.csv.CsvReader;
  */
 public class AwsCsvReader extends CsvBeanReader<AwsInstancePrice> {
 
-	private static final String AWS_EC2_HEADERS = "sku,offerTermCode,drop,termType,drop,drop,drop,drop,priceUnit,pricePerUnit,drop,"
-			+ "leaseContractLength,purchaseOption,offeringClass,drop,drop,drop,drop,instanceType,drop,drop,"
-			+ "cpu,physicalProcessor,clockSpeed,memory,"
-			+ "drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,tenancy,drop,os,licenseModel,"
-			+ "drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,ecu,"
-			+ "drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,drop,software,drop,drop";
-
 	/**
 	 * CSV raw data reader.
 	 */
@@ -31,8 +24,8 @@ public class AwsCsvReader extends CsvBeanReader<AwsInstancePrice> {
 	 *            The CSV input, without headers and starting from the first
 	 *            raw.
 	 */
-	public AwsCsvReader(Reader reader) {
-		super(reader, AwsInstancePrice.class, AWS_EC2_HEADERS.split(","));
+	public AwsCsvReader(Reader reader, final String[] headers) {
+		super(reader, AwsInstancePrice.class, headers);
 
 		// Makes visible this entry
 		this.csvReaderProxy = new CsvReader(reader, ',');
@@ -44,7 +37,11 @@ public class AwsCsvReader extends CsvBeanReader<AwsInstancePrice> {
 		final List<String> rawValues = csvReaderProxy.read();
 
 		// Build only for AWS compute instance
-		if (rawValues.isEmpty() || isValidRaw(rawValues)) {
+		if (rawValues.isEmpty()) {
+			// EOF
+			return null;
+		}
+		if (isValidRaw(rawValues)) {
 			return build(rawValues);
 		}
 

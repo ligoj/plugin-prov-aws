@@ -9,6 +9,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Reader;
+import java.io.StringReader;
 import java.net.ConnectException;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
@@ -59,6 +60,7 @@ import org.ligoj.app.resource.subscription.SubscriptionEditionVo;
 import org.ligoj.app.resource.subscription.SubscriptionResource;
 import org.ligoj.bootstrap.core.NamedBean;
 import org.ligoj.bootstrap.core.resource.BusinessException;
+import org.ligoj.bootstrap.core.resource.TechnicalException;
 import org.ligoj.bootstrap.resource.system.configuration.ConfigurationResource;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
@@ -119,8 +121,16 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 	 */
 	@Test
 	public void dummyCoverage() throws IOException {
-		new AwsCsvForBean(Mockito.mock(BufferedReader.class)).toBean(null, (Reader)null);
+		new AwsCsvForBean(new BufferedReader(new StringReader("SKU"))).toBean(null, (Reader)null);
 		new AwsInstancePrice().getDrop();
+	}
+
+	/**
+	 * Invalid EC2 CSV header
+	 */
+	@Test(expected=TechnicalException.class)
+	public void installInvalidHeader() throws IOException {
+		new AwsCsvForBean(new BufferedReader(new StringReader("any"))).toBean(null, (Reader)null);
 	}
 
 	/**

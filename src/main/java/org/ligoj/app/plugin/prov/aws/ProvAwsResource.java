@@ -198,14 +198,16 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	@Override
 	public SubscriptionStatusWithData checkSubscriptionStatus(final int subscription, final String node,
 			final Map<String, String> parameters) throws Exception {
+		// Validate the account
 		if (checkAwsConnection(subscription)) {
+			// Return the quote details
 			return super.checkSubscriptionStatus(subscription, node, parameters);
 		}
 		return new SubscriptionStatusWithData(false);
 	}
 
 	/**
-	 * check AWS connection
+	 * Check AWS connection and account.
 	 * 
 	 * @param subscription
 	 *            subscription
@@ -213,11 +215,11 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	 * @throws Exception
 	 */
 	public boolean checkAwsConnection(final int subscription) throws Exception {
-		// call s3 ls service
+		// Call S3 ls service
+		// TODO Use EC2 instead of S3
 		final AWS4SignatureQueryBuilder signatureQueryBuilder = AWS4SignatureQuery.builder().httpMethod("GET").serviceName("s3")
 				.host("s3-" + DEFAULT_REGION + ".amazonaws.com").path("/");
-		final CurlRequest request = prepareCallAWSService(signatureQueryBuilder, subscription);
-		return new CurlProcessor().process(request);
+		return new CurlProcessor().process(prepareCallAWSService(signatureQueryBuilder, subscription));
 	}
 
 	/**
@@ -526,27 +528,26 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	}
 
 	/**
+	 * Return EC2 keys
 	 * 
 	 * @param subscription
-	 * @return
+	 *            The related subscription.
+	 * @return EC2 keys related to given subscription.
 	 */
 	@Path("ec2/keys/{subscription:\\d+}")
 	@GET
 	public List<NamedBean<String>> getEC2Keys(@PathParam("subscription") final int subscription) {
-		// call describeKeyPairs service
+		// Call "DescribeKeyPairs" service
 		final String query = "Action=DescribeKeyPairs&Version=2016-11-15";
 		final AWS4SignatureQueryBuilder signatureQueryBuilder = AWS4SignatureQuery.builder().httpMethod("POST").serviceName("ec2")
 				.host("ec2." + DEFAULT_REGION + ".amazonaws.com").path("/").body(query);
 		final CurlRequest request = prepareCallAWSService(signatureQueryBuilder, subscription);
-		final boolean httpResult = new CurlProcessor().process(request);
-		// extract keypairs from response
+		// extract key pairs from response
 		final List<NamedBean<String>> keys = new ArrayList<>();
-		if (httpResult) {
+		if (new CurlProcessor().process(request)) {
 			final Matcher keyNames = Pattern.compile("<keyName>(.*)</keyName>").matcher(request.getResponse());
 			while (keyNames.find()) {
-				final NamedBean<String> bean = new NamedBean<>();
-				bean.setName(keyNames.group(1));
-				keys.add(bean);
+				keys.add(new NamedBean<>(keyNames.group(1), null));
 			}
 		}
 		return keys;
@@ -556,16 +557,16 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	 * Create Curl request for AWS service. Initialize default values for
 	 * awsAccessKey, awsSecretKey and regionName and compute signature.
 	 * 
-	 * @param signatureQueryBuilder
-	 *            signatureQueryBuilder initialized with values used for this
-	 *            call (headers, parameters, host, ...)
+	 * @param signatureBuilder
+	 *            {@link AWS4SignatureQueryBuilder} initialized with values used
+	 *            for this call (headers, parameters, host, ...)
 	 * @param subscription
-	 *            subscription id
+	 *            Subscription's identifier.
 	 * @return initialized request
 	 */
-	protected CurlRequest prepareCallAWSService(final AWS4SignatureQueryBuilder signatureQueryBuilder, final int subscription) {
+	protected CurlRequest prepareCallAWSService(final AWS4SignatureQueryBuilder signatureBuilder, final int subscription) {
 		final Map<String, String> parameters = subscriptionResource.getParameters(subscription);
-		final AWS4SignatureQuery signatureQuery = signatureQueryBuilder.awsAccessKey(parameters.get(PARAMETER_ACCESS_KEY_ID))
+		final AWS4SignatureQuery signatureQuery = signatureBuilder.awsAccessKey(parameters.get(PARAMETER_ACCESS_KEY_ID))
 				.awsSecretKey(parameters.get(PARAMETER_SECRET_ACCESS_KEY)).regionName(DEFAULT_REGION).build();
 		final String authorization = signer.computeSignature(signatureQuery);
 		final CurlRequest request = new CurlRequest(signatureQuery.getHttpMethod(),

@@ -12,8 +12,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ligoj.app.AbstractServerTest;
-import org.ligoj.app.dao.ProjectRepository;
+import org.ligoj.app.dao.SubscriptionRepository;
 import org.ligoj.app.model.Node;
+import org.ligoj.app.model.Parameter;
+import org.ligoj.app.model.ParameterValue;
 import org.ligoj.app.model.Project;
 import org.ligoj.app.model.Subscription;
 import org.ligoj.app.plugin.prov.QuoteStorageVo;
@@ -45,16 +47,16 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	private ProvAwsTerraformService service;
 
 	@Autowired
-	private ProjectRepository projectRepository;
+	private SubscriptionRepository subscriptionRepository;
 
 	private Subscription subscription;
 
 	@Before
 	public void prepareData() throws IOException {
 		persistSystemEntities();
-		persistEntities("csv", new Class[] { Node.class, Project.class }, StandardCharsets.UTF_8.name());
-		subscription = new Subscription();
-		subscription.setProject(projectRepository.findByNameExpected("gStack"));
+		persistEntities("csv", new Class[] { Node.class, Project.class, Parameter.class, Subscription.class, ParameterValue.class },
+				StandardCharsets.UTF_8.name());
+		subscription = subscriptionRepository.findBy("node.id", "service:prov:aws:account");
 	}
 
 	/**
@@ -68,8 +70,8 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 		final QuoteVo quoteVo = new QuoteVo();
 		final ProvQuoteInstance instance = generateQuoteInstance("OnDemand");
 		quoteVo.setInstances(Lists.newArrayList(instance));
-		quoteVo.setStorages(Lists.newArrayList(generateStorage(instance.getId(), "dev", 5),
-				generateStorage(instance.getId(), "dev-1", 50)));
+		quoteVo.setStorages(
+				Lists.newArrayList(generateStorage(instance.getId(), "dev", 5), generateStorage(instance.getId(), "dev-1", 50)));
 
 		testTerraformGeneration(subscription, quoteVo, "terraform/terraform.tf");
 	}
@@ -105,7 +107,8 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	}
 
 	/**
-	 * Call terraform generation and check the result is same as input file content
+	 * Call terraform generation and check the result is same as input file
+	 * content
 	 * 
 	 * @param subscription
 	 *            subscription
@@ -114,16 +117,15 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	 * @param expectedResultFileName
 	 *            expected result
 	 */
-	private void testTerraformGeneration(final Subscription subscription, final QuoteVo quoteVo,
-			final String expectedResultFileName) throws IOException {
+	private void testTerraformGeneration(final Subscription subscription, final QuoteVo quoteVo, final String expectedResultFileName)
+			throws IOException {
 		final StringWriter writer = new StringWriter();
 		service.writeTerraform(writer, quoteVo, subscription);
 
 		final String terraform = writer.toString();
 		Assert.assertNotNull(terraform);
 		Assert.assertEquals(
-				IOUtils.toString(Thread.currentThread().getContextClassLoader().getResource(expectedResultFileName),
-						Charsets.UTF_8),
+				IOUtils.toString(Thread.currentThread().getContextClassLoader().getResource(expectedResultFileName), Charsets.UTF_8),
 				terraform);
 	}
 

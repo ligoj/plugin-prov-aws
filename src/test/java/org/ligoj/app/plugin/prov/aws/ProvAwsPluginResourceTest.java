@@ -75,16 +75,16 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import com.google.common.collect.Lists;
 
 /**
- * Test class of {@link ProvAwsResource}
+ * Test class of {@link ProvAwsPluginResource}
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = "classpath:/META-INF/spring/application-context-test.xml")
 @Rollback
 @Transactional
-public class ProvAwsResourceTest extends AbstractServerTest {
+public class ProvAwsPluginResourceTest extends AbstractServerTest {
 
 	@Autowired
-	private ProvAwsResource resource;
+	private ProvAwsPluginResource resource;
 
 	@Autowired
 	private ProvResource provResource;
@@ -141,8 +141,8 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 	@Configuration
 	public static class MockConfiguration {
 		@Bean
-		ProvAwsResource provAwsResource() {
-			return new ProvAwsResource() {
+		ProvAwsPluginResource provAwsResource() {
+			return new ProvAwsPluginResource() {
 				@Override
 				public boolean checkAwsConnection(int subscription) throws Exception {
 					return true;
@@ -217,8 +217,8 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 	 */
 	private QuoteVo install() throws Exception {
 		initSpringSecurityContext(DEFAULT_USER);
-		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
-		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/spot.js");
+		configuration.saveOrUpdate(ProvAwsPluginResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
+		configuration.saveOrUpdate(ProvAwsPluginResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/spot.js");
 		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
 				IOUtils.toString(new ClassPathResource("mock-server/aws/index.csv").getInputStream(), "UTF-8"))));
 		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
@@ -231,8 +231,8 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 
 	@Test
 	public void installOnLine() throws Exception {
-		configuration.delete(ProvAwsResource.CONF_URL_PRICES);
-		configuration.delete(ProvAwsResource.CONF_URL_PRICES_SPOT);
+		configuration.delete(ProvAwsPluginResource.CONF_URL_PRICES);
+		configuration.delete(ProvAwsPluginResource.CONF_URL_PRICES_SPOT);
 
 		// Aligned to :
 		// https://aws.amazon.com/fr/ec2/pricing/reserved-instances/pricing/
@@ -259,7 +259,7 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 	@Test(expected = ConnectException.class)
 	public void installErrorCsv() throws Exception {
 		initSpringSecurityContext(DEFAULT_USER);
-		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/any.csv");
+		configuration.saveOrUpdate(ProvAwsPluginResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/any.csv");
 		installAndConfigure();
 	}
 
@@ -269,8 +269,8 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 	@Test
 	public void installSpotEmpty() throws Exception {
 		initSpringSecurityContext(DEFAULT_USER);
-		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
-		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/any.js");
+		configuration.saveOrUpdate(ProvAwsPluginResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
+		configuration.saveOrUpdate(ProvAwsPluginResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/any.js");
 		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
 				IOUtils.toString(new ClassPathResource("mock-server/aws/index-empty.csv").getInputStream(), "UTF-8"))));
 		httpServer.start();
@@ -297,8 +297,8 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 	@Test(expected = NumberFormatException.class)
 	public void installSpotError() throws Exception {
 		initSpringSecurityContext(DEFAULT_USER);
-		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
-		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/spot.js");
+		configuration.saveOrUpdate(ProvAwsPluginResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
+		configuration.saveOrUpdate(ProvAwsPluginResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/spot.js");
 		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
 				IOUtils.toString(new ClassPathResource("mock-server/aws/index.csv").getInputStream(), "UTF-8"))));
 		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
@@ -315,8 +315,8 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 	@Test
 	public void installSpotInstanceBrokenReference() throws Exception {
 		initSpringSecurityContext(DEFAULT_USER);
-		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
-		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/spot.js");
+		configuration.saveOrUpdate(ProvAwsPluginResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
+		configuration.saveOrUpdate(ProvAwsPluginResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/spot.js");
 		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
 				IOUtils.toString(new ClassPathResource("mock-server/aws/index.csv").getInputStream(), "UTF-8"))));
 		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
@@ -338,8 +338,8 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 	@Test
 	public void installSpotRegionNotFound() throws Exception {
 		initSpringSecurityContext(DEFAULT_USER);
-		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
-		configuration.saveOrUpdate(ProvAwsResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/spot.js");
+		configuration.saveOrUpdate(ProvAwsPluginResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
+		configuration.saveOrUpdate(ProvAwsPluginResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/spot.js");
 		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
 				IOUtils.toString(new ClassPathResource("mock-server/aws/index-empty.csv").getInputStream(), "UTF-8"))));
 		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
@@ -406,13 +406,13 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 		vo.setNode("service:prov:aws:account");
 		vo.setProject(projectRepository.findByNameExpected("gStack").getId());
 		final ParameterValueCreateVo awsid = new ParameterValueCreateVo();
-		awsid.setParameter(ProvAwsResource.PARAMETER_ACCESS_KEY_ID);
+		awsid.setParameter(ProvAwsPluginResource.PARAMETER_ACCESS_KEY_ID);
 		awsid.setText("KEY____________________");
 		final ParameterValueCreateVo awssecret = new ParameterValueCreateVo();
-		awssecret.setParameter(ProvAwsResource.PARAMETER_SECRET_ACCESS_KEY);
+		awssecret.setParameter(ProvAwsPluginResource.PARAMETER_SECRET_ACCESS_KEY);
 		awssecret.setText("SECRET____________________");
 		final ParameterValueCreateVo account = new ParameterValueCreateVo();
-		account.setParameter(ProvAwsResource.PARAMETER_ACCOUNT);
+		account.setParameter(ProvAwsPluginResource.PARAMETER_ACCOUNT);
 		account.setText("000111222333444");
 		vo.setParameters(Lists.newArrayList(awsid, awssecret, account));
 		return subscriptionResource.create(vo);
@@ -447,7 +447,7 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 	public void testGetEC2Keys() throws Exception {
 		final int subscription = newSubscription();
 
-		final ProvAwsResource resourceMock = Mockito.spy(resource);
+		final ProvAwsPluginResource resourceMock = Mockito.spy(resource);
 		final CurlRequest mockRequest = new CurlRequest("GET", "http://localhost:" + MOCK_PORT + "/mock", null);
 		mockRequest.setSaveResponse(true);
 		Mockito.doReturn(mockRequest).when(resourceMock).prepareCallAWSService(
@@ -494,7 +494,7 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 
 	@Test(expected = BusinessException.class)
 	public void testCreateFailed() throws Exception {
-		final ProvAwsResource resourceMock = Mockito.spy(ProvAwsResource.class);
+		final ProvAwsPluginResource resourceMock = Mockito.spy(ProvAwsPluginResource.class);
 		Mockito.doReturn(false).when(resourceMock).checkAwsConnection(ArgumentMatchers.anyInt());
 		resourceMock.create(1);
 	}
@@ -510,7 +510,7 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 	@Test
 	public void testCheckSubscriptionStatusDown() throws Exception {
 		final int subscription = newSubscription();
-		final ProvAwsResource resourceMock = Mockito.spy(ProvAwsResource.class);
+		final ProvAwsPluginResource resourceMock = Mockito.spy(ProvAwsPluginResource.class);
 		Mockito.doReturn(false).when(resourceMock).checkAwsConnection(ArgumentMatchers.anyInt());
 		final SubscriptionStatusWithData status = resourceMock.checkSubscriptionStatus(subscription, null,
 				new HashMap<String, String>());
@@ -530,7 +530,7 @@ public class ProvAwsResourceTest extends AbstractServerTest {
 	private boolean checkAwsConnection(int status) throws Exception {
 		final int subscription = newSubscription();
 
-		final ProvAwsResource resourceMock = Mockito.spy(new ProvAwsResource());
+		final ProvAwsPluginResource resourceMock = Mockito.spy(new ProvAwsPluginResource());
 		final CurlRequest mockRequest = new CurlRequest("GET", "http://localhost:" + MOCK_PORT + "/mock", null);
 		mockRequest.setSaveResponse(true);
 		Mockito.doReturn(mockRequest).when(resourceMock).prepareCallAWSService(

@@ -90,7 +90,7 @@ public class ProvAwsTerraformService {
 			}
 
 			// AMI part
-			final String account = subscriptionResource.getParameters(subscription.getId()).get(ProvAwsResource.PARAMETER_ACCOUNT);
+			final String account = subscriptionResource.getParameters(subscription.getId()).get(ProvAwsPluginResource.PARAMETER_ACCOUNT);
 			for (final VmOs os : osToSearch) {
 				writeAmiSearch(writer, os, account);
 			}

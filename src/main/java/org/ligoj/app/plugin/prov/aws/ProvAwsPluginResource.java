@@ -74,19 +74,19 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Service
-@Path(ProvAwsResource.SERVICE_URL)
+@Path(ProvAwsPluginResource.URL)
 @Produces(MediaType.APPLICATION_JSON)
-public class ProvAwsResource extends AbstractProvResource implements Terraforming {
+public class ProvAwsPluginResource extends AbstractProvResource implements Terraforming {
 
 	/**
 	 * Plug-in key.
 	 */
-	public static final String SERVICE_URL = ProvResource.SERVICE_URL + "/aws";
+	public static final String URL = ProvResource.SERVICE_URL + "/aws";
 
 	/**
 	 * Plug-in key.
 	 */
-	public static final String SERVICE_KEY = SERVICE_URL.replace('/', ':').substring(1);
+	public static final String KEY = URL.replace('/', ':').substring(1);
 
 	/**
 	 * The default region, fixed for now.
@@ -114,37 +114,37 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	/**
 	 * Configuration key used for {@link #EC2_PRICES}
 	 */
-	public static final String CONF_URL_PRICES = SERVICE_KEY + ":ec2-prices-url";
+	public static final String CONF_URL_PRICES = KEY + ":ec2-prices-url";
 
 	/**
 	 * Configuration key used for {@link #EC2_PRICES_SPOT}
 	 */
-	public static final String CONF_URL_PRICES_SPOT = SERVICE_KEY + ":ec2-prices-spot-url";
+	public static final String CONF_URL_PRICES_SPOT = KEY + ":ec2-prices-spot-url";
 
 	/**
 	 * Configuration key used for {@link #DEFAULT_REGION}
 	 */
-	public static final String CONF_REGION = SERVICE_KEY + ":region";
+	public static final String CONF_REGION = KEY + ":region";
 
 	/**
 	 * Configuration key used for {@link #DEFAULT_REGION_SPOT}
 	 */
-	public static final String CONF_REGION_SPOT = SERVICE_KEY + ":region-spot";
+	public static final String CONF_REGION_SPOT = KEY + ":region-spot";
 
 	/**
 	 * Parameter used for AWS authentication
 	 */
-	public static final String PARAMETER_ACCESS_KEY_ID = SERVICE_KEY + ":access-key-id";
+	public static final String PARAMETER_ACCESS_KEY_ID = KEY + ":access-key-id";
 
 	/**
 	 * Parameter used for AWS authentication
 	 */
-	public static final String PARAMETER_SECRET_ACCESS_KEY = SERVICE_KEY + ":secret-access-key";
+	public static final String PARAMETER_SECRET_ACCESS_KEY = KEY + ":secret-access-key";
 
 	/**
 	 * AWS Account Id.
 	 */
-	public static final String PARAMETER_ACCOUNT = SERVICE_KEY + ":account";
+	public static final String PARAMETER_ACCOUNT = KEY + ":account";
 
 	/**
 	 * Jackson type reference for Spot price
@@ -180,7 +180,7 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 
 	@Override
 	public String getKey() {
-		return SERVICE_KEY;
+		return KEY;
 	}
 
 	@Override
@@ -229,7 +229,7 @@ public class ProvAwsResource extends AbstractProvResource implements Terraformin
 	public void install() throws IOException, URISyntaxException {
 
 		// Node is already persisted
-		final Node node = nodeRepository.findOneExpected(SERVICE_KEY);
+		final Node node = nodeRepository.findOneExpected(KEY);
 		installEC2SpotPrices(installEC2Prices(node), node);
 	}
 

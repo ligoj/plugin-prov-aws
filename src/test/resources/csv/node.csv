@@ -1,4 +1,4 @@
 id;name;refined.id;mode;uiClasses;tag;tagUiClasses
 service:prov;Provisioning;;LINK;fa fa-server;technical;fa fa-industry
 service:prov:aws;Provisioning AWS;service:prov;LINK;;;
-service:prov:aws:account;Provisioning AWS AccountA;service:prov:aws;LINK;;;
+service:prov:aws:test;Provisioning AWS Test;service:prov:aws;LINK;;;

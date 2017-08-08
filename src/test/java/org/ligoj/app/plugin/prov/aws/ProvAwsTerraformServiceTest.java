@@ -56,7 +56,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 		persistSystemEntities();
 		persistEntities("csv", new Class[] { Node.class, Project.class, Parameter.class, Subscription.class, ParameterValue.class },
 				StandardCharsets.UTF_8.name());
-		subscription = subscriptionRepository.findBy("node.id", "service:prov:aws:account");
+		subscription = subscriptionRepository.findBy("node.id", "service:prov:aws:test");
 	}
 
 	/**

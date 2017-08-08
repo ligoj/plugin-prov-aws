@@ -403,7 +403,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	private int newSubscription() throws Exception {
 		final SubscriptionEditionVo vo = new SubscriptionEditionVo();
 		vo.setMode(SubscriptionMode.CREATE);
-		vo.setNode("service:prov:aws:account");
+		vo.setNode("service:prov:aws:test");
 		vo.setProject(projectRepository.findByNameExpected("gStack").getId());
 		final ParameterValueCreateVo awsid = new ParameterValueCreateVo();
 		awsid.setParameter(ProvAwsPluginResource.PARAMETER_ACCESS_KEY_ID);

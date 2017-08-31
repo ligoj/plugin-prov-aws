@@ -20,10 +20,12 @@ import org.ligoj.app.model.Project;
 import org.ligoj.app.model.Subscription;
 import org.ligoj.app.plugin.prov.QuoteStorageVo;
 import org.ligoj.app.plugin.prov.QuoteVo;
+import org.ligoj.app.plugin.prov.model.InternetAccess;
 import org.ligoj.app.plugin.prov.model.ProvInstance;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceType;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
+import org.ligoj.app.plugin.prov.model.ProvQuoteStorage;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.model.VmOs;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,7 +56,8 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	@Before
 	public void prepareData() throws IOException {
 		persistSystemEntities();
-		persistEntities("csv", new Class[] { Node.class, Project.class, Parameter.class, Subscription.class, ParameterValue.class },
+		persistEntities("csv",
+				new Class[] { Node.class, Project.class, Parameter.class, Subscription.class, ParameterValue.class },
 				StandardCharsets.UTF_8.name());
 		subscription = subscriptionRepository.findBy("node.id", "service:prov:aws:test");
 	}
@@ -69,9 +72,10 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	public void testTerraformGenerationOnDemandType() throws Exception {
 		final QuoteVo quoteVo = new QuoteVo();
 		final ProvQuoteInstance instance = generateQuoteInstance("OnDemand");
+		instance.setStorages(Lists.newArrayList(generateInstanceStorage(5), generateInstanceStorage(50)));
 		quoteVo.setInstances(Lists.newArrayList(instance));
-		quoteVo.setStorages(
-				Lists.newArrayList(generateStorage(instance.getId(), "dev", 5), generateStorage(instance.getId(), "dev-1", 50)));
+		quoteVo.setStorages(Lists.newArrayList(generateStorage(instance.getId(), "dev", 5),
+				generateStorage(instance.getId(), "dev-1", 50)));
 
 		testTerraformGeneration(subscription, quoteVo, "terraform/terraform.tf");
 	}
@@ -89,6 +93,40 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 		quoteVo.setStorages(Lists.newArrayList());
 
 		testTerraformGeneration(subscription, quoteVo, "terraform/terraform-spot.tf");
+	}
+
+	/**
+	 * check generated terraform
+	 * 
+	 * @throws Exception
+	 *             unexpected exception
+	 */
+	@Test
+	public void testTerraformGenerationPrivateNetwork() throws Exception {
+		final QuoteVo quoteVo = new QuoteVo();
+		final ProvQuoteInstance instance = generateQuoteInstance("OnDemand");
+		instance.setInternet(InternetAccess.PRIVATE);
+		quoteVo.setInstances(Lists.newArrayList(instance));
+		quoteVo.setStorages(Lists.newArrayList());
+
+		testTerraformGeneration(subscription, quoteVo, "terraform/terraform-private.tf");
+	}
+
+	/**
+	 * check generated terraform
+	 * 
+	 * @throws Exception
+	 *             unexpected exception
+	 */
+	@Test
+	public void testTerraformGenerationNatNetwork() throws Exception {
+		final QuoteVo quoteVo = new QuoteVo();
+		final ProvQuoteInstance instance = generateQuoteInstance("OnDemand");
+		instance.setInternet(InternetAccess.PRIVATE_NAT);
+		quoteVo.setInstances(Lists.newArrayList(instance));
+		quoteVo.setStorages(Lists.newArrayList());
+
+		testTerraformGeneration(subscription, quoteVo, "terraform/terraform-nat.tf");
 	}
 
 	/**
@@ -117,15 +155,16 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	 * @param expectedResultFileName
 	 *            expected result
 	 */
-	private void testTerraformGeneration(final Subscription subscription, final QuoteVo quoteVo, final String expectedResultFileName)
-			throws IOException {
+	private void testTerraformGeneration(final Subscription subscription, final QuoteVo quoteVo,
+			final String expectedResultFileName) throws IOException {
 		final StringWriter writer = new StringWriter();
 		service.writeTerraform(writer, quoteVo, subscription);
 
 		final String terraform = writer.toString();
 		Assert.assertNotNull(terraform);
 		Assert.assertEquals(
-				IOUtils.toString(Thread.currentThread().getContextClassLoader().getResource(expectedResultFileName), Charsets.UTF_8),
+				IOUtils.toString(Thread.currentThread().getContextClassLoader().getResource(expectedResultFileName),
+						Charsets.UTF_8),
 				terraform);
 	}
 
@@ -171,5 +210,21 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 		quoteInstance.setInstancePrice(instancePrice);
 		quoteInstance.setStorages(Lists.newArrayList());
 		return quoteInstance;
+	}
+
+	/**
+	 * generate an instance storage for test purpose
+	 * 
+	 * @param size
+	 *            storage size
+	 * @return instance storage
+	 */
+	private ProvQuoteStorage generateInstanceStorage(final int size) {
+		final ProvQuoteStorage instanceStorage = new ProvQuoteStorage();
+		instanceStorage.setSize(size);
+		final ProvStorageType storageType = new ProvStorageType();
+		storageType.setName("gp2");
+		instanceStorage.setType(storageType);
+		return instanceStorage;
 	}
 }

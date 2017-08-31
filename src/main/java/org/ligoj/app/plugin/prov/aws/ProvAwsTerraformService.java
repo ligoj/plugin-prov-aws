@@ -7,10 +7,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.ligoj.app.model.Subscription;
 import org.ligoj.app.plugin.prov.QuoteStorageVo;
 import org.ligoj.app.plugin.prov.QuoteVo;
+import org.ligoj.app.plugin.prov.model.InternetAccess;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
 import org.ligoj.app.plugin.prov.model.ProvQuoteStorage;
 import org.ligoj.app.plugin.prov.model.VmOs;
@@ -76,11 +78,14 @@ public class ProvAwsTerraformService {
 	 * @param subscription
 	 *            The related subscription.
 	 */
-	public void writeTerraform(final Writer writer, final QuoteVo quote, final Subscription subscription) throws IOException {
+	public void writeTerraform(final Writer writer, final QuoteVo quote, final Subscription subscription)
+			throws IOException {
 		final String projectName = subscription.getProject().getName();
 		writeProvider(writer);
 		if (!quote.getInstances().isEmpty()) {
 			writePublicKey(writer);
+			writeNetwork(writer, projectName,
+					quote.getInstances().stream().map(instance -> instance.getInternet()).collect(Collectors.toSet()));
 			writeSecurityGroup(writer, projectName);
 			writeKeyPair(writer, projectName);
 			final Set<VmOs> osToSearch = new HashSet<>();
@@ -90,12 +95,137 @@ public class ProvAwsTerraformService {
 			}
 
 			// AMI part
-			final String account = subscriptionResource.getParameters(subscription.getId()).get(ProvAwsPluginResource.PARAMETER_ACCOUNT);
+			final String account = subscriptionResource.getParameters(subscription.getId())
+					.get(ProvAwsPluginResource.PARAMETER_ACCOUNT);
 			for (final VmOs os : osToSearch) {
 				writeAmiSearch(writer, os, account);
 			}
 		}
 		writeStandaloneStorages(writer, projectName, quote.getStorages());
+	}
+
+	/**
+	 * write Network
+	 * 
+	 * @param writer
+	 *            writer
+	 * @param project
+	 *            project name
+	 * @param types
+	 *            internet access types of instances
+	 * @throws IOException
+	 *             exception
+	 */
+	private void writeNetwork(final Writer writer, final String project, final Set<InternetAccess> types)
+			throws IOException {
+		writer.write("/* network */\n");
+		writer.write("resource \"aws_vpc\" \"terraform\" {\n");
+		writer.write("  cidr_block = \"10.0.0.0/16\"\n");
+		writer.write("}\n");
+		if (types.contains(InternetAccess.PUBLIC) || types.contains(InternetAccess.PRIVATE_NAT)) {
+			writeSubnet(writer, project, InternetAccess.PUBLIC, "10.0.1.0/24");
+			writeInternetGateway(writer);
+			writeRouteTable(writer, project, InternetAccess.PUBLIC);
+		}
+		if (types.contains(InternetAccess.PRIVATE_NAT)) {
+			writeSubnet(writer, project, InternetAccess.PRIVATE_NAT, "10.0.2.0/24");
+			writeNatGateway(writer);
+			writeRouteTable(writer, project, InternetAccess.PRIVATE_NAT);
+		}
+		if (types.contains(InternetAccess.PRIVATE)) {
+			writeSubnet(writer, project, InternetAccess.PRIVATE, "10.0.3.0/24");
+		}
+	}
+
+	/**
+	 * write a nat gateway
+	 * 
+	 * @param writer
+	 *            writer
+	 * @throws IOException
+	 *             exception
+	 */
+	private void writeNatGateway(final Writer writer) throws IOException {
+		writer.write("resource \"aws_eip\" \"" + InternetAccess.PRIVATE_NAT.name() + "\" {\n");
+		writer.write("  vpc      = true\n");
+		writer.write("}\n");
+		writer.write("resource \"aws_nat_gateway\" \"default\" {\n");
+		writer.write("  allocation_id = \"${aws_eip." + InternetAccess.PRIVATE_NAT.name() + ".id}\"\n");
+		writer.write("  subnet_id     = \"${aws_subnet." + InternetAccess.PUBLIC.name() + ".id}\"\n");
+		writer.write("}\n");
+	}
+
+	/**
+	 * write a route table
+	 * 
+	 * @param writer
+	 *            writer
+	 * @param project
+	 *            project name
+	 * @param type
+	 *            internet access
+	 * @throws IOException
+	 *             exception
+	 */
+	private void writeRouteTable(final Writer writer, final String project, final InternetAccess type)
+			throws IOException {
+		writer.write("resource \"aws_route_table\" \"" + type.name() + "\" {\n");
+		writer.write("  vpc_id     = \"${aws_vpc.terraform.id}\"\n");
+		writer.write("  route {\n");
+		writer.write("    cidr_block = \"0.0.0.0/0\"\n");
+		if (type == InternetAccess.PUBLIC) {
+			writer.write("    gateway_id = \"${aws_internet_gateway.default.id}\"\n");
+		} else {
+			writer.write("        nat_gateway_id = \"${aws_nat_gateway.default.id}\"\n");
+		}
+		writer.write("  }\n");
+		writeTags(writer, project, type.name());
+		writer.write("}\n");
+		writer.write("resource \"aws_route_table_association\" \"" + type.name() + "\" {\n");
+		writer.write("    subnet_id = \"${aws_subnet." + type.name() + ".id}\"\n");
+		writer.write("    route_table_id = \"${aws_route_table." + type.name() + ".id}\"\n");
+		writer.write("}\n");
+	}
+
+	/**
+	 * write internet gateway
+	 * 
+	 * @param writer
+	 *            writer
+	 * @throws IOException
+	 *             exception
+	 */
+	private void writeInternetGateway(final Writer writer) throws IOException {
+		writer.write("resource \"aws_internet_gateway\" \"default\" {\n");
+		writer.write("  vpc_id     = \"${aws_vpc.terraform.id}\"\n");
+		writer.write("}\n");
+	}
+
+	/**
+	 * write a subnet
+	 * 
+	 * @param writer
+	 *            writer
+	 * @param project
+	 *            project name
+	 * @param type
+	 *            internet access type
+	 * @param cidr
+	 *            cidr
+	 * @throws IOException
+	 *             exception
+	 */
+	private void writeSubnet(final Writer writer, final String project, final InternetAccess type, final String cidr)
+			throws IOException {
+		writer.write("/* " + type.name() + " subnet */\n");
+		writer.write("resource \"aws_subnet\" \"" + type + "\" {\n");
+		writer.write("  vpc_id     = \"${aws_vpc.terraform.id}\"\n");
+		writer.write("  cidr_block = \"" + cidr + "\"\n");
+		if (type == InternetAccess.PUBLIC) {
+			writer.write("  map_public_ip_on_launch = true\n");
+		}
+		writeTags(writer, project, type.name());
+		writer.write("}\n");
 	}
 
 	/**
@@ -112,8 +242,8 @@ public class ProvAwsTerraformService {
 	 * @throws IOException
 	 *             exception thrown during write
 	 */
-	private void writeInstance(final Writer writer, final QuoteVo quote, final ProvQuoteInstance instance, final String projectName)
-			throws IOException {
+	private void writeInstance(final Writer writer, final QuoteVo quote, final ProvQuoteInstance instance,
+			final String projectName) throws IOException {
 		final VmOs os = instance.getInstancePrice().getOs();
 		final String instanceName = instance.getName();
 		final String instanceType = instance.getInstancePrice().getInstance().getName();
@@ -130,6 +260,7 @@ public class ProvAwsTerraformService {
 		writer.write("  instance_type = \"" + instanceType + "\"\n");
 		writer.write("  key_name    	= \"" + projectName + "-key\"\n");
 		writer.write("  vpc_security_group_ids = [ \"${aws_security_group.vm-sg.id}\" ]\n");
+		writer.write("  subnet_id     = \"${aws_subnet." + instance.getInternet().name() + ".id}\"\n");
 		writeInstanceStorages(writer, quote, instance);
 		writeTags(writer, projectName, projectName + "-" + instanceName);
 		writer.write("}\n");
@@ -205,12 +336,20 @@ public class ProvAwsTerraformService {
 		writer.write("/* security group */\n");
 		writer.write("resource \"aws_security_group\" \"vm-sg\" {\n");
 		writer.write("  name        = \"" + projectName + "-sg\"\n");
-		writer.write("  description = \"Allow ssh inbound traffic and all outbund traffic\"\n");
+		writer.write(
+				"  description = \"Allow ssh inbound traffic, all inbound traffic in security group and all outbund traffic\"\n");
+		writer.write("  vpc_id     = \"${aws_vpc.terraform.id}\"\n");
 		writer.write("  ingress {\n");
 		writer.write("    from_port   = 22\n");
 		writer.write("    to_port     = 22\n");
 		writer.write("    protocol    = \"TCP\"\n");
 		writer.write("    cidr_blocks = [\"0.0.0.0/0\"]\n");
+		writer.write("  }\n");
+		writer.write("  ingress {\n");
+		writer.write("    from_port   = 0\n");
+		writer.write("    to_port     = 0\n");
+		writer.write("    protocol    = \"TCP\"\n");
+		writer.write("    self        = true\n");
 		writer.write("  }\n");
 		writer.write("  egress {\n");
 		writer.write("    from_port = 0\n");
@@ -267,7 +406,8 @@ public class ProvAwsTerraformService {
 	 * @throws IOException
 	 *             exception thrown during write
 	 */
-	private void writeInstanceStorages(final Writer writer, final QuoteVo quote, final ProvQuoteInstance instance) throws IOException {
+	private void writeInstanceStorages(final Writer writer, final QuoteVo quote, final ProvQuoteInstance instance)
+			throws IOException {
 		int idx = 0;
 		for (final ProvQuoteStorage storage : instance.getStorages()) {
 			if (idx == 0) {
@@ -295,8 +435,8 @@ public class ProvAwsTerraformService {
 	 * @throws IOException
 	 *             exception thrown during write
 	 */
-	private void writeStandaloneStorages(final Writer writer, final String projectName, final List<QuoteStorageVo> storages)
-			throws IOException {
+	private void writeStandaloneStorages(final Writer writer, final String projectName,
+			final List<QuoteStorageVo> storages) throws IOException {
 		for (final QuoteStorageVo storage : storages) {
 			if (storage.getQuoteInstance() == null) {
 				writer.write("resource \"aws_ebs_volume\" \"" + storage.getName() + "\" {\n");

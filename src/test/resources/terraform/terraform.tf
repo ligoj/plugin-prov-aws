@@ -8,15 +8,54 @@ provider "aws" {
 variable publickey {
   description = "SSH Public key used to access nginx EC2 Server"
 }
+/* network */
+resource "aws_vpc" "terraform" {
+  cidr_block = "10.0.0.0/16"
+}
+/* PUBLIC subnet */
+resource "aws_subnet" "PUBLIC" {
+  vpc_id     = "${aws_vpc.terraform.id}"
+  cidr_block = "10.0.1.0/24"
+  map_public_ip_on_launch = true
+  tags = {
+    Project = "gStack"
+    Name = "PUBLIC"
+  }
+}
+resource "aws_internet_gateway" "default" {
+  vpc_id     = "${aws_vpc.terraform.id}"
+}
+resource "aws_route_table" "PUBLIC" {
+  vpc_id     = "${aws_vpc.terraform.id}"
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = "${aws_internet_gateway.default.id}"
+  }
+  tags = {
+    Project = "gStack"
+    Name = "PUBLIC"
+  }
+}
+resource "aws_route_table_association" "PUBLIC" {
+    subnet_id = "${aws_subnet.PUBLIC.id}"
+    route_table_id = "${aws_route_table.PUBLIC.id}"
+}
 /* security group */
 resource "aws_security_group" "vm-sg" {
   name        = "gStack-sg"
-  description = "Allow ssh inbound traffic and all outbund traffic"
+  description = "Allow ssh inbound traffic, all inbound traffic in security group and all outbund traffic"
+  vpc_id     = "${aws_vpc.terraform.id}"
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "TCP"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "TCP"
+    self        = true
   }
   egress {
     from_port = 0
@@ -40,6 +79,7 @@ resource "aws_instance" "vm-dev" {
   instance_type = "t2.micro"
   key_name    	= "gStack-key"
   vpc_security_group_ids = [ "${aws_security_group.vm-sg.id}" ]
+  subnet_id     = "${aws_subnet.PUBLIC.id}"
   root_block_device {
     volume_type = "gp2"
     volume_size = 5

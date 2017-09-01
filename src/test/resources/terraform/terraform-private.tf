@@ -57,6 +57,7 @@ resource "aws_key_pair" "vm-keypair" {
 /* instance */
 resource "aws_instance" "vm-dev" {
   ami           = "${data.aws_ami.ami-LINUX.id}"
+  name    		= "dev"
   instance_type = "t2.micro"
   key_name    	= "gStack-key"
   vpc_security_group_ids = [ "${aws_security_group.vm-sg.id}" ]

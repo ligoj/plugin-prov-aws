@@ -119,6 +119,25 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	 *             unexpected exception
 	 */
 	@Test
+	public void testTerraformGenerationWithAutoscale() throws Exception {
+		final QuoteVo quoteVo = new QuoteVo();
+		final ProvQuoteInstance instance = generateQuoteInstance("OnDemand");
+		instance.setInternet(InternetAccess.PRIVATE);
+		instance.setMinQuantity(2);
+		instance.setMaxQuantity(4);
+		quoteVo.setInstances(Lists.newArrayList(instance));
+		quoteVo.setStorages(Lists.newArrayList());
+
+		testTerraformGeneration(subscription, quoteVo, "terraform/terraform-scale.tf");
+	}
+
+	/**
+	 * check generated terraform
+	 * 
+	 * @throws Exception
+	 *             unexpected exception
+	 */
+	@Test
 	public void testTerraformGenerationNatNetwork() throws Exception {
 		final QuoteVo quoteVo = new QuoteVo();
 		final ProvQuoteInstance instance = generateQuoteInstance("OnDemand");

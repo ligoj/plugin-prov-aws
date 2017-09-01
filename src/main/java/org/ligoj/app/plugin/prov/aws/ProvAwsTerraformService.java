@@ -248,22 +248,50 @@ public class ProvAwsTerraformService {
 		final String instanceName = instance.getName();
 		final String instanceType = instance.getInstancePrice().getInstance().getName();
 		final boolean spot = SPOT_INSTANCE_PRICE_TYPE.equals(instance.getInstancePrice().getType().getName());
-
+		final boolean autoscaling = instance.getMinQuantity() != 1 | instance.getMaxQuantity() != 1;
 		writer.write("/* instance */\n");
-		if (spot) {
+		if (autoscaling) {
+			writer.write("resource \"aws_launch_configuration\" \"vm-" + instanceName + "\" {\n");
+		} else if (spot) {
 			writer.write("resource \"aws_spot_instance_request\" \"vm-" + instanceName + "\" {\n");
 			writer.write("  spot_price    = \"0.03\"\n");
 		} else {
 			writer.write("resource \"aws_instance\" \"vm-" + instanceName + "\" {\n");
 		}
-		writer.write("  ami           = \"${data.aws_ami.ami-" + os.name() + ".id}\"\n");
+		writer.write("  " + (autoscaling ? "image_id" : "ami") + "           = \"${data.aws_ami.ami-" + os.name()
+				+ ".id}\"\n");
+		writer.write("  name    		= \"" + instanceName + "\"\n");
 		writer.write("  instance_type = \"" + instanceType + "\"\n");
 		writer.write("  key_name    	= \"" + projectName + "-key\"\n");
-		writer.write("  vpc_security_group_ids = [ \"${aws_security_group.vm-sg.id}\" ]\n");
-		writer.write("  subnet_id     = \"${aws_subnet." + instance.getInternet().name() + ".id}\"\n");
+		writer.write("  " + (autoscaling ? "security_groups" : "vpc_security_group_ids")
+				+ " = [ \"${aws_security_group.vm-sg.id}\" ]\n");
 		writeInstanceStorages(writer, quote, instance);
-		writeTags(writer, projectName, projectName + "-" + instanceName);
+		if (!autoscaling) {
+			writer.write("  subnet_id     = \"${aws_subnet." + instance.getInternet().name() + ".id}\"\n");
+			writeTags(writer, projectName, projectName + "-" + instanceName);
+		}
 		writer.write("}\n");
+
+		// autoscaling
+		if (autoscaling) {
+			writer.write("/* autoscaling */\n");
+			writer.write("resource \"aws_autoscaling_group\" \"" + instanceName + "autoscaling-group\" {\n");
+			writer.write("  min_size                  = " + instance.getMinQuantity() + "\n");
+			writer.write("  max_size                  = " + instance.getMaxQuantity() + "\n");
+			writer.write(
+					"  launch_configuration      = \"${aws_launch_configuration.vm-" + instanceName + ".name}\"\n");
+			writer.write("  vpc_zone_identifier     = [\"${aws_subnet." + instance.getInternet().name() + ".id}\"]\n");
+			writer.write("  tags = [{\n");
+			writer.write("    key=\"Project\"\n");
+			writer.write("    value=\"" + projectName + "\"\n");
+			writer.write("    propagate_at_launch = true\n");
+			writer.write("  }, {\n");
+			writer.write("    key=\"Name\"\n");
+			writer.write("    value=\"" + projectName + "-" + instanceName + "\"\n");
+			writer.write("    propagate_at_launch = true\n");
+			writer.write("  }]\n");
+			writer.write("}\n");
+		}
 	}
 
 	/**

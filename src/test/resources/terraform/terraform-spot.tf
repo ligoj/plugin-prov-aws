@@ -77,6 +77,7 @@ resource "aws_key_pair" "vm-keypair" {
 resource "aws_spot_instance_request" "vm-dev" {
   spot_price    = "0.03"
   ami           = "${data.aws_ami.ami-LINUX.id}"
+  name    		= "dev"
   instance_type = "t2.micro"
   key_name    	= "gStack-key"
   vpc_security_group_ids = [ "${aws_security_group.vm-sg.id}" ]

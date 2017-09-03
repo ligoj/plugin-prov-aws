@@ -148,10 +148,12 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 
 		// Check the spot
 		final ComputedInstancePrice spotPrice = provResource
-				.lookupInstance(instance.getConfiguration().getSubscription().getId(), 2, 1741, true, VmOs.LINUX, null, null).getInstance();
+				.lookupInstance(instance.getConfiguration().getSubscription().getId(), 2, 1741, true, VmOs.LINUX, null, null, true)
+				.getInstance();
 		Assert.assertEquals(12.629, spotPrice.getCost(), 0.001);
 		Assert.assertEquals(0.0173d, spotPrice.getInstance().getCost(), 0.0001);
 		Assert.assertEquals("Spot", spotPrice.getInstance().getType().getName());
+		Assert.assertTrue(spotPrice.getInstance().getType().isEphemeral());
 		Assert.assertEquals("r4.large", spotPrice.getInstance().getInstance().getName());
 		Assert.assertEquals(5, ipRepository.findAllBy("type.name", "Spot").size());
 	}
@@ -180,6 +182,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		Assert.assertEquals(0.064, price.getCost(), 0.001);
 		final ProvInstancePriceType priceType = price.getType();
 		Assert.assertEquals("Reserved, 3yr, All Upfront", priceType.getName());
+		Assert.assertFalse(priceType.isEphemeral());
 		Assert.assertEquals(1576800, priceType.getPeriod().intValue());
 		Assert.assertEquals("c1.medium", price.getInstance().getName());
 		return instance;
@@ -216,16 +219,16 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		final ProvQuoteInstance instance = check(quote);
 
 		// Check the spot
-		final ComputedInstancePrice spotPrice = provResource
-				.lookupInstance(instance.getConfiguration().getSubscription().getId(), 2, 1741, null, VmOs.LINUX,
-						instanceRepository.findByName(instance.getConfiguration().getSubscription().getId(), "r4.large").getId(), null)
-				.getInstance();
+		final ComputedInstancePrice spotPrice = provResource.lookupInstance(instance.getConfiguration().getSubscription().getId(), 2, 1741,
+				null, VmOs.LINUX, instanceRepository.findByName(instance.getConfiguration().getSubscription().getId(), "r4.large").getId(),
+				null, true).getInstance();
 		Assert.assertTrue(spotPrice.getCost() > 5d);
 		Assert.assertTrue(spotPrice.getCost() < 100d);
 		final ProvInstancePrice instance2 = spotPrice.getInstance();
 		Assert.assertTrue(instance2.getCost() > 0.005d);
 		Assert.assertTrue(instance2.getCost() < 1d);
 		Assert.assertEquals("Spot", instance2.getType().getName());
+		Assert.assertTrue(instance2.getType().isEphemeral());
 		Assert.assertEquals("r4.large", instance2.getInstance().getName());
 	}
 
@@ -258,7 +261,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		Assert.assertNull(iptRepository.findByName("Reserved, 3yr, All Upfront"));
 
 		// Check the spot
-		Assert.assertNull(provResource.lookupInstance(subscription, 1, 1, false, VmOs.LINUX, null, null).getInstance());
+		Assert.assertNull(provResource.lookupInstance(subscription, 1, 1, false, VmOs.LINUX, null, null, true).getInstance());
 	}
 
 	/**
@@ -321,7 +324,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		Assert.assertEquals(0, ipRepository.findAllBy("type.name", "Spot").size());
 
 		// Check no instance can be found
-		Assert.assertNull(provResource.lookupInstance(subscription, 1, 1, false, VmOs.LINUX, null, null).getInstance());
+		Assert.assertNull(provResource.lookupInstance(subscription, 1, 1, false, VmOs.LINUX, null, null, true).getInstance());
 	}
 
 	/**
@@ -337,7 +340,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		// Request an instance that would not be a Spot
 		final LowestInstancePrice price = provResource.lookupInstance(subscription, 2, 1741, true, VmOs.LINUX,
 				instanceRepository.findByName(subscription, "c1.medium").getId(),
-				iptRepository.findByNameExpected("Reserved, 3yr, All Upfront").getId());
+				iptRepository.findByNameExpected("Reserved, 3yr, All Upfront").getId(), false);
 		final QuoteInstanceEditionVo ivo = new QuoteInstanceEditionVo();
 		ivo.setCpu(1d);
 		ivo.setRam(1);

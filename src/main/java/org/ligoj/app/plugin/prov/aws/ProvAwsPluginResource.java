@@ -299,6 +299,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 		spotPriceType.setNode(node);
 		spotPriceType.setPeriod(60); // 1h
 		spotPriceType.setVariable(true);
+		spotPriceType.setEphemeral(true);
 		iptRepository.saveAndFlush(spotPriceType);
 		return spotPriceType;
 	}

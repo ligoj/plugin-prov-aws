@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -58,6 +59,7 @@ import org.ligoj.app.resource.plugin.CurlProcessor;
 import org.ligoj.app.resource.plugin.CurlRequest;
 import org.ligoj.bootstrap.core.NamedBean;
 import org.ligoj.bootstrap.core.resource.BusinessException;
+import org.ligoj.bootstrap.core.security.SecurityHelper;
 import org.ligoj.bootstrap.resource.system.configuration.ConfigurationResource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -178,6 +180,9 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	@Autowired
 	private ProvAwsTerraformService terraformService;
 
+	@Autowired
+	private SecurityHelper securityHelper;
+
 	@Override
 	public String getKey() {
 		return KEY;
@@ -223,7 +228,38 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	 */
 	@Override
 	public void install() throws IOException, URISyntaxException {
+		installInternal();
+	}
 
+	/**
+	 * Reinstall the plug-in : cost are updated
+	 */
+	@Path("install")
+	@POST
+	public void reinstall() throws IOException, URISyntaxException {
+		checkWritableNode(KEY);
+		installInternal();
+	}
+
+	/**
+	 * Check the related node can be updated by the current principal.
+	 * 
+	 * TODO Delete with API 1.1.3+
+	 * 
+	 * @param The
+	 *            node to check.
+	 * @return the checked writable node.
+	 */
+	private Node checkWritableNode(final String id) {
+		final Node node = nodeRepository.findOneWritable(id, securityHelper.getLogin());
+		if (node == null) {
+			// Node is not readable or does not exists
+			throw new BusinessException("read-only-node", "node", id);
+		}
+		return node;
+	}
+
+	private void installInternal() throws IOException, URISyntaxException {
 		// Node is already persisted
 		final Node node = nodeRepository.findOneExpected(KEY);
 		installEC2SpotPrices(installEC2Prices(node), node);

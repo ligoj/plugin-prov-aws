@@ -15,6 +15,7 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.transaction.Transactional;
 
@@ -158,6 +159,32 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		Assert.assertEquals(5, ipRepository.findAllBy("type.name", "Spot").size());
 	}
 
+	@Test
+	public void reinstall() throws Exception {
+		mockAwsServer();
+		persistEntities("csv", new Class[] { ProvStorageType.class }, StandardCharsets.UTF_8.name());
+
+		// Re-Install a new configuration
+		resource.reinstall();
+	}
+
+	@Test(expected = BusinessException.class)
+	public void reinstallNoRight() throws Exception {
+		initSpringSecurityContext("any");
+		reinstall();
+	}
+
+	private void mockAwsServer() throws IOException {
+		initSpringSecurityContext(DEFAULT_USER);
+		configuration.saveOrUpdate(ProvAwsPluginResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
+		configuration.saveOrUpdate(ProvAwsPluginResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/spot.js");
+		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
+				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/index.csv").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
+				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/spot.js").getInputStream(), "UTF-8"))));
+		httpServer.start();
+	}
+
 	private ProvQuoteInstance check(final QuoteVo quote) {
 		Assert.assertEquals(47.219d, quote.getCost().getMin(), 0.001);
 		checkStorage(quote.getStorages().get(0));
@@ -194,14 +221,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	 * @return The new quote from the installed
 	 */
 	private QuoteVo install() throws Exception {
-		initSpringSecurityContext(DEFAULT_USER);
-		configuration.saveOrUpdate(ProvAwsPluginResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
-		configuration.saveOrUpdate(ProvAwsPluginResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/spot.js");
-		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/index.csv").getInputStream(), "UTF-8"))));
-		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/spot.js").getInputStream(), "UTF-8"))));
-		httpServer.start();
+		mockAwsServer();
 
 		// Check the basic quote
 		return installAndConfigure();
@@ -431,6 +451,13 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		Assert.assertEquals("body", request.getContent());
 	}
 
+	@Test
+	public void create() throws Exception {
+		final ProvAwsPluginResource resource = Mockito.spy(ProvAwsPluginResource.class);
+		Mockito.doReturn(true).when(resource).validateAccess(ArgumentMatchers.anyInt());
+		resource.create(subscription);
+	}
+
 	@Test(expected = BusinessException.class)
 	public void createFailed() throws Exception {
 		final ProvAwsPluginResource resource = Mockito.spy(ProvAwsPluginResource.class);
@@ -460,6 +487,16 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	@Test
 	public void validateAccessDown() throws Exception {
 		Assert.assertFalse(validateAccess(HttpStatus.SC_FORBIDDEN));
+	}
+
+	@Test
+	public void checkStatus() throws Exception {
+		Assert.assertTrue(validateAccess(HttpStatus.SC_OK));
+		Map<String, String> parameters = new HashMap<>();
+		parameters.put("service:prov:aws:access-key-id", "12345678901234567890");
+		parameters.put("service:prov:aws:secret-access-key", "abcdefghtiklmnopqrstuvwxyz");
+		parameters.put("service:prov:aws:account", "123456789");
+		Assert.assertTrue(resource.checkStatus(null, parameters));
 	}
 
 	private boolean validateAccess(int status) throws Exception {

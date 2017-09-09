@@ -15,6 +15,7 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.transaction.Transactional;
 
@@ -148,12 +149,40 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 
 		// Check the spot
 		final ComputedInstancePrice spotPrice = provResource
-				.lookupInstance(instance.getConfiguration().getSubscription().getId(), 2, 1741, true, VmOs.LINUX, null, null).getInstance();
+				.lookupInstance(instance.getConfiguration().getSubscription().getId(), 2, 1741, true, VmOs.LINUX, null, null, true)
+				.getInstance();
 		Assert.assertEquals(12.629, spotPrice.getCost(), 0.001);
 		Assert.assertEquals(0.0173d, spotPrice.getInstance().getCost(), 0.0001);
 		Assert.assertEquals("Spot", spotPrice.getInstance().getType().getName());
+		Assert.assertTrue(spotPrice.getInstance().getType().isEphemeral());
 		Assert.assertEquals("r4.large", spotPrice.getInstance().getInstance().getName());
 		Assert.assertEquals(5, ipRepository.findAllBy("type.name", "Spot").size());
+	}
+
+	@Test
+	public void reinstall() throws Exception {
+		mockAwsServer();
+		persistEntities("csv", new Class[] { ProvStorageType.class }, StandardCharsets.UTF_8.name());
+
+		// Re-Install a new configuration
+		resource.reinstall();
+	}
+
+	@Test(expected = BusinessException.class)
+	public void reinstallNoRight() throws Exception {
+		initSpringSecurityContext("any");
+		reinstall();
+	}
+
+	private void mockAwsServer() throws IOException {
+		initSpringSecurityContext(DEFAULT_USER);
+		configuration.saveOrUpdate(ProvAwsPluginResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
+		configuration.saveOrUpdate(ProvAwsPluginResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/spot.js");
+		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
+				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/index.csv").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
+				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/spot.js").getInputStream(), "UTF-8"))));
+		httpServer.start();
 	}
 
 	private ProvQuoteInstance check(final QuoteVo quote) {
@@ -180,6 +209,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		Assert.assertEquals(0.064, price.getCost(), 0.001);
 		final ProvInstancePriceType priceType = price.getType();
 		Assert.assertEquals("Reserved, 3yr, All Upfront", priceType.getName());
+		Assert.assertFalse(priceType.isEphemeral());
 		Assert.assertEquals(1576800, priceType.getPeriod().intValue());
 		Assert.assertEquals("c1.medium", price.getInstance().getName());
 		return instance;
@@ -191,14 +221,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	 * @return The new quote from the installed
 	 */
 	private QuoteVo install() throws Exception {
-		initSpringSecurityContext(DEFAULT_USER);
-		configuration.saveOrUpdate(ProvAwsPluginResource.CONF_URL_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
-		configuration.saveOrUpdate(ProvAwsPluginResource.CONF_URL_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/spot.js");
-		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/index.csv").getInputStream(), "UTF-8"))));
-		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/spot.js").getInputStream(), "UTF-8"))));
-		httpServer.start();
+		mockAwsServer();
 
 		// Check the basic quote
 		return installAndConfigure();
@@ -216,16 +239,16 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		final ProvQuoteInstance instance = check(quote);
 
 		// Check the spot
-		final ComputedInstancePrice spotPrice = provResource
-				.lookupInstance(instance.getConfiguration().getSubscription().getId(), 2, 1741, null, VmOs.LINUX,
-						instanceRepository.findByName(instance.getConfiguration().getSubscription().getId(), "r4.large").getId(), null)
-				.getInstance();
+		final ComputedInstancePrice spotPrice = provResource.lookupInstance(instance.getConfiguration().getSubscription().getId(), 2, 1741,
+				null, VmOs.LINUX, instanceRepository.findByName(instance.getConfiguration().getSubscription().getId(), "r4.large").getId(),
+				null, true).getInstance();
 		Assert.assertTrue(spotPrice.getCost() > 5d);
 		Assert.assertTrue(spotPrice.getCost() < 100d);
 		final ProvInstancePrice instance2 = spotPrice.getInstance();
 		Assert.assertTrue(instance2.getCost() > 0.005d);
 		Assert.assertTrue(instance2.getCost() < 1d);
 		Assert.assertEquals("Spot", instance2.getType().getName());
+		Assert.assertTrue(instance2.getType().isEphemeral());
 		Assert.assertEquals("r4.large", instance2.getInstance().getName());
 	}
 
@@ -258,7 +281,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		Assert.assertNull(iptRepository.findByName("Reserved, 3yr, All Upfront"));
 
 		// Check the spot
-		Assert.assertNull(provResource.lookupInstance(subscription, 1, 1, false, VmOs.LINUX, null, null).getInstance());
+		Assert.assertNull(provResource.lookupInstance(subscription, 1, 1, false, VmOs.LINUX, null, null, true).getInstance());
 	}
 
 	/**
@@ -321,7 +344,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		Assert.assertEquals(0, ipRepository.findAllBy("type.name", "Spot").size());
 
 		// Check no instance can be found
-		Assert.assertNull(provResource.lookupInstance(subscription, 1, 1, false, VmOs.LINUX, null, null).getInstance());
+		Assert.assertNull(provResource.lookupInstance(subscription, 1, 1, false, VmOs.LINUX, null, null, true).getInstance());
 	}
 
 	/**
@@ -337,7 +360,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		// Request an instance that would not be a Spot
 		final LowestInstancePrice price = provResource.lookupInstance(subscription, 2, 1741, true, VmOs.LINUX,
 				instanceRepository.findByName(subscription, "c1.medium").getId(),
-				iptRepository.findByNameExpected("Reserved, 3yr, All Upfront").getId());
+				iptRepository.findByNameExpected("Reserved, 3yr, All Upfront").getId(), false);
 		final QuoteInstanceEditionVo ivo = new QuoteInstanceEditionVo();
 		ivo.setCpu(1d);
 		ivo.setRam(1);
@@ -428,6 +451,13 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		Assert.assertEquals("body", request.getContent());
 	}
 
+	@Test
+	public void create() throws Exception {
+		final ProvAwsPluginResource resource = Mockito.spy(ProvAwsPluginResource.class);
+		Mockito.doReturn(true).when(resource).validateAccess(ArgumentMatchers.anyInt());
+		resource.create(subscription);
+	}
+
 	@Test(expected = BusinessException.class)
 	public void createFailed() throws Exception {
 		final ProvAwsPluginResource resource = Mockito.spy(ProvAwsPluginResource.class);
@@ -457,6 +487,16 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	@Test
 	public void validateAccessDown() throws Exception {
 		Assert.assertFalse(validateAccess(HttpStatus.SC_FORBIDDEN));
+	}
+
+	@Test
+	public void checkStatus() throws Exception {
+		Assert.assertTrue(validateAccess(HttpStatus.SC_OK));
+		Map<String, String> parameters = new HashMap<>();
+		parameters.put("service:prov:aws:access-key-id", "12345678901234567890");
+		parameters.put("service:prov:aws:secret-access-key", "abcdefghtiklmnopqrstuvwxyz");
+		parameters.put("service:prov:aws:account", "123456789");
+		Assert.assertTrue(resource.checkStatus(null, parameters));
 	}
 
 	private boolean validateAccess(int status) throws Exception {

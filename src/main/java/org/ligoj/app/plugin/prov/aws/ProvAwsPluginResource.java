@@ -55,11 +55,11 @@ import org.ligoj.app.plugin.prov.model.ProvInstancePriceType;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.model.ProvTenancy;
 import org.ligoj.app.plugin.prov.model.VmOs;
+import org.ligoj.app.resource.node.NodeResource;
 import org.ligoj.app.resource.plugin.CurlProcessor;
 import org.ligoj.app.resource.plugin.CurlRequest;
 import org.ligoj.bootstrap.core.NamedBean;
 import org.ligoj.bootstrap.core.resource.BusinessException;
-import org.ligoj.bootstrap.core.security.SecurityHelper;
 import org.ligoj.bootstrap.resource.system.configuration.ConfigurationResource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -166,6 +166,9 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	private NodeRepository nodeRepository;
 
 	@Autowired
+	private NodeResource nodeResource;
+
+	@Autowired
 	private ProvInstancePriceTypeRepository iptRepository;
 
 	@Autowired
@@ -179,9 +182,6 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 
 	@Autowired
 	private ProvAwsTerraformService terraformService;
-
-	@Autowired
-	private SecurityHelper securityHelper;
 
 	@Override
 	public String getKey() {
@@ -237,26 +237,8 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	@Path("install")
 	@POST
 	public void reinstall() throws IOException, URISyntaxException {
-		checkWritableNode(KEY);
+		nodeResource.checkWritableNode(KEY);
 		installInternal();
-	}
-
-	/**
-	 * Check the related node can be updated by the current principal.
-	 * 
-	 * TODO Delete with API 1.1.3+
-	 * 
-	 * @param The
-	 *            node to check.
-	 * @return the checked writable node.
-	 */
-	private Node checkWritableNode(final String id) {
-		final Node node = nodeRepository.findOneWritable(id, securityHelper.getLogin());
-		if (node == null) {
-			// Node is not readable or does not exists
-			throw new BusinessException("read-only-node", "node", id);
-		}
-		return node;
 	}
 
 	private void installInternal() throws IOException, URISyntaxException {

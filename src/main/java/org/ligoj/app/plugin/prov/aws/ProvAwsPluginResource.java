@@ -598,12 +598,18 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 		final AWS4SignatureQuery signatureQuery = signatureBuilder.accessKey(parameters.get(PARAMETER_ACCESS_KEY_ID))
 				.secretKey(parameters.get(PARAMETER_SECRET_ACCESS_KEY)).region(getRegion()).build();
 		final String authorization = signer.computeSignature(signatureQuery);
-		final CurlRequest request = new CurlRequest(signatureQuery.getMethod(),
-				"https://" + signatureQuery.getHost() + signatureQuery.getPath(), signatureQuery.getBody());
+		final CurlRequest request = new CurlRequest(signatureQuery.getMethod(), toUrl(signatureQuery), signatureQuery.getBody());
 		request.getHeaders().putAll(signatureQuery.getHeaders());
 		request.getHeaders().put("Authorization", authorization);
 		request.setSaveResponse(true);
 		return request;
+	}
+
+	/**
+	 * Return the URL built from the {@link AWS4SignatureQuery}
+	 */
+	protected String toUrl(final AWS4SignatureQuery signatureQuery) {
+		return "https://" + signatureQuery.getHost() + signatureQuery.getPath();
 	}
 
 	/**
@@ -616,9 +622,16 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	private boolean validateAccess(final Map<String, String> parameters) throws Exception {
 		// Call S3 ls service
 		// TODO Use EC2 instead of S3
-		final AWS4SignatureQueryBuilder signatureQueryBuilder = AWS4SignatureQuery.builder().method("GET").service("s3")
-				.host("s3-" + getRegion() + ".amazonaws.com").path("/");
+		final AWS4SignatureQueryBuilder signatureQueryBuilder = AWS4SignatureQuery.builder().method("GET").service("s3").host(getS3Host())
+				.path("/");
 		return new CurlProcessor().process(newRequest(signatureQueryBuilder, parameters));
+	}
+
+	/**
+	 * Return the default S3 hot to validate the account
+	 */
+	protected String getS3Host() {
+		return "s3-" + getRegion() + ".amazonaws.com";
 	}
 
 	/**
@@ -638,8 +651,8 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	public boolean validateAccess(final int subscription) throws Exception {
 		// Call S3 ls service
 		// TODO Use EC2 instead of S3
-		final AWS4SignatureQueryBuilder signatureQueryBuilder = AWS4SignatureQuery.builder().method("GET").service("s3")
-				.host("s3-" + getRegion() + ".amazonaws.com").path("/");
+		final AWS4SignatureQueryBuilder signatureQueryBuilder = AWS4SignatureQuery.builder().method("GET").service("s3").host(getS3Host())
+				.path("/");
 		return new CurlProcessor().process(newRequest(signatureQueryBuilder, subscription));
 	}
 }

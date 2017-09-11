@@ -248,7 +248,7 @@ public class ProvAwsTerraformService {
 		final String instanceName = instance.getName();
 		final String instanceType = instance.getInstancePrice().getInstance().getName();
 		final boolean spot = SPOT_INSTANCE_PRICE_TYPE.equals(instance.getInstancePrice().getType().getName());
-		final boolean autoscaling = instance.getMinQuantity() != 1 | instance.getMaxQuantity() != 1;
+		final boolean autoscaling = instance.getMinQuantity() != 1 || instance.getMaxQuantity() == null || instance.getMinQuantity() != 1;
 		writer.write("/* instance */\n");
 		if (autoscaling) {
 			writer.write("resource \"aws_launch_configuration\" \"vm-" + instanceName + "\" {\n");

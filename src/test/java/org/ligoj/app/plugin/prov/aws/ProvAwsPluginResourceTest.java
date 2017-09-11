@@ -170,8 +170,12 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 
 	@Test(expected = BusinessException.class)
 	public void reinstallNoRight() throws Exception {
+		mockAwsServer();
 		initSpringSecurityContext("any");
-		reinstall();
+		persistEntities("csv", new Class[] { ProvStorageType.class }, StandardCharsets.UTF_8.name());
+
+		// Re-Install a new configuration
+		resource.reinstall();
 	}
 
 	private void mockAwsServer() throws IOException {
@@ -492,7 +496,9 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	@Test
 	public void checkStatus() throws Exception {
 		Assert.assertTrue(validateAccess(HttpStatus.SC_OK));
-		Map<String, String> parameters = new HashMap<>();
+		final ProvAwsPluginResource resource = Mockito.spy(this.resource);
+		Mockito.doReturn(MOCK_URL).when(resource).toUrl(ArgumentMatchers.any());
+		final Map<String, String> parameters = new HashMap<>();
 		parameters.put("service:prov:aws:access-key-id", "12345678901234567890");
 		parameters.put("service:prov:aws:secret-access-key", "abcdefghtiklmnopqrstuvwxyz");
 		parameters.put("service:prov:aws:account", "123456789");

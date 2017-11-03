@@ -8,7 +8,6 @@
 [![Coverage Status](https://coveralls.io/repos/github/ligoj/plugin-prov-aws/badge.svg?branch=master)](https://coveralls.io/github/ligoj/plugin-prov-aws?branch=master)
 [![Dependency Status](https://www.versioneye.com/user/projects/58caeda8dcaf9e0041b5b978/badge.svg?style=flat)](https://www.versioneye.com/user/projects/58caeda8dcaf9e0041b5b978)
 [![Quality Gate](https://sonarcloud.io/api/badges/gate?key=org.ligoj.plugin:plugin-prov-aws)](https://sonarcloud.io/dashboard/index/org.ligoj.plugin:plugin-prov-aws)
-[![Sourcegraph Badge](https://sourcegraph.com/github.com/ligoj/plugin-prov-aws/-/badge.svg)](https://sourcegraph.com/github.com/ligoj/plugin-prov-aws?badge)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/7972cb9a10d54d119b8c434fef8d4013)](https://www.codacy.com/app/ligoj/plugin-prov-aws?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ligoj/plugin-prov-aws&amp;utm_campaign=Badge_Grade)
 [![CodeFactor](https://www.codefactor.io/repository/github/ligoj/plugin-prov-aws/badge)](https://www.codefactor.io/repository/github/ligoj/plugin-prov-aws)
 [![License](http://img.shields.io/:license-mit-blue.svg)](http://gus.mit-license.org/)

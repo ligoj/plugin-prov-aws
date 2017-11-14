@@ -64,8 +64,6 @@ import org.ligoj.bootstrap.resource.system.configuration.ConfigurationResource;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ContextConfiguration;
@@ -516,22 +514,6 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		httpServer.stubFor(get(urlEqualTo("/mock")).willReturn(aResponse().withStatus(status)));
 		httpServer.start();
 		return resource.validateAccess(subscription);
-	}
-
-	/**
-	 * Configuration class used to mock AWS calls
-	 */
-	@Configuration
-	public static class MockConfiguration {
-		@Bean
-		ProvAwsPluginResource provAwsPluginResource() {
-			return new ProvAwsPluginResource() {
-				@Override
-				public boolean validateAccess(int subscription) throws Exception {
-					return true;
-				}
-			};
-		}
 	}
 
 	/**

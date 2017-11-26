@@ -1,4 +1,4 @@
-package org.ligoj.app.plugin.prov.aws;
+package org.ligoj.app.plugin.prov.aws.in;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -62,7 +62,7 @@ public class AwsCsvReader extends CsvBeanReader<AwsInstancePrice> {
 				// Only OS compliant
 				&& rawValues.get(37) != null && !"NA".equals(rawValues.get(37))
 
-				// Only shared or dedicated tenancy
+				// No RI for now
 				&& !"Host".equals(rawValues.get(35));
 	}
 }

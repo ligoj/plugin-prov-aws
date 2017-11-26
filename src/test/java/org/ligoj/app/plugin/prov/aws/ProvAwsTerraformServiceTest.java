@@ -18,14 +18,14 @@ import org.ligoj.app.model.Parameter;
 import org.ligoj.app.model.ParameterValue;
 import org.ligoj.app.model.Project;
 import org.ligoj.app.model.Subscription;
-import org.ligoj.app.plugin.prov.QuoteStorageVo;
 import org.ligoj.app.plugin.prov.QuoteVo;
 import org.ligoj.app.plugin.prov.model.InternetAccess;
-import org.ligoj.app.plugin.prov.model.ProvInstance;
+import org.ligoj.app.plugin.prov.model.ProvInstanceType;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
-import org.ligoj.app.plugin.prov.model.ProvInstancePriceType;
+import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
 import org.ligoj.app.plugin.prov.model.ProvQuoteStorage;
+import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.model.VmOs;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,8 +56,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	@Before
 	public void prepareData() throws IOException {
 		persistSystemEntities();
-		persistEntities("csv",
-				new Class[] { Node.class, Project.class, Parameter.class, Subscription.class, ParameterValue.class },
+		persistEntities("csv", new Class[] { Node.class, Project.class, Parameter.class, Subscription.class, ParameterValue.class },
 				StandardCharsets.UTF_8.name());
 		subscription = subscriptionRepository.findBy("node.id", "service:prov:aws:test");
 	}
@@ -74,8 +73,8 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 		final ProvQuoteInstance instance = generateQuoteInstance("OnDemand");
 		instance.setStorages(Lists.newArrayList(generateInstanceStorage(5), generateInstanceStorage(50)));
 		quoteVo.setInstances(Lists.newArrayList(instance));
-		quoteVo.setStorages(Lists.newArrayList(generateStorage(instance.getId(), "dev", 5),
-				generateStorage(instance.getId(), "dev-1", 50)));
+		quoteVo.setStorages(
+				Lists.newArrayList(generateStorage(instance.getId(), "dev", 5), generateStorage(instance.getId(), "dev-1", 50)));
 
 		testTerraformGeneration(subscription, quoteVo, "terraform/terraform.tf");
 	}
@@ -149,10 +148,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	}
 
 	/**
-	 * check generated terraform for only storages
-	 * 
-	 * @throws Exception
-	 *             unexpected exception
+	 * Check generated Terraform for only storages
 	 */
 	@Test
 	public void testTerraformGenerationStorage() throws Exception {
@@ -164,8 +160,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	}
 
 	/**
-	 * Call terraform generation and check the result is same as input file
-	 * content
+	 * Call terraform generation and check the result is same as input file content
 	 * 
 	 * @param subscription
 	 *            subscription
@@ -174,16 +169,15 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	 * @param expectedResultFileName
 	 *            expected result
 	 */
-	private void testTerraformGeneration(final Subscription subscription, final QuoteVo quoteVo,
-			final String expectedResultFileName) throws IOException {
+	private void testTerraformGeneration(final Subscription subscription, final QuoteVo quoteVo, final String expectedResultFileName)
+			throws IOException {
 		final StringWriter writer = new StringWriter();
 		service.writeTerraform(writer, quoteVo, subscription);
 
 		final String terraform = writer.toString();
 		Assert.assertNotNull(terraform);
 		Assert.assertEquals(
-				IOUtils.toString(Thread.currentThread().getContextClassLoader().getResource(expectedResultFileName),
-						Charsets.UTF_8),
+				IOUtils.toString(Thread.currentThread().getContextClassLoader().getResource(expectedResultFileName), Charsets.UTF_8),
 				terraform);
 	}
 
@@ -196,14 +190,22 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	 *            storage size
 	 * @return quote storage
 	 */
-	private QuoteStorageVo generateStorage(final Integer instanceId, final String name, final int size) {
-		final QuoteStorageVo storageVo = new QuoteStorageVo();
+	private ProvQuoteStorage generateStorage(final Integer instanceId, final String name, final int size) {
+		final ProvQuoteStorage storageVo = new ProvQuoteStorage();
 		storageVo.setSize(size);
 		storageVo.setName(name);
-		storageVo.setQuoteInstance(instanceId);
+		if (instanceId != null) {
+			final ProvQuoteInstance instance = new ProvQuoteInstance();
+			instance.setId(instanceId);
+			instance.setName("instance-tag");
+			storageVo.setQuoteInstance(instance);
+		}
 		final ProvStorageType storageType = new ProvStorageType();
 		storageType.setName("gp2");
-		storageVo.setType(storageType);
+		
+		final ProvStoragePrice storagePrice = new ProvStoragePrice();
+		storagePrice.setType(storageType);
+		storageVo.setPrice(storagePrice);
 		return storageVo;
 	}
 
@@ -218,15 +220,15 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 		final ProvQuoteInstance quoteInstance = new ProvQuoteInstance();
 		quoteInstance.setId(1);
 		quoteInstance.setName("dev");
-		final ProvInstance instance = new ProvInstance();
+		final ProvInstanceType instance = new ProvInstanceType();
 		instance.setName("t2.micro");
 		final ProvInstancePrice instancePrice = new ProvInstancePrice();
-		instancePrice.setInstance(instance);
+		instancePrice.setType(instance);
 		instancePrice.setOs(VmOs.LINUX);
-		final ProvInstancePriceType instancePriceType = new ProvInstancePriceType();
+		final ProvInstancePriceTerm instancePriceType = new ProvInstancePriceTerm();
 		instancePriceType.setName(type);
-		instancePrice.setType(instancePriceType);
-		quoteInstance.setInstancePrice(instancePrice);
+		instancePrice.setTerm(instancePriceType);
+		quoteInstance.setPrice(instancePrice);
 		quoteInstance.setStorages(Lists.newArrayList());
 		return quoteInstance;
 	}
@@ -241,9 +243,11 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	private ProvQuoteStorage generateInstanceStorage(final int size) {
 		final ProvQuoteStorage instanceStorage = new ProvQuoteStorage();
 		instanceStorage.setSize(size);
+		final ProvStoragePrice storagePrice = new ProvStoragePrice();
 		final ProvStorageType storageType = new ProvStorageType();
 		storageType.setName("gp2");
-		instanceStorage.setType(storageType);
+		storagePrice.setType(storageType);
+		instanceStorage.setPrice(storagePrice);
 		return instanceStorage;
 	}
 }

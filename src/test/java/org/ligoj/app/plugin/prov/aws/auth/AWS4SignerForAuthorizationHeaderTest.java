@@ -12,8 +12,7 @@ import org.junit.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /**
- * @author alocquet
- *
+ * Test class of {@link AWS4SignerForAuthorizationHeader}
  */
 public class AWS4SignerForAuthorizationHeaderTest {
 

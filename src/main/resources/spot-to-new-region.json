@@ -1,0 +1,8 @@
+{
+	"us-east":"us-east-1",
+	"us-west":"us-west-1",
+	"eu-ireland":"eu-west-1",
+	"apac-sin":"ap-southeast-1",
+	"apac-tokyo":"ap-northeast-1",
+	"apac-syd":"ap-southeast-2"
+}

@@ -1,0 +1,10 @@
+{
+	"ebsGPSSD":"gp2",
+	"ebsPIOPSSSD":"io1",
+	"ebsTOHDD":"st1",
+	"ebsColdHDD":"sc1",
+	"ebsSnapsToS3":"snapshot",
+	"storage": "s3",
+	"infrequentAccessStorage": "s3-ia",
+	"glacierStorage": "glacier"
+}

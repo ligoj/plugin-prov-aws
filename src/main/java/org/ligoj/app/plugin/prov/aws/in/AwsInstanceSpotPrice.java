@@ -1,4 +1,4 @@
-package org.ligoj.app.plugin.prov.aws;
+package org.ligoj.app.plugin.prov.aws.in;
 
 import java.util.Collection;
 

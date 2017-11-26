@@ -2,7 +2,7 @@ package org.ligoj.app.plugin.prov.aws;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -10,7 +10,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.ligoj.app.model.Subscription;
-import org.ligoj.app.plugin.prov.QuoteStorageVo;
 import org.ligoj.app.plugin.prov.QuoteVo;
 import org.ligoj.app.plugin.prov.model.InternetAccess;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
@@ -33,12 +32,12 @@ public class ProvAwsTerraformService {
 	/**
 	 * mapping between OS name and AMI search string.
 	 */
-	private final static Map<VmOs, String[]> MAPPING_OS_AMI = new HashMap<>();
+	private static final Map<VmOs, String[]> MAPPING_OS_AMI = new EnumMap<>(VmOs.class);
 
 	/**
 	 * mapping between OS name and AMI's owner search string.
 	 */
-	private final static Map<VmOs, String> MAPPING_OS_OWNER = new HashMap<>();
+	private static final Map<VmOs, String> MAPPING_OS_OWNER = new EnumMap<>(VmOs.class);
 
 	static {
 		// AWS Images
@@ -78,25 +77,23 @@ public class ProvAwsTerraformService {
 	 * @param subscription
 	 *            The related subscription.
 	 */
-	public void writeTerraform(final Writer writer, final QuoteVo quote, final Subscription subscription)
-			throws IOException {
+	public void writeTerraform(final Writer writer, final QuoteVo quote, final Subscription subscription) throws IOException {
 		final String projectName = subscription.getProject().getName();
 		writeProvider(writer);
 		if (!quote.getInstances().isEmpty()) {
 			writePublicKey(writer);
 			writeNetwork(writer, projectName,
-					quote.getInstances().stream().map(instance -> instance.getInternet()).collect(Collectors.toSet()));
+					quote.getInstances().stream().map(ProvQuoteInstance::getInternet).collect(Collectors.toSet()));
 			writeSecurityGroup(writer, projectName);
 			writeKeyPair(writer, projectName);
 			final Set<VmOs> osToSearch = new HashSet<>();
 			for (final ProvQuoteInstance instance : quote.getInstances()) {
 				writeInstance(writer, quote, instance, projectName);
-				osToSearch.add(instance.getInstancePrice().getOs());
+				osToSearch.add(instance.getPrice().getOs());
 			}
 
 			// AMI part
-			final String account = subscriptionResource.getParameters(subscription.getId())
-					.get(ProvAwsPluginResource.PARAMETER_ACCOUNT);
+			final String account = subscriptionResource.getParameters(subscription.getId()).get(ProvAwsPluginResource.PARAMETER_ACCOUNT);
 			for (final VmOs os : osToSearch) {
 				writeAmiSearch(writer, os, account);
 			}
@@ -116,8 +113,7 @@ public class ProvAwsTerraformService {
 	 * @throws IOException
 	 *             exception
 	 */
-	private void writeNetwork(final Writer writer, final String project, final Set<InternetAccess> types)
-			throws IOException {
+	private void writeNetwork(final Writer writer, final String project, final Set<InternetAccess> types) throws IOException {
 		writer.write("/* network */\n");
 		writer.write("resource \"aws_vpc\" \"terraform\" {\n");
 		writer.write("  cidr_block = \"10.0.0.0/16\"\n");
@@ -167,8 +163,7 @@ public class ProvAwsTerraformService {
 	 * @throws IOException
 	 *             exception
 	 */
-	private void writeRouteTable(final Writer writer, final String project, final InternetAccess type)
-			throws IOException {
+	private void writeRouteTable(final Writer writer, final String project, final InternetAccess type) throws IOException {
 		writer.write("resource \"aws_route_table\" \"" + type.name() + "\" {\n");
 		writer.write("  vpc_id     = \"${aws_vpc.terraform.id}\"\n");
 		writer.write("  route {\n");
@@ -215,8 +210,7 @@ public class ProvAwsTerraformService {
 	 * @throws IOException
 	 *             exception
 	 */
-	private void writeSubnet(final Writer writer, final String project, final InternetAccess type, final String cidr)
-			throws IOException {
+	private void writeSubnet(final Writer writer, final String project, final InternetAccess type, final String cidr) throws IOException {
 		writer.write("/* " + type.name() + " subnet */\n");
 		writer.write("resource \"aws_subnet\" \"" + type + "\" {\n");
 		writer.write("  vpc_id     = \"${aws_vpc.terraform.id}\"\n");
@@ -242,13 +236,13 @@ public class ProvAwsTerraformService {
 	 * @throws IOException
 	 *             exception thrown during write
 	 */
-	private void writeInstance(final Writer writer, final QuoteVo quote, final ProvQuoteInstance instance,
-			final String projectName) throws IOException {
-		final VmOs os = instance.getInstancePrice().getOs();
+	private void writeInstance(final Writer writer, final QuoteVo quote, final ProvQuoteInstance instance, final String projectName)
+			throws IOException {
+		final VmOs os = instance.getPrice().getOs();
 		final String instanceName = instance.getName();
-		final String instanceType = instance.getInstancePrice().getInstance().getName();
-		final boolean spot = SPOT_INSTANCE_PRICE_TYPE.equals(instance.getInstancePrice().getType().getName());
-		final boolean autoscaling = instance.getMinQuantity() != 1 || instance.getMaxQuantity() == null || instance.getMinQuantity() != 1;
+		final String instanceType = instance.getPrice().getType().getName();
+		final boolean spot = SPOT_INSTANCE_PRICE_TYPE.equals(instance.getPrice().getTerm().getName());
+		final boolean autoscaling = instance.getMinQuantity() != 1 || instance.getMaxQuantity() == null;
 		writer.write("/* instance */\n");
 		if (autoscaling) {
 			writer.write("resource \"aws_launch_configuration\" \"vm-" + instanceName + "\" {\n");
@@ -258,13 +252,11 @@ public class ProvAwsTerraformService {
 		} else {
 			writer.write("resource \"aws_instance\" \"vm-" + instanceName + "\" {\n");
 		}
-		writer.write("  " + (autoscaling ? "image_id" : "ami") + "           = \"${data.aws_ami.ami-" + os.name()
-				+ ".id}\"\n");
+		writer.write("  " + (autoscaling ? "image_id" : "ami") + "           = \"${data.aws_ami.ami-" + os.name() + ".id}\"\n");
 		writer.write("  name    		= \"" + instanceName + "\"\n");
 		writer.write("  instance_type = \"" + instanceType + "\"\n");
 		writer.write("  key_name    	= \"" + projectName + "-key\"\n");
-		writer.write("  " + (autoscaling ? "security_groups" : "vpc_security_group_ids")
-				+ " = [ \"${aws_security_group.vm-sg.id}\" ]\n");
+		writer.write("  " + (autoscaling ? "security_groups" : "vpc_security_group_ids") + " = [ \"${aws_security_group.vm-sg.id}\" ]\n");
 		writeInstanceStorages(writer, quote, instance);
 		if (!autoscaling) {
 			writer.write("  subnet_id     = \"${aws_subnet." + instance.getInternet().name() + ".id}\"\n");
@@ -278,8 +270,7 @@ public class ProvAwsTerraformService {
 			writer.write("resource \"aws_autoscaling_group\" \"" + instanceName + "autoscaling-group\" {\n");
 			writer.write("  min_size                  = " + instance.getMinQuantity() + "\n");
 			writer.write("  max_size                  = " + instance.getMaxQuantity() + "\n");
-			writer.write(
-					"  launch_configuration      = \"${aws_launch_configuration.vm-" + instanceName + ".name}\"\n");
+			writer.write("  launch_configuration      = \"${aws_launch_configuration.vm-" + instanceName + ".name}\"\n");
 			writer.write("  vpc_zone_identifier     = [\"${aws_subnet." + instance.getInternet().name() + ".id}\"]\n");
 			writer.write("  tags = [{\n");
 			writer.write("    key=\"Project\"\n");
@@ -364,8 +355,7 @@ public class ProvAwsTerraformService {
 		writer.write("/* security group */\n");
 		writer.write("resource \"aws_security_group\" \"vm-sg\" {\n");
 		writer.write("  name        = \"" + projectName + "-sg\"\n");
-		writer.write(
-				"  description = \"Allow ssh inbound traffic, all inbound traffic in security group and all outbund traffic\"\n");
+		writer.write("  description = \"Allow ssh inbound traffic, all inbound traffic in security group and all outbund traffic\"\n");
 		writer.write("  vpc_id     = \"${aws_vpc.terraform.id}\"\n");
 		writer.write("  ingress {\n");
 		writer.write("    from_port   = 22\n");
@@ -434,8 +424,7 @@ public class ProvAwsTerraformService {
 	 * @throws IOException
 	 *             exception thrown during write
 	 */
-	private void writeInstanceStorages(final Writer writer, final QuoteVo quote, final ProvQuoteInstance instance)
-			throws IOException {
+	private void writeInstanceStorages(final Writer writer, final QuoteVo quote, final ProvQuoteInstance instance) throws IOException {
 		int idx = 0;
 		for (final ProvQuoteStorage storage : instance.getStorages()) {
 			if (idx == 0) {
@@ -444,7 +433,7 @@ public class ProvAwsTerraformService {
 				writer.write("  ebs_block_device {\n");
 				writer.write("    device_name = \"/dev/sda" + idx + "\"\n");
 			}
-			writer.write("    volume_type = \"" + storage.getType().getName() + "\"\n");
+			writer.write("    volume_type = \"" + storage.getPrice().getType().getName() + "\"\n");
 			writer.write("    volume_size = " + storage.getSize() + "\n");
 			writer.write("  }\n");
 			idx++;
@@ -457,19 +446,17 @@ public class ProvAwsTerraformService {
 	 * @param writer
 	 *            Target output of Terraform content.
 	 * @param projectName
-	 *            project name
+	 *            The project name.
 	 * @param storages
-	 *            storages
-	 * @throws IOException
-	 *             exception thrown during write
+	 *            Storages of the quote.
 	 */
-	private void writeStandaloneStorages(final Writer writer, final String projectName,
-			final List<QuoteStorageVo> storages) throws IOException {
-		for (final QuoteStorageVo storage : storages) {
+	private void writeStandaloneStorages(final Writer writer, final String projectName, final List<ProvQuoteStorage> storages)
+			throws IOException {
+		for (final ProvQuoteStorage storage : storages) {
 			if (storage.getQuoteInstance() == null) {
 				writer.write("resource \"aws_ebs_volume\" \"" + storage.getName() + "\" {\n");
 				writer.write("  availability_zone = \"eu-west-1a\"\n");
-				writer.write("  type = \"" + storage.getType().getName() + "\"\n");
+				writer.write("  type = \"" + storage.getPrice().getType().getName() + "\"\n");
 				writer.write("  size = " + storage.getSize() + "\n");
 				writeTags(writer, projectName, projectName + "-" + storage.getName());
 				writer.write("}\n");

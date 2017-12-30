@@ -49,7 +49,7 @@ import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvQuote;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
 import org.ligoj.app.plugin.prov.model.ProvQuoteStorage;
-import org.ligoj.app.plugin.prov.model.ProvStorageFrequency;
+import org.ligoj.app.plugin.prov.model.ProvStorageLatency;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.model.ProvTenancy;
 import org.ligoj.app.plugin.prov.model.VmOs;
@@ -271,7 +271,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		Assert.assertEquals(5, storage.getSize(), 0.001);
 		Assert.assertNotNull(storage.getQuoteInstance());
 		Assert.assertEquals("gp2", storage.getPrice().getType().getName());
-		Assert.assertEquals(ProvStorageFrequency.HOT, storage.getPrice().getType().getFrequency());
+		Assert.assertEquals(ProvStorageLatency.LOW, storage.getPrice().getType().getLatency());
 		return storage;
 	}
 
@@ -494,7 +494,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		em.clear();
 
 		// Add storage to this instance
-		final QuoteStorageLoopup slookup = qsResource.lookup(subscription, 5, ProvStorageFrequency.HOT, instance, null, null).get(0);
+		final QuoteStorageLoopup slookup = qsResource.lookup(subscription, 5, ProvStorageLatency.LOW, instance, null, null).get(0);
 		final QuoteStorageEditionVo svo = new QuoteStorageEditionVo();
 		svo.setQuoteInstance(instance);
 		svo.setSize(5);

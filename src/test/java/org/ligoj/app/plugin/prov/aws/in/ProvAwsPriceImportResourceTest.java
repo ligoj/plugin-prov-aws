@@ -50,6 +50,7 @@ import org.ligoj.app.plugin.prov.model.ProvQuote;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
 import org.ligoj.app.plugin.prov.model.ProvQuoteStorage;
 import org.ligoj.app.plugin.prov.model.ProvStorageLatency;
+import org.ligoj.app.plugin.prov.model.ProvStorageOptimized;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.model.ProvTenancy;
 import org.ligoj.app.plugin.prov.model.VmOs;
@@ -69,6 +70,8 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 @Rollback
 @Transactional
 public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
+
+	private static final double DELTA = 0.001;
 
 	private ProvAwsPriceImportResource resource;
 
@@ -133,8 +136,8 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 	 */
 	@Test
 	public void dummyCoverage() throws IOException {
-		new AwsCsvForBean(new BufferedReader(new StringReader("SKU"))).toBean(null, (Reader) null);
-		new AwsInstancePrice().getDrop();
+		new CsvForBeanEc2(new BufferedReader(new StringReader("SKU"))).toBean(null, (Reader) null);
+		new AwsEc2Price().getDrop();
 	}
 
 	/**
@@ -142,7 +145,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 	 */
 	@Test(expected = TechnicalException.class)
 	public void installInvalidHeader() throws IOException {
-		new AwsCsvForBean(new BufferedReader(new StringReader("any"))).toBean(null, (Reader) null);
+		new CsvForBeanEc2(new BufferedReader(new StringReader("any"))).toBean(null, (Reader) null);
 	}
 
 	@Test
@@ -151,12 +154,12 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		final QuoteVo quote = install();
 
 		// Check the whole quote
-		final ProvQuoteInstance instance = check(quote, 47.219d, 46.669d);
+		final ProvQuoteInstance instance = check(quote, 47.549d, 46.669d);
 
 		// Check the spot
 		final QuoteInstanceLookup spotPrice = qiResource.lookup(instance.getConfiguration().getSubscription().getId(), 2, 1741, true,
 				VmOs.LINUX, null, null, true, null, null);
-		Assert.assertEquals(12.629, spotPrice.getCost(), 0.001);
+		Assert.assertEquals(12.629, spotPrice.getCost(), DELTA);
 		Assert.assertEquals(0.0173d, spotPrice.getPrice().getCost(), 0.0001);
 		Assert.assertEquals("Spot", spotPrice.getPrice().getTerm().getName());
 		Assert.assertTrue(spotPrice.getPrice().getTerm().isEphemeral());
@@ -168,7 +171,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		resetImportTask();
 		resource.install();
 		provResource.refreshCost(subscription);
-		check(provResource.getConfiguration(subscription), 47.219d, 46.669d);
+		check(provResource.getConfiguration(subscription), 47.549d, 46.669d);
 		checkImportStatus();
 
 		// Now, change a price within the remote catalog
@@ -177,8 +180,8 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES, "http://localhost:" + MOCK_PORT + "/v2/index.csv");
 		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/v2/spot.js");
 		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EBS_PRICES, "http://localhost:" + MOCK_PORT + "/v2/pricing-ebs.js");
-		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_S3_PRICES,
-				"http://localhost:" + MOCK_PORT + "/v2/pricing-storage-s3.js");
+		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EFS_PRICES, "http://localhost:" + MOCK_PORT + "/v2/pricing-efs.csv");
+		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_S3_PRICES, "http://localhost:" + MOCK_PORT + "/v2/pricing-s3.js");
 
 		// Install the new catalog, update occurs
 		resetImportTask();
@@ -187,21 +190,21 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 
 		// Check the new price
 		final QuoteVo newQuote = provResource.getConfiguration(subscription);
-		Assert.assertEquals(47.111d, newQuote.getCost().getMin(), 0.001);
+		Assert.assertEquals(47.431d, newQuote.getCost().getMin(), DELTA);
 
 		// Storage price is updated
 		final ProvQuoteStorage storage = newQuote.getStorages().get(0);
-		Assert.assertEquals(0.5d, storage.getCost(), 0.001);
-		Assert.assertEquals(5, storage.getSize(), 0.001);
+		Assert.assertEquals(0.5d, storage.getCost(), DELTA);
+		Assert.assertEquals(5, storage.getSize(), DELTA);
 
 		// Compute price is updated
 		final ProvQuoteInstance instance2 = newQuote.getInstances().get(0);
-		Assert.assertEquals(46.611d, instance2.getCost(), 0.001);
+		Assert.assertEquals(46.611d, instance2.getCost(), DELTA);
 		final ProvInstancePrice price = instance2.getPrice();
-		Assert.assertEquals(1678d, price.getInitialCost(), 0.001);
+		Assert.assertEquals(1678d, price.getInitialCost(), DELTA);
 		Assert.assertEquals(VmOs.LINUX, price.getOs());
 		Assert.assertEquals(ProvTenancy.SHARED, price.getTenancy());
-		Assert.assertEquals(0.06385, price.getCost(), 0.001);
+		Assert.assertEquals(0.06385, price.getCost(), DELTA);
 		final ProvInstancePriceTerm priceType = price.getTerm();
 		Assert.assertEquals("Reserved, 3yr, All Upfront", priceType.getName());
 		Assert.assertFalse(priceType.isEphemeral());
@@ -213,13 +216,13 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 	private void checkImportStatus() {
 		final ImportCatalogStatus status = this.resource.importCatalogResource.getTask("service:prov:aws");
 		Assert.assertEquals(6, status.getDone());
-		Assert.assertEquals(7, status.getWorkload());
+		Assert.assertEquals(8, status.getWorkload());
 		Assert.assertEquals("ec2", status.getPhase());
 		Assert.assertEquals(DEFAULT_USER, status.getAuthor());
 		Assert.assertEquals(258, status.getNbInstancePrices().intValue());
 		Assert.assertEquals(74, status.getNbInstanceTypes().intValue());
 		Assert.assertEquals(4, status.getNbLocations().intValue());
-		Assert.assertEquals(8, status.getNbStorageTypes().intValue());
+		Assert.assertEquals(9, status.getNbStorageTypes().intValue());
 	}
 
 	private void mockAwsServer() throws IOException {
@@ -230,8 +233,10 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/spot.js").getInputStream(), "UTF-8"))));
 		httpServer.stubFor(get(urlEqualTo("/pricing-ebs.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
 				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/pricing-ebs.js").getInputStream(), "UTF-8"))));
-		httpServer.stubFor(get(urlEqualTo("/pricing-storage-s3.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/pricing-storage-s3.js").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/pricing-efs.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
+				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/pricing-efs.csv").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/pricing-s3.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
+				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/pricing-s3.js").getInputStream(), "UTF-8"))));
 
 		// Another catalog version
 		httpServer.stubFor(get(urlEqualTo("/v2/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
@@ -240,24 +245,26 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/v2/spot.js").getInputStream(), "UTF-8"))));
 		httpServer.stubFor(get(urlEqualTo("/v2/pricing-ebs.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
 				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/v2/pricing-ebs.js").getInputStream(), "UTF-8"))));
-		httpServer.stubFor(get(urlEqualTo("/v2/pricing-storage-s3.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/v2/pricing-storage-s3.js").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/v2/pricing-efs.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
+				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/v2/pricing-efs.csv").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/v2/pricing-s3.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
+				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/v2/pricing-s3.js").getInputStream(), "UTF-8"))));
 		httpServer.start();
 	}
 
 	private ProvQuoteInstance check(final QuoteVo quote, final double cost, final double computeCost) {
-		Assert.assertEquals(cost, quote.getCost().getMin(), 0.001);
+		Assert.assertEquals(cost, quote.getCost().getMin(), DELTA);
 		checkStorage(quote.getStorages().get(0));
 		return checkInstance(quote.getInstances().get(0), computeCost);
 	}
 
 	private ProvQuoteInstance checkInstance(final ProvQuoteInstance instance, final double cost) {
-		Assert.assertEquals(cost, instance.getCost(), 0.001);
+		Assert.assertEquals(cost, instance.getCost(), DELTA);
 		final ProvInstancePrice price = instance.getPrice();
-		Assert.assertEquals(1680d, price.getInitialCost(), 0.001);
+		Assert.assertEquals(1680d, price.getInitialCost(), DELTA);
 		Assert.assertEquals(VmOs.LINUX, price.getOs());
 		Assert.assertEquals(ProvTenancy.SHARED, price.getTenancy());
-		Assert.assertEquals(0.06393, price.getCost(), 0.001);
+		Assert.assertEquals(0.06393, price.getCost(), DELTA);
 		final ProvInstancePriceTerm priceType = price.getTerm();
 		Assert.assertEquals("Reserved, 3yr, All Upfront", priceType.getName());
 		Assert.assertFalse(priceType.isEphemeral());
@@ -267,11 +274,11 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 	}
 
 	private ProvQuoteStorage checkStorage(final ProvQuoteStorage storage) {
-		Assert.assertEquals(0.55d, storage.getCost(), 0.001);
-		Assert.assertEquals(5, storage.getSize(), 0.001);
+		Assert.assertEquals(0.55d, storage.getCost(), DELTA);
+		Assert.assertEquals(5, storage.getSize(), DELTA);
 		Assert.assertNotNull(storage.getQuoteInstance());
 		Assert.assertEquals("gp2", storage.getPrice().getType().getName());
-		Assert.assertEquals(ProvStorageLatency.LOW, storage.getPrice().getType().getLatency());
+		Assert.assertEquals(ProvStorageLatency.LOWEST, storage.getPrice().getType().getLatency());
 		return storage;
 	}
 
@@ -296,7 +303,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		// https://aws.amazon.com/fr/ec2/pricing/reserved-instances/pricing/
 		// Check the reserved
 		final QuoteVo quote = installAndConfigure();
-		final ProvQuoteInstance instance = check(quote, 47.219d, 46.669d);
+		final ProvQuoteInstance instance = check(quote, 47.549d, 46.669d);
 
 		// Check the spot
 		final QuoteInstanceLookup spotPrice = qiResource.lookup(instance.getConfiguration().getSubscription().getId(), 2, 1741, null,
@@ -322,7 +329,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		resource.install();
 		em.flush();
 		em.clear();
-		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), 0.001);
+		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), DELTA);
 
 		// No instance imported
 		Assert.assertEquals(0, instanceRepository.findAll().size());
@@ -341,7 +348,27 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		resource.install();
 		em.flush();
 		em.clear();
-		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), 0.001);
+		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), DELTA);
+
+		// No instance imported
+		Assert.assertEquals(0, instanceRepository.findAll().size());
+	}
+
+	/**
+	 * Invalid EFS CSV file
+	 */
+	@Test(expected = TechnicalException.class)
+	public void installEfsCsvInvalidHeader() throws Exception {
+		patchConfigurationUrl();
+		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EFS_PRICES, "http://localhost:" + MOCK_PORT + "/pricing-efs-error.csv");
+		httpServer.stubFor(get(urlEqualTo("/pricing-efs-error.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
+				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/pricing-efs-error.csv").getInputStream(), "UTF-8"))));
+		httpServer.start();
+
+		resource.install();
+		em.flush();
+		em.clear();
+		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), DELTA);
 
 		// No instance imported
 		Assert.assertEquals(0, instanceRepository.findAll().size());
@@ -361,7 +388,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		resource.install();
 		em.flush();
 		em.clear();
-		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), 0.001);
+		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), DELTA);
 
 		// Only one price has been imported
 		Assert.assertEquals(1, instanceRepository.findAll().size());
@@ -372,8 +399,10 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/spot.js").getInputStream(), "UTF-8"))));
 		httpServer.stubFor(get(urlEqualTo("/pricing-ebs.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
 				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/pricing-ebs.js").getInputStream(), "UTF-8"))));
-		httpServer.stubFor(get(urlEqualTo("/pricing-storage-s3.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/pricing-storage-s3.js").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/pricing-efs.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
+				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/pricing-efs.csv").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/pricing-s3.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
+				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/pricing-s3.js").getInputStream(), "UTF-8"))));
 		httpServer.start();
 	}
 
@@ -394,7 +423,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		resource.install();
 		em.flush();
 		em.clear();
-		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), 0.001);
+		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), DELTA);
 
 		// Request an instance that would not be a Spot
 		Assert.assertNull(iptRepository.findByName("Reserved, 3yr, All Upfront"));
@@ -423,8 +452,8 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES, "http://localhost:" + MOCK_PORT + "/index.csv");
 		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES_SPOT, "http://localhost:" + MOCK_PORT + "/spot.js");
 		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EBS_PRICES, "http://localhost:" + MOCK_PORT + "/pricing-ebs.js");
-		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_S3_PRICES,
-				"http://localhost:" + MOCK_PORT + "/pricing-storage-s3.js");
+		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EFS_PRICES, "http://localhost:" + MOCK_PORT + "/pricing-efs.csv");
+		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_S3_PRICES, "http://localhost:" + MOCK_PORT + "/pricing-s3.js");
 	}
 
 	/**
@@ -433,6 +462,8 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 	@Test
 	public void installSpotInstanceBrokenReference() throws Exception {
 		patchConfigurationUrl();
+		httpServer.stubFor(get(urlEqualTo("/pricing-efs.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
+				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/pricing-efs.csv").getInputStream(), "UTF-8"))));
 		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
 				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/index.csv").getInputStream(), "UTF-8"))));
 		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
@@ -452,6 +483,8 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 	@Test
 	public void installSpotRegionNotFound() throws Exception {
 		patchConfigurationUrl();
+		httpServer.stubFor(get(urlEqualTo("/pricing-efs.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
+				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/pricing-efs.csv").getInputStream(), "UTF-8"))));
 		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
 				.withBody(IOUtils.toString(new ClassPathResource("mock-server/aws/index-empty.csv").getInputStream(), "UTF-8"))));
 		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
@@ -461,7 +494,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		resource.install();
 		em.flush();
 		em.clear();
-		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), 0.001);
+		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), DELTA);
 		Assert.assertEquals(0, ipRepository.findAllBy("type.name", "Spot").size());
 
 		// Check no instance can be found
@@ -475,7 +508,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		resource.install();
 		em.flush();
 		em.clear();
-		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), 0.001);
+		Assert.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), DELTA);
 
 		// Request an instance that would not be a Spot
 		final QuoteInstanceLookup lookup = qiResource.lookup(subscription, 2, 1741, true, VmOs.LINUX, "c1.medium",
@@ -503,6 +536,18 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		svo.setSubscription(subscription);
 		final UpdatedCost createStorage = qsResource.create(svo);
 		Assert.assertTrue(createStorage.getTotalCost().getMin() > 0.5);
+
+		// Add storage (EFS) to this quote
+		final QuoteStorageLoopup efsLookpup = qsResource
+				.lookup(subscription, 1, ProvStorageLatency.LOW, null, ProvStorageOptimized.THROUGHPUT, null).get(0);
+		final QuoteStorageEditionVo svo2 = new QuoteStorageEditionVo();
+		svo2.setSize(1);
+		svo2.setOptimized(ProvStorageOptimized.THROUGHPUT);
+		svo2.setType(efsLookpup.getPrice().getType().getName());
+		svo2.setName("nfs1");
+		svo2.setSubscription(subscription);
+		final UpdatedCost createEfs = qsResource.create(svo2);
+		Assert.assertEquals(0.33, createEfs.getResourceCost().getMin(), DELTA);
 
 		return provResource.getConfiguration(subscription);
 	}

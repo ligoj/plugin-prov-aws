@@ -3,7 +3,7 @@ service:prov:aws;gp2;IOPS;LOWEST;1;16384;true
 service:prov:aws;io1;IOPS;LOWEST;4;16384;true
 service:prov:aws;st1;THROUGHPUT;LOW;500;16384;true
 service:prov:aws;sc1;THROUGHPUT;LOW;500;16384;true
-service:prov:aws;snapshot;DURABILITY;;0;;false
+service:prov:aws;snapshot;DURABILITY;LOWEST;0;;false
 service:prov:aws;s3;DURABILITY;MEDIUM;0;;false
 service:prov:aws;s3-ia;DURABILITY;MEDIUM;0;;false
 service:prov:aws;glacier;DURABILITY;HIGHEST;0;;false

@@ -10,7 +10,7 @@ import org.ligoj.bootstrap.core.csv.CsvReader;
 /**
  * Read CSV reader skipping the useless rows.
  */
-public class AwsCsvReader extends CsvBeanReader<AwsInstancePrice> {
+public class AwsCsvReader<T> extends CsvBeanReader<T> {
 
 	/**
 	 * CSV raw data reader.
@@ -18,21 +18,20 @@ public class AwsCsvReader extends CsvBeanReader<AwsInstancePrice> {
 	private final CsvReader csvReaderProxy;
 
 	/**
-	 * Build a CSV reader to build {@link AwsInstancePrice} objects.
+	 * Build a CSV reader to build {@link AwsEc2Price} objects.
 	 * 
 	 * @param reader
-	 *            The CSV input, without headers and starting from the first
-	 *            raw.
+	 *            The CSV input, without headers and starting from the first raw.
 	 */
-	public AwsCsvReader(Reader reader, final String[] headers) {
-		super(reader, AwsInstancePrice.class, headers);
+	public AwsCsvReader(final Reader reader, final String[] headers, final Class<T> beanType) {
+		super(reader, beanType, headers);
 
 		// Makes visible this entry
 		this.csvReaderProxy = new CsvReader(reader, ',');
 	}
 
 	@Override
-	public AwsInstancePrice read() throws IOException {
+	public T read() throws IOException {
 		// Read the raw entries to check the build/skip option
 		final List<String> rawValues = csvReaderProxy.read();
 
@@ -50,19 +49,14 @@ public class AwsCsvReader extends CsvBeanReader<AwsInstancePrice> {
 	}
 
 	/**
-	 * Check the given raw is valid to build an AWS Price.
+	 * Check the given raw is valid to build an AWS Price. When invalid, the record
+	 * is dropped.
+	 * 
+	 * @param rawValues
+	 *            The column of the current record.
+	 * @return <code>true</code> when this record can be used to build a bean.
 	 */
-	private boolean isValidRaw(final List<String> rawValues) {
-		// Only Compute Instance with a valid OS
-		return rawValues.size() > 38
-
-				// Only compute instance for now
-				&& "Compute Instance".equals(rawValues.get(14))
-
-				// Only OS compliant
-				&& rawValues.get(37) != null && !"NA".equals(rawValues.get(37))
-
-				// No RI for now
-				&& !"Host".equals(rawValues.get(35));
+	protected boolean isValidRaw(final List<String> rawValues) {
+		return true;
 	}
 }

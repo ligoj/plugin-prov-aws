@@ -1,0 +1,13 @@
+sep=,
+"FormatVersion","v1.0"
+"Disclaimer","This pricing list is for informational purposes only. All prices are subject to the additional terms included in the pricing pages on http://aws.amazon.com. All Free Tier prices are also subject to the terms included at https://aws.amazon.com/free/"
+"Publication Date","2017-07-21T19:52:42Z"
+"Version","20170721195242"
+"OfferCode","AmazonEFS"
+"SKU","OfferTermCode","RateCode","TermType","PriceDescription","EffectiveDate","StartingRange","EndingRange","Unit","PricePerUnit","Currency","Product Family","serviceCode","Location","Location Type","Storage Class","usageType","operation"
+"GQN8D8ZABJSBVTUG","JRTCKXETXF","GQN8D8ZABJSBVTUG.JRTCKXETXF.6YS6EN2CT7","OnDemand","Storage used in GB-months (USW2)","2017-06-01","0","Inf","GB-Mo","0.3000000000","USD","Storage","AmazonEFS","US West (Oregon)","AWS Region","General Purpose","USW2-TimedStorage-ByteHrs",""
+"WDJR7Q9RKV87VCVK","JRTCKXETXF","WDJR7Q9RKV87VCVK.JRTCKXETXF.6YS6EN2CT7","OnDemand","Storage used in GB-months (EU)","2017-06-01","0","Inf","GB-Mo","0.3300000000","USD","Storage","AmazonEFS","EU (Ireland)","AWS Region","General Purpose","EU-TimedStorage-ByteHrs",""
+"3DVQ7PV23A9TDKS7","JRTCKXETXF","3DVQ7PV23A9TDKS7.JRTCKXETXF.6YS6EN2CT7","OnDemand","Storage used in GB-months (APS2)","2017-06-01","0","Inf","GB-Mo","0.3600000000","USD","Storage","AmazonEFS","Asia Pacific (Sydney)","AWS Region","General Purpose","APS2-TimedStorage-ByteHrs",""
+"MPPYNV6CU5GBQHYC","JRTCKXETXF","MPPYNV6CU5GBQHYC.JRTCKXETXF.6YS6EN2CT7","OnDemand","Storage used in GB-months (EUC1)","2017-06-01","0","Inf","GB-Mo","0.3600000000","USD","Storage","AmazonEFS","EU (Frankfurt)","AWS Region","General Purpose","EUC1-TimedStorage-ByteHrs",""
+"R3JWPWRUN558WBDE","JRTCKXETXF","R3JWPWRUN558WBDE.JRTCKXETXF.6YS6EN2CT7","OnDemand","Storage used in GB-months (USE2)","2017-06-01","0","Inf","GB-Mo","0.3000000000","USD","Storage","AmazonEFS","US East (Ohio)","AWS Region","General Purpose","USE2-TimedStorage-ByteHrs",""
+"YFV3RHAD3CDDP3VE","JRTCKXETXF","YFV3RHAD3CDDP3VE.JRTCKXETXF.6YS6EN2CT7","OnDemand","Storage used in GB-months (USE1)","2017-06-01","0","Inf","GB-Mo","0.3000000000","USD","Storage","AmazonEFS","US East (N. Virginia)","AWS Region","General Purpose","USE1-TimedStorage-ByteHrs",""

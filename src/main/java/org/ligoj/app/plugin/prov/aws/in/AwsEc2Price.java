@@ -4,19 +4,12 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * AWS price configuration
+ * AWS EC2 price configuration
  */
 @Getter
 @Setter
-public class AwsInstancePrice {
+public class AwsEc2Price extends AwsCsvPrice {
 
-	/**
-	 * Ignored property
-	 */
-	private String drop;
-	private String offerTermCode;
-	private String termType;
-	private double pricePerUnit;
 	private String leaseContractLength;
 	private String purchaseOption;
 	private String offeringClass;
@@ -29,7 +22,6 @@ public class AwsInstancePrice {
 	private String os;
 	private String ecu;
 	private String priceUnit;
-	private String sku;
 	private String licenseModel;
 	private String software;
 }

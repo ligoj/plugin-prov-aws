@@ -20,7 +20,7 @@ public class SpotRegion extends AwsRegionPrices {
 	@Setter
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	public static class SpotInstanceType {
-		private Collection<AwsInstanceSpotPrice> sizes;
+		private Collection<AwsEc2SpotPrice> sizes;
 	}
 
 }

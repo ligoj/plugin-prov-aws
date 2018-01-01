@@ -12,13 +12,13 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class AwsInstanceSpotPrice {
+public class AwsEc2SpotPrice {
 
 	/**
 	 * Prices for each OS.
 	 */
 	@JsonProperty("valueColumns")
-	private Collection<AwsInstanceSpotOsPrice> osPrices;
+	private Collection<AwsEc2SpotOsPrice> osPrices;
 
 	/**
 	 * Instance name.

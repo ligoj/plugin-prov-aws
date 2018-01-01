@@ -11,6 +11,7 @@ import java.util.Formatter;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -94,12 +95,17 @@ public class ProvAwsPriceImportResource {
 	private static final String EBS_PRICES = "https://a0.awsstatic.com/pricing/1/ebs/pricing-ebs.js";
 
 	/**
+	 * The EFS price end-point, a CSV file. Multi-region.
+	 */
+	private static final String EFS_PRICES = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEFS/current/index.csv";
+
+	/**
 	 * The S3 prices end-point. Contains the prices for all regions.
 	 */
 	private static final String S3_PRICES = "https://a0.awsstatic.com/pricing/1/s3/pricing-storage-s3.js";
 
 	/**
-	 * Configuration key used for {@link #EBS_PRICES}
+	 * Configuration key used for AWS URL prices.
 	 */
 	public static final String CONF_URL_API_PRICES = ProvAwsPluginResource.KEY + ":%s-prices-url";
 
@@ -117,6 +123,11 @@ public class ProvAwsPriceImportResource {
 	 * Configuration key used for {@link #EBS_PRICES}
 	 */
 	public static final String CONF_URL_EBS_PRICES = String.format(CONF_URL_API_PRICES, "ebs");
+
+	/**
+	 * Configuration key used for {@link #EFS_PRICES}
+	 */
+	public static final String CONF_URL_EFS_PRICES = String.format(CONF_URL_API_PRICES, "efs");
 
 	/**
 	 * Configuration key used for {@link #S3_PRICES}
@@ -174,12 +185,15 @@ public class ProvAwsPriceImportResource {
 		final Map<String, ProvLocation> regions = locationRepository.findAllBy("node.id", node.getId()).stream()
 				.collect(Collectors.toMap(INamableBean::getName, Function.identity()));
 
-		// Update the workload : nb.regions + 3 (spot, ebs, s3)
+		// Update the workload : nb.regions + 3 (spot, EBS, S3, EFS)
 		nextStep(node, null, 0);
 
 		// Proceed to the install
 		installStoragePrices(node, regions);
 		installComputePrices(node, regions);
+
+		// EFS need to be processed after EC2 for region mapping
+		installEfsPrices(node, regions);
 	}
 
 	/**
@@ -319,12 +333,95 @@ public class ProvAwsPriceImportResource {
 	}
 
 	/**
+	 * Install AWS prices from the JSON file.
+	 * 
+	 * @param node
+	 *            The related AWS {@link Node}
+	 * @param regions
+	 *            The available regions.
+	 * @param api
+	 *            The API name, only for log.
+	 * @param endpoint
+	 *            The prices end-point JSON URL.
+	 * @param apiClass
+	 *            The mapping model from JSON at region level.
+	 * @param mapper
+	 *            The mapping function from JSON at region level to JPA entity.
+	 */
+	private <R extends AwsRegionPrices, T extends AwsPrices<R>> void installEfsPrices(final Node node,
+			final Map<String, ProvLocation> regions) throws IOException, URISyntaxException {
+		log.info("AWS EFS prices ...");
+
+		// Track the created instance to cache partial costs
+		final ProvStorageType efs = stRepository.findAllBy("node.id", node.getId()).stream().filter(t -> t.getName().equals("efs"))
+				.findAny().get();
+		final Map<ProvLocation, ProvStoragePrice> previous = spRepository.findAllBy("type", efs).stream()
+				.collect(Collectors.toMap(p -> p.getLocation(), Function.identity()));
+
+		int priceCounter = 0;
+		BufferedReader reader = null;
+		try {
+			// Get the remote prices stream
+			reader = new BufferedReader(
+					new InputStreamReader(new URI(configuration.get(CONF_URL_EFS_PRICES, EFS_PRICES)).toURL().openStream()));
+			// Pipe to the CSV reader
+			final CsvForBeanEfs csvReader = new CsvForBeanEfs(reader);
+
+			// Build the AWS instance prices from the CSV
+			AwsCsvPrice csv = null;
+			do {
+				// Read the next one
+				csv = csvReader.read();
+				if (csv == null) {
+					break;
+				}
+				final ProvLocation location = getRegionByHumanName(regions, csv.getLocation());
+				if (location == null) {
+					// Unsupported location, ignore this price
+					continue;
+				}
+				final ProvStoragePrice price = previous.computeIfAbsent(location, r -> {
+					ProvStoragePrice p = new ProvStoragePrice();
+					p.setLocation(r);
+					p.setType(efs);
+					return p;
+				});
+
+				// Update the price
+				price.setCostGb(csv.getPricePerUnit());
+
+				// Persist this price
+				spRepository.saveAndFlush(price);
+				priceCounter++;
+			} while (true);
+		} finally {
+			// Report
+			log.info("AWS EFS finished : {} prices", priceCounter);
+			IOUtils.closeQuietly(reader);
+		}
+	}
+
+	/**
+	 * Return the {@link ProvLocation} matching the human name.
+	 * 
+	 * @param regions
+	 *            The available regions.
+	 * @param humanName
+	 *            The required human name.
+	 * @return The corresponding {@link ProvLocation} or <code>null</code>.
+	 */
+	private ProvLocation getRegionByHumanName(final Map<String, ProvLocation> regions, final String humanName) {
+		return regions.entrySet().stream().filter(e -> humanName.equals(e.getValue().getDescription())).findAny().map(Entry::getValue)
+				.orElse(null);
+	}
+
+	/**
 	 * Update the statistics
 	 */
 	private void nextStep(final Node node, final String location, final int step) {
 		importCatalogResource.nextStep(node.getId(), t -> {
 			importCatalogResource.updateStats(t);
-			t.setWorkload(t.getNbLocations() + 3); // Nb region + 3 (spot+s3+ebs)
+			t.setWorkload(t.getNbLocations() + 4); // NB region + 4 (Spot+S3+EBS+EFS)
 			t.setDone(t.getDone() + step);
 			t.setLocation(location);
 		});
@@ -376,7 +473,7 @@ public class ProvAwsPriceImportResource {
 	 *            The previous installed prices.
 	 * @return The amount of installed prices. Only for the report.
 	 */
-	private int install(final AwsInstanceSpotPrice json, final Map<String, ProvInstanceType> instances,
+	private int install(final AwsEc2SpotPrice json, final Map<String, ProvInstanceType> instances,
 			final ProvInstancePriceTerm spotPriceType, final ProvLocation region, final Map<String, ProvInstancePrice> previous) {
 		return (int) json.getOsPrices().stream().filter(op -> !StringUtils.startsWithIgnoreCase(op.getPrices().get("USD"), "N/A"))
 				.map(op -> {
@@ -459,16 +556,19 @@ public class ProvAwsPriceImportResource {
 			// Get the remote prices stream
 			reader = new BufferedReader(new InputStreamReader(new URI(endpoint).toURL().openStream()));
 			// Pipe to the CSV reader
-			final AwsCsvForBean csvReader = new AwsCsvForBean(reader);
+			final CsvForBeanEc2 csvReader = new CsvForBeanEc2(reader);
 
 			// Build the AWS instance prices from the CSV
-			AwsInstancePrice csv = null;
+			AwsEc2Price csv = null;
 			do {
 				// Read the next one
 				csv = csvReader.read();
 				if (csv == null) {
 					break;
 				}
+
+				// Complete the region human name associated to the API one
+				region.setDescription(csv.getLocation());
 
 				// Persist this price
 				priceCounter += install(csv, instances, priceTypes, partialCost, node, region, previous);
@@ -507,7 +607,7 @@ public class ProvAwsPriceImportResource {
 	 *            The previous installed prices.
 	 * @return The amount of installed prices. Only for the report.
 	 */
-	private int install(final AwsInstancePrice csv, final Map<String, ProvInstanceType> instances,
+	private int install(final AwsEc2Price csv, final Map<String, ProvInstanceType> instances,
 			final Map<String, ProvInstancePriceTerm> priceTypes, final Map<String, ProvInstancePrice> partialCost, final Node node,
 			final ProvLocation region, final Map<String, ProvInstancePrice> previous) {
 		// Upfront, partial or not
@@ -525,19 +625,19 @@ public class ProvAwsPriceImportResource {
 			} else {
 				// First time, save this instance for a future completion
 				handleUpfront(csv,
-						partialCost.computeIfAbsent(code, k -> newProvInstancePrice(csv, instances, priceTypes, node, region, previous)));
+						partialCost.computeIfAbsent(code, k -> newInstancePrice(csv, instances, priceTypes, node, region, previous)));
 			}
 		} else {
 			// No leasing, cost is fixed
 			priceCounter++;
-			final ProvInstancePrice price = newProvInstancePrice(csv, instances, priceTypes, node, region, previous);
+			final ProvInstancePrice price = newInstancePrice(csv, instances, priceTypes, node, region, previous);
 			price.setCost(csv.getPricePerUnit());
 			ipRepository.save(price);
 		}
 		return priceCounter;
 	}
 
-	private void handleUpfront(final AwsInstancePrice csv, final ProvInstancePrice ipUpfront) {
+	private void handleUpfront(final AwsEc2Price csv, final ProvInstancePrice ipUpfront) {
 		final double hourlyCost;
 		if (csv.getPriceUnit().equals("Quantity")) {
 			// Upfront price part , update the effective hourly cost
@@ -555,16 +655,16 @@ public class ProvAwsPriceImportResource {
 	/**
 	 * Install or update a EC2 price
 	 */
-	private ProvInstancePrice newProvInstancePrice(final AwsInstancePrice csv, final Map<String, ProvInstanceType> instances,
+	private ProvInstancePrice newInstancePrice(final AwsEc2Price csv, final Map<String, ProvInstanceType> instances,
 			final Map<String, ProvInstancePriceTerm> priceTypes, final Node node, final ProvLocation region,
 			final Map<String, ProvInstancePrice> previous) {
 		final VmOs os = VmOs.valueOf(csv.getOs().toUpperCase(Locale.ENGLISH));
-		final ProvInstanceType instance = instances.computeIfAbsent(csv.getInstanceType(), k -> newProvInstance(csv, node));
+		final ProvInstanceType instance = instances.computeIfAbsent(csv.getInstanceType(), k -> newInstanceType(csv, node));
 		final String license = StringUtils.trimToNull(
 				StringUtils.remove(csv.getLicenseModel().replace("License Included", StringUtils.defaultString(csv.getSoftware(), ""))
 						.replace("NA", "License Included"), "No License required"));
 		final ProvTenancy tenancy = ProvTenancy.valueOf(StringUtils.upperCase(csv.getTenancy()));
-		final ProvInstancePriceTerm term = priceTypes.computeIfAbsent(csv.getOfferTermCode(), k -> newProvInstancePriceTerm(csv, node));
+		final ProvInstancePriceTerm term = priceTypes.computeIfAbsent(csv.getOfferTermCode(), k -> newInstancePriceTerm(csv, node));
 		final String code = toCode(csv);
 		final ProvInstancePrice price = previous.computeIfAbsent(code, c -> {
 			final ProvInstancePrice p = new ProvInstancePrice();
@@ -583,14 +683,14 @@ public class ProvAwsPriceImportResource {
 		return price;
 	}
 
-	private String toCode(final AwsInstancePrice csv) {
+	private String toCode(final AwsEc2Price csv) {
 		return csv.getSku() + csv.getOfferTermCode();
 	}
 
 	/**
 	 * Install a new EC2 instance type
 	 */
-	private ProvInstanceType newProvInstance(final AwsInstancePrice csv, final Node node) {
+	private ProvInstanceType newInstanceType(final AwsEc2Price csv, final Node node) {
 		final ProvInstanceType instance = new ProvInstanceType();
 		instance.setNode(node);
 		instance.setCpu(csv.getCpu());
@@ -615,7 +715,7 @@ public class ProvAwsPriceImportResource {
 	/**
 	 * Build a new instance price type from the CSV line.
 	 */
-	private ProvInstancePriceTerm newProvInstancePriceTerm(final AwsInstancePrice csvPrice, final Node node) {
+	private ProvInstancePriceTerm newInstancePriceTerm(final AwsEc2Price csvPrice, final Node node) {
 		final ProvInstancePriceTerm result = new ProvInstancePriceTerm();
 		result.setNode(node);
 		result.setCode(csvPrice.getOfferTermCode());

@@ -10,7 +10,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class AwsInstanceSpotOsPrice {
+public class AwsEc2SpotOsPrice {
 
 	/**
 	 * OS identifier.

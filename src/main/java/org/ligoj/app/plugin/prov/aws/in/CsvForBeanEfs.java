@@ -24,6 +24,8 @@ public class CsvForBeanEfs extends AbstractAwsCsvForBean<AwsCsvPrice> {
 	 * 
 	 * @param reader
 	 *            The original AWS CSV input.
+	 * @throws IOException
+	 *             When no valid CSV header can be found.
 	 */
 	public CsvForBeanEfs(final BufferedReader reader) throws IOException {
 		super(reader, HEADERS_MAPPING, AwsCsvPrice.class);

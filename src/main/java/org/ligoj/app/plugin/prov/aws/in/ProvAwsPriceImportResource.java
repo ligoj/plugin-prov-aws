@@ -742,6 +742,9 @@ public class ProvAwsPriceImportResource {
 
 	/**
 	 * Read the spot region to the new format from an external JSON file.
+	 * 
+	 * @throws IOException
+	 *             When the JSON mapping file cannot be read.
 	 */
 	@PostConstruct
 	public void initSpotToNewRegion() throws IOException {
@@ -754,6 +757,8 @@ public class ProvAwsPriceImportResource {
 
 	/**
 	 * Read the EBS/S3 mapping to API name from an external JSON file.
+	 * @throws IOException
+	 *             When the JSON mapping file cannot be read.
 	 */
 	@PostConstruct
 	public void initEbsToApi() throws IOException {

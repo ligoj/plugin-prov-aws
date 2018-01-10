@@ -78,6 +78,10 @@ abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 	/**
 	 * Return a list of JPA bean re ad from the given CSV input. Headers are
 	 * expected.
+	 * 
+	 * @return The bean read from the next CSV record.
+	 * @throws IOException
+	 *             When the CSV record cannot be read.
 	 */
 	public T read() throws IOException {
 		return beanReader.read();

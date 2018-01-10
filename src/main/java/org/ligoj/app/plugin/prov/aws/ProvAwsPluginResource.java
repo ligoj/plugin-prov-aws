@@ -73,11 +73,6 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	public static final String CONF_REGION = KEY + ":region";
 
 	/**
-	 * Configuration key used for {@link #DEFAULT_ENABLED_REGION}
-	 */
-	public static final String CONF_ENABLED_REGION = KEY + ":enabled-region";
-
-	/**
 	 * Parameter used for AWS authentication
 	 */
 	public static final String PARAMETER_ACCESS_KEY_ID = KEY + ":access-key-id";
@@ -118,8 +113,10 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	/**
 	 * Check AWS connection and account.
 	 * 
-	 * @param subscription
-	 *            subscription
+	 * @param node
+	 *            The node identifier. May be <code>null</code>.
+	 * @param parameters
+	 *            the parameter values of the node.
 	 * @return <code>true</code> if AWS connection is up
 	 */
 	@Override

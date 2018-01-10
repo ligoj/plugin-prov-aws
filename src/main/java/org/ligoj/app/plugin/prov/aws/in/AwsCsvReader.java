@@ -22,6 +22,10 @@ public class AwsCsvReader<T> extends CsvBeanReader<T> {
 	 * 
 	 * @param reader
 	 *            The CSV input, without headers and starting from the first raw.
+	 * @param The
+	 *            CSV headers.
+	 * @param beanType
+	 *            The target bean type.
 	 */
 	public AwsCsvReader(final Reader reader, final String[] headers, final Class<T> beanType) {
 		super(reader, beanType, headers);

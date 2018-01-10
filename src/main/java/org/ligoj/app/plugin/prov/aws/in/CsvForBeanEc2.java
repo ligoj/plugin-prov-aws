@@ -41,6 +41,8 @@ public class CsvForBeanEc2 extends AbstractAwsCsvForBean<AwsEc2Price> {
 	 * 
 	 * @param reader
 	 *            The original AWS CSV input.
+	 * @throws IOException
+	 *             When CSV content cannot be read.
 	 */
 	public CsvForBeanEc2(final BufferedReader reader) throws IOException {
 		super(reader, HEADERS_MAPPING, AwsEc2Price.class);

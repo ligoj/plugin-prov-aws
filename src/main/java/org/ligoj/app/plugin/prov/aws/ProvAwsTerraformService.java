@@ -76,6 +76,8 @@ public class ProvAwsTerraformService {
 	 *            quote instance
 	 * @param subscription
 	 *            The related subscription.
+	 * @throws IOException
+	 *             When Terraform content cannot be written.
 	 */
 	public void writeTerraform(final Writer writer, final QuoteVo quote, final Subscription subscription) throws IOException {
 		final String projectName = subscription.getProject().getName();

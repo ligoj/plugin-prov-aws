@@ -14,10 +14,10 @@ import java.util.Map;
 import javax.transaction.Transactional;
 
 import org.apache.http.HttpStatus;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.ligoj.app.AbstractServerTest;
 import org.ligoj.app.api.SubscriptionStatusWithData;
 import org.ligoj.app.iam.model.CacheCompany;
@@ -42,12 +42,12 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 /**
  * Test class of {@link ProvAwsPluginResource}
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @ContextConfiguration(locations = "classpath:/META-INF/spring/application-context-test.xml")
 @Rollback
 @Transactional
@@ -60,7 +60,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 
 	protected int subscription;
 
-	@Before
+	@BeforeEach
 	public void prepareData() throws IOException {
 		persistSystemEntities();
 		persistEntities("csv", new Class[] { Node.class, Project.class, CacheCompany.class, CacheUser.class, DelegateNode.class,
@@ -71,12 +71,12 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 
 	@Test
 	public void getInstalledEntities() {
-		Assert.assertTrue(resource.getInstalledEntities().contains(ProvStorageType.class));
+		Assertions.assertTrue(resource.getInstalledEntities().contains(ProvStorageType.class));
 	}
 
 	@Test
 	public void getKey() {
-		Assert.assertEquals("service:prov:aws", resource.getKey());
+		Assertions.assertEquals("service:prov:aws", resource.getKey());
 	}
 
 	@Test
@@ -95,14 +95,16 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		resource2.updateCatalog("service:prov:aws:account");
 	}
 
-	@Test(expected = BusinessException.class)
+	@Test
 	public void updateCatalogNoRight() throws Exception {
 		initSpringSecurityContext("any");
 
 		// Re-Install a new configuration
-		resource.updateCatalog("service:prov:aws:account");
+		Assertions.assertEquals("ttt", Assertions.assertThrows(BusinessException.class, () -> {
+			resource.updateCatalog("service:prov:aws:account");
+		}).getMessage());
 	}
-	
+
 	@Test
 	public void terraform() throws Exception {
 		final ProvAwsPluginResource resource2 = new ProvAwsPluginResource();
@@ -115,9 +117,9 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	@Test
 	public void terraformCommandLineParameters() throws Exception {
 		final String[] parameters = resource.commandLineParameters(subscription);
-		Assert.assertTrue(parameters.length == 4);
-		Assert.assertTrue("'AWS_ACCESS_KEY_ID=12345678901234567890'".equals(parameters[1]));
-		Assert.assertTrue("'AWS_SECRET_ACCESS_KEY=abcdefghtiklmnopqrstuvwxyz'".equals(parameters[3]));
+		Assertions.assertTrue(parameters.length == 4);
+		Assertions.assertTrue("'AWS_ACCESS_KEY_ID=12345678901234567890'".equals(parameters[1]));
+		Assertions.assertTrue("'AWS_SECRET_ACCESS_KEY=abcdefghtiklmnopqrstuvwxyz'".equals(parameters[3]));
 	}
 
 	/**
@@ -138,9 +140,9 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		httpServer.start();
 
 		final List<NamedBean<String>> keys = resource.getEC2Keys(subscription);
-		Assert.assertFalse(keys.isEmpty());
-		Assert.assertEquals(1, keys.size());
-		Assert.assertEquals("my-key", keys.get(0).getId());
+		Assertions.assertFalse(keys.isEmpty());
+		Assertions.assertEquals(1, keys.size());
+		Assertions.assertEquals("my-key", keys.get(0).getId());
 	}
 
 	/**
@@ -151,7 +153,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	 */
 	@Test
 	public void getEC2KeysError() throws Exception {
-		Assert.assertTrue(resource.getEC2Keys(subscription).isEmpty());
+		Assertions.assertTrue(resource.getEC2Keys(subscription).isEmpty());
 	}
 
 	/**
@@ -164,10 +166,10 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	public void newRequest() throws Exception {
 		final CurlRequest request = resource.newRequest(AWS4SignatureQuery.builder().host("mock").path("/").body("body").service("s3"),
 				subscription);
-		Assert.assertTrue(request.getHeaders().containsKey("Authorization"));
-		Assert.assertEquals("https://mock/", request.getUrl());
-		Assert.assertEquals("POST", request.getMethod());
-		Assert.assertEquals("body", request.getContent());
+		Assertions.assertTrue(request.getHeaders().containsKey("Authorization"));
+		Assertions.assertEquals("https://mock/", request.getUrl());
+		Assertions.assertEquals("POST", request.getMethod());
+		Assertions.assertEquals("body", request.getContent());
 	}
 
 	@Test
@@ -177,17 +179,19 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		resource.create(subscription);
 	}
 
-	@Test(expected = BusinessException.class)
+	@Test
 	public void createFailed() throws Exception {
 		final ProvAwsPluginResource resource = Mockito.spy(ProvAwsPluginResource.class);
 		Mockito.doReturn(false).when(resource).validateAccess(ArgumentMatchers.anyInt());
-		resource.create(-1);
+		Assertions.assertEquals("ttt", Assertions.assertThrows(BusinessException.class, () -> {
+			resource.create(-1);
+		}).getMessage());
 	}
 
 	@Test
 	public void checkSubscriptionStatusUp() throws Exception {
 		final SubscriptionStatusWithData status = resource.checkSubscriptionStatus(subscription, null, new HashMap<String, String>());
-		Assert.assertTrue(status.getStatus().isUp());
+		Assertions.assertTrue(status.getStatus().isUp());
 	}
 
 	@Test
@@ -195,29 +199,29 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		final ProvAwsPluginResource resource = Mockito.spy(ProvAwsPluginResource.class);
 		Mockito.doReturn(false).when(resource).validateAccess(ArgumentMatchers.anyInt());
 		final SubscriptionStatusWithData status = resource.checkSubscriptionStatus(subscription, null, new HashMap<String, String>());
-		Assert.assertFalse(status.getStatus().isUp());
+		Assertions.assertFalse(status.getStatus().isUp());
 	}
 
 	@Test
 	public void validateAccessUp() {
-		Assert.assertTrue(validateAccess(HttpStatus.SC_OK));
+		Assertions.assertTrue(validateAccess(HttpStatus.SC_OK));
 	}
 
 	@Test
 	public void validateAccessDown() {
-		Assert.assertFalse(validateAccess(HttpStatus.SC_FORBIDDEN));
+		Assertions.assertFalse(validateAccess(HttpStatus.SC_FORBIDDEN));
 	}
 
 	@Test
 	public void checkStatus() throws Exception {
-		Assert.assertTrue(validateAccess(HttpStatus.SC_OK));
+		Assertions.assertTrue(validateAccess(HttpStatus.SC_OK));
 		final ProvAwsPluginResource resource = Mockito.spy(this.resource);
 		Mockito.doReturn(MOCK_URL).when(resource).toUrl(ArgumentMatchers.any());
 		final Map<String, String> parameters = new HashMap<>();
 		parameters.put("service:prov:aws:access-key-id", "12345678901234567890");
 		parameters.put("service:prov:aws:secret-access-key", "abcdefghtiklmnopqrstuvwxyz");
 		parameters.put("service:prov:aws:account", "123456789");
-		Assert.assertTrue(resource.checkStatus(null, parameters));
+		Assertions.assertTrue(resource.checkStatus(null, parameters));
 	}
 
 	private boolean validateAccess(int status) {

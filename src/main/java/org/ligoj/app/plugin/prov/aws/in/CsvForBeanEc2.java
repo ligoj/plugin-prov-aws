@@ -50,7 +50,7 @@ public class CsvForBeanEc2 extends AbstractAwsCsvForBean<AwsEc2Price> {
 
 	@Override
 	protected CsvBeanReader<AwsEc2Price> newCsvReader(final Reader reader, final String[] headers, final Class<AwsEc2Price> beanType) {
-		return new AwsCsvReader<AwsEc2Price>(reader, headers, beanType) {
+		return new AwsCsvReader<>(reader, headers, beanType) {
 
 			@Override
 			protected boolean isValidRaw(final List<String> rawValues) {

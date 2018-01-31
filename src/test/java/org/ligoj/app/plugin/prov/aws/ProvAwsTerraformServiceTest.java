@@ -7,10 +7,10 @@ import java.nio.charset.StandardCharsets;
 import javax.transaction.Transactional;
 
 import org.apache.commons.io.IOUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.ligoj.app.AbstractServerTest;
 import org.ligoj.app.dao.SubscriptionRepository;
 import org.ligoj.app.model.Node;
@@ -20,9 +20,9 @@ import org.ligoj.app.model.Project;
 import org.ligoj.app.model.Subscription;
 import org.ligoj.app.plugin.prov.QuoteVo;
 import org.ligoj.app.plugin.prov.model.InternetAccess;
-import org.ligoj.app.plugin.prov.model.ProvInstanceType;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
+import org.ligoj.app.plugin.prov.model.ProvInstanceType;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
 import org.ligoj.app.plugin.prov.model.ProvQuoteStorage;
 import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
@@ -31,7 +31,7 @@ import org.ligoj.app.plugin.prov.model.VmOs;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
@@ -39,7 +39,7 @@ import com.google.common.collect.Lists;
 /**
  * Test class of {@link ProvAwsTerraformService}
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @ContextConfiguration(locations = "classpath:/META-INF/spring/application-context-test.xml")
 @Rollback
 @Transactional
@@ -53,7 +53,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 
 	private Subscription subscription;
 
-	@Before
+	@BeforeEach
 	public void prepareData() throws IOException {
 		persistSystemEntities();
 		persistEntities("csv", new Class[] { Node.class, Project.class, Parameter.class, Subscription.class, ParameterValue.class },
@@ -175,8 +175,8 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 		service.writeTerraform(writer, quoteVo, subscription);
 
 		final String terraform = writer.toString();
-		Assert.assertNotNull(terraform);
-		Assert.assertEquals(
+		Assertions.assertNotNull(terraform);
+		Assertions.assertEquals(
 				IOUtils.toString(Thread.currentThread().getContextClassLoader().getResource(expectedResultFileName), Charsets.UTF_8),
 				terraform);
 	}

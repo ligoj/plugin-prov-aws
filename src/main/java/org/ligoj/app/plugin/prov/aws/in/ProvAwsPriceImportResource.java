@@ -64,15 +64,16 @@ import lombok.extern.slf4j.Slf4j;
 public class ProvAwsPriceImportResource {
 
 	/**
-	 * File containing the mapping from the spot region name to the new format one.
-	 * This mapping is required because of the old naming format used for the first
-	 * region's name. All non mapped regions use the new name in spot JSON file.
+	 * File containing the mapping from the spot region name to the new format
+	 * one. This mapping is required because of the old naming format used for
+	 * the first region's name. All non mapped regions use the new name in spot
+	 * JSON file.
 	 */
 	private static final String SPOT_TO_NEW_REGION_FILE = "spot-to-new-region.json";
 
 	/**
-	 * File containing the mapping from the EBS/S3 JSON code name to API name. All
-	 * non mapped regions use the JSON name.
+	 * File containing the mapping from the EBS/S3 JSON code name to API name.
+	 * All non mapped regions use the JSON name.
 	 */
 	private static final String STORAGE_TO_API = "storage-to-api.json";
 
@@ -220,7 +221,8 @@ public class ProvAwsPriceImportResource {
 					.count();
 		});
 
-		// Install S3 prices, note only the first 50TB storage tiers is considered
+		// Install S3 prices, note only the first 50TB storage tiers is
+		// considered
 		installPrices(node, regions, "s3", configuration.get(CONF_URL_S3_PRICES, S3_PRICES), S3Prices.class, (r, region) -> {
 			// Get previous prices for this location
 			final Map<Integer, ProvStoragePrice> previous = spRepository.findAll(node.getId(), region.getName()).stream()
@@ -258,7 +260,8 @@ public class ProvAwsPriceImportResource {
 		final Map<String, ProvInstancePriceTerm> priceTypes = iptRepository.findAllBy("node.id", node.getId()).stream()
 				.collect(Collectors.toMap(ProvInstancePriceTerm::getCode, Function.identity()));
 
-		// The previously installed instance types cache. Key is the instance name
+		// The previously installed instance types cache. Key is the instance
+		// name
 		final Map<String, ProvInstanceType> instances = instanceRepository.findAllBy("node.id", node.getId()).stream()
 				.collect(Collectors.toMap(ProvInstanceType::getName, Function.identity()));
 
@@ -347,6 +350,10 @@ public class ProvAwsPriceImportResource {
 	 *            The mapping model from JSON at region level.
 	 * @param mapper
 	 *            The mapping function from JSON at region level to JPA entity.
+	 * @param <R>
+	 *            Prices specific to a region type.
+	 * @param <T>
+	 *            Set of prices specific to a region type.
 	 */
 	private <R extends AwsRegionPrices, T extends AwsPrices<R>> void installEfsPrices(final Node node,
 			final Map<String, ProvLocation> regions) throws IOException, URISyntaxException {
@@ -421,7 +428,8 @@ public class ProvAwsPriceImportResource {
 	private void nextStep(final Node node, final String location, final int step) {
 		importCatalogResource.nextStep(node.getId(), t -> {
 			importCatalogResource.updateStats(t);
-			t.setWorkload(t.getNbLocations() + 4); // NB region + 4 (Spot+S3+EBS+EFS)
+			t.setWorkload(t.getNbLocations() + 4); // NB region + 4
+													// (Spot+S3+EBS+EFS)
 			t.setDone(t.getDone() + step);
 			t.setLocation(location);
 		});
@@ -458,13 +466,14 @@ public class ProvAwsPriceImportResource {
 	}
 
 	/**
-	 * EC2 spot installer. Install the instance type (if needed), the instance price
-	 * type (if needed) and the price.
+	 * EC2 spot installer. Install the instance type (if needed), the instance
+	 * price type (if needed) and the price.
 	 * 
 	 * @param json
 	 *            The current JSON entry.
 	 * @param instances
-	 *            The previously installed instance types. Key is the instance name.
+	 *            The previously installed instance types. Key is the instance
+	 *            name.
 	 * @param spotPriceType
 	 *            The related AWS Spot instance price type.
 	 * @param region
@@ -588,13 +597,14 @@ public class ProvAwsPriceImportResource {
 	}
 
 	/**
-	 * Install the install the instance type (if needed), the instance price type
-	 * (if needed) and the price.
+	 * Install the install the instance type (if needed), the instance price
+	 * type (if needed) and the price.
 	 * 
 	 * @param csv
 	 *            The current CSV entry.
 	 * @param instances
-	 *            The previously installed instance types. Key is the instance name.
+	 *            The previously installed instance types. Key is the instance
+	 *            name.
 	 * @param priceTypes
 	 *            The previously installed price types.
 	 * @param partialCost
@@ -757,6 +767,7 @@ public class ProvAwsPriceImportResource {
 
 	/**
 	 * Read the EBS/S3 mapping to API name from an external JSON file.
+	 * 
 	 * @throws IOException
 	 *             When the JSON mapping file cannot be read.
 	 */

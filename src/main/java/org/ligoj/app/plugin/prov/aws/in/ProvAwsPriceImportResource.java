@@ -217,7 +217,7 @@ public class ProvAwsPriceImportResource {
 					.collect(Collectors.toMap(p -> p.getType().getId(), Function.identity()));
 			return (int) r.getTypes().stream().filter(t -> containsKey(storages, t))
 					.filter(t -> t.getValues().stream().filter(j -> !"perPIOPSreq".equals(j.getRate()))
-							.filter(j -> install(j, storages.get(t.getName()), region, previous)).findAny().isPresent())
+							.anyMatch(j -> install(j, storages.get(t.getName()), region, previous)))
 					.count();
 		});
 
@@ -352,10 +352,8 @@ public class ProvAwsPriceImportResource {
 	 *            The mapping function from JSON at region level to JPA entity.
 	 * @param <R>
 	 *            Prices specific to a region type.
-	 * @param <T>
-	 *            Set of prices specific to a region type.
 	 */
-	private <R extends AwsRegionPrices, T extends AwsPrices<R>> void installEfsPrices(final Node node,
+	private <R extends AwsRegionPrices> void installEfsPrices(final Node node,
 			final Map<String, ProvLocation> regions) throws IOException, URISyntaxException {
 		log.info("AWS EFS prices ...");
 
@@ -363,7 +361,7 @@ public class ProvAwsPriceImportResource {
 		final ProvStorageType efs = stRepository.findAllBy("node.id", node.getId()).stream().filter(t -> t.getName().equals("efs"))
 				.findAny().get();
 		final Map<ProvLocation, ProvStoragePrice> previous = spRepository.findAllBy("type", efs).stream()
-				.collect(Collectors.toMap(p -> p.getLocation(), Function.identity()));
+				.collect(Collectors.toMap(ProvStoragePrice::getLocation, Function.identity()));
 
 		int priceCounter = 0;
 		BufferedReader reader = null;

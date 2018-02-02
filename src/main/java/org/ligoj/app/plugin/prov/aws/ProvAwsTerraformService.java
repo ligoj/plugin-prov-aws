@@ -259,7 +259,7 @@ public class ProvAwsTerraformService {
 		writer.write("  instance_type = \"" + instanceType + "\"\n");
 		writer.write("  key_name    	= \"" + projectName + "-key\"\n");
 		writer.write("  " + (autoscaling ? "security_groups" : "vpc_security_group_ids") + " = [ \"${aws_security_group.vm-sg.id}\" ]\n");
-		writeInstanceStorages(writer, quote, instance);
+		writeInstanceStorages(writer, instance);
 		if (!autoscaling) {
 			writer.write("  subnet_id     = \"${aws_subnet." + instance.getInternet().name() + ".id}\"\n");
 			writeTags(writer, projectName, projectName + "-" + instanceName);
@@ -419,14 +419,12 @@ public class ProvAwsTerraformService {
 	 * 
 	 * @param writer
 	 *            Target output of Terraform content.
-	 * @param quote
-	 *            quote instance
 	 * @param instance
 	 *            instance
 	 * @throws IOException
 	 *             exception thrown during write
 	 */
-	private void writeInstanceStorages(final Writer writer, final QuoteVo quote, final ProvQuoteInstance instance) throws IOException {
+	private void writeInstanceStorages(final Writer writer, final ProvQuoteInstance instance) throws IOException {
 		int idx = 0;
 		for (final ProvQuoteStorage storage : instance.getStorages()) {
 			if (idx == 0) {

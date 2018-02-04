@@ -507,6 +507,57 @@ public class ProvAwsPriceImportResource {
 	}
 
 	/**
+	 * Install the install the instance type (if needed), the instance price
+	 * type (if needed) and the price.
+	 * 
+	 * @param csv
+	 *            The current CSV entry.
+	 * @param instances
+	 *            The previously installed instance types. Key is the instance
+	 *            name.
+	 * @param priceTypes
+	 *            The previously installed price types.
+	 * @param partialCost
+	 *            The current partial cost for up-front options.
+	 * @param node
+	 *            The related {@link Node}
+	 * @param region
+	 *            The current region.
+	 * @param previous
+	 *            The previous installed prices.
+	 * @return The amount of installed prices. Only for the report.
+	 */
+	private int install(final AwsEc2Price csv, final Map<String, ProvInstanceType> instances,
+			final Map<String, ProvInstancePriceTerm> priceTypes, final Map<String, ProvInstancePrice> partialCost, final Node node,
+			final ProvLocation region, final Map<String, ProvInstancePrice> previous) {
+		// Upfront, partial or not
+		int priceCounter = 0;
+		if (StringUtils.equalsAnyIgnoreCase(csv.getPurchaseOption(), "All Upfront", "Partial Upfront")) {
+			final String code = csv.getSku() + csv.getOfferTermCode();
+			if (partialCost.containsKey(code)) {
+				final ProvInstancePrice ipUpfront = partialCost.get(code);
+				handleUpfront(csv, ipUpfront);
+
+				// The price is completed, cleanup and persist
+				partialCost.remove(code);
+				priceCounter++;
+				ipRepository.save(ipUpfront);
+			} else {
+				// First time, save this instance for a future completion
+				handleUpfront(csv,
+						partialCost.computeIfAbsent(code, k -> newInstancePrice(csv, instances, priceTypes, node, region, previous)));
+			}
+		} else {
+			// No leasing, cost is fixed
+			priceCounter++;
+			final ProvInstancePrice price = newInstancePrice(csv, instances, priceTypes, node, region, previous);
+			price.setCost(csv.getPricePerUnit());
+			ipRepository.save(price);
+		}
+		return priceCounter;
+	}
+
+	/**
 	 * Install the EBS/S3 price using the related storage type.
 	 * 
 	 * @param json
@@ -591,57 +642,6 @@ public class ProvAwsPriceImportResource {
 		}
 
 		// Return the available instances types
-		return priceCounter;
-	}
-
-	/**
-	 * Install the install the instance type (if needed), the instance price
-	 * type (if needed) and the price.
-	 * 
-	 * @param csv
-	 *            The current CSV entry.
-	 * @param instances
-	 *            The previously installed instance types. Key is the instance
-	 *            name.
-	 * @param priceTypes
-	 *            The previously installed price types.
-	 * @param partialCost
-	 *            The current partial cost for up-front options.
-	 * @param node
-	 *            The related {@link Node}
-	 * @param region
-	 *            The current region.
-	 * @param previous
-	 *            The previous installed prices.
-	 * @return The amount of installed prices. Only for the report.
-	 */
-	private int install(final AwsEc2Price csv, final Map<String, ProvInstanceType> instances,
-			final Map<String, ProvInstancePriceTerm> priceTypes, final Map<String, ProvInstancePrice> partialCost, final Node node,
-			final ProvLocation region, final Map<String, ProvInstancePrice> previous) {
-		// Upfront, partial or not
-		int priceCounter = 0;
-		if (StringUtils.equalsAnyIgnoreCase(csv.getPurchaseOption(), "All Upfront", "Partial Upfront")) {
-			final String code = csv.getSku() + csv.getOfferTermCode();
-			if (partialCost.containsKey(code)) {
-				final ProvInstancePrice ipUpfront = partialCost.get(code);
-				handleUpfront(csv, ipUpfront);
-
-				// The price is completed, cleanup and persist
-				partialCost.remove(code);
-				priceCounter++;
-				ipRepository.save(ipUpfront);
-			} else {
-				// First time, save this instance for a future completion
-				handleUpfront(csv,
-						partialCost.computeIfAbsent(code, k -> newInstancePrice(csv, instances, priceTypes, node, region, previous)));
-			}
-		} else {
-			// No leasing, cost is fixed
-			priceCounter++;
-			final ProvInstancePrice price = newInstancePrice(csv, instances, priceTypes, node, region, previous);
-			price.setCost(csv.getPricePerUnit());
-			ipRepository.save(price);
-		}
 		return priceCounter;
 	}
 

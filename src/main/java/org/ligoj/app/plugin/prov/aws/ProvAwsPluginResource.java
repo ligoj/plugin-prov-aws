@@ -120,7 +120,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	 * @return <code>true</code> if AWS connection is up
 	 */
 	@Override
-	public boolean checkStatus(final String node, final Map<String, String> parameters) throws Exception {
+	public boolean checkStatus(final String node, final Map<String, String> parameters) {
 		return validateAccess(parameters);
 	}
 

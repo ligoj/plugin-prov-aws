@@ -70,7 +70,7 @@ abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 	 * @see #read() instead
 	 */
 	@Override
-	public final <B> List<B> toBean(final Class<B> beanType, final Reader input) throws IOException {
+	public final <B> List<B> toBean(final Class<B> beanType, final Reader input) {
 		// Disable this method,
 		return null;
 	}

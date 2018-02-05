@@ -96,7 +96,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void updateCatalogNoRight() throws Exception {
+	public void updateCatalogNoRight() {
 		initSpringSecurityContext("any");
 
 		// Re-Install a new configuration
@@ -115,7 +115,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void terraformCommandLineParameters() throws Exception {
+	public void terraformCommandLineParameters() {
 		final String[] parameters = resource.commandLineParameters(subscription);
 		Assertions.assertTrue(parameters.length == 4);
 		Assertions.assertTrue("'AWS_ACCESS_KEY_ID=12345678901234567890'".equals(parameters[1]));
@@ -129,7 +129,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	 *             exception
 	 */
 	@Test
-	public void getEC2Keys() throws Exception {
+	public void getEC2Keys() {
 		final ProvAwsPluginResource resource = Mockito.spy(this.resource);
 		final CurlRequest mockRequest = new CurlRequest("GET", MOCK_URL, null);
 		mockRequest.setSaveResponse(true);
@@ -152,7 +152,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	 *             exception
 	 */
 	@Test
-	public void getEC2KeysError() throws Exception {
+	public void getEC2KeysError() {
 		Assertions.assertTrue(resource.getEC2Keys(subscription).isEmpty());
 	}
 
@@ -163,7 +163,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	 *             exception
 	 */
 	@Test
-	public void newRequest() throws Exception {
+	public void newRequest() {
 		final CurlRequest request = resource.newRequest(AWS4SignatureQuery.builder().host("mock").path("/").body("body").service("s3"),
 				subscription);
 		Assertions.assertTrue(request.getHeaders().containsKey("Authorization"));
@@ -180,7 +180,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void createFailed() throws Exception {
+	public void createFailed() {
 		final ProvAwsPluginResource resource = Mockito.spy(ProvAwsPluginResource.class);
 		Mockito.doReturn(false).when(resource).validateAccess(ArgumentMatchers.anyInt());
 		Assertions.assertEquals("ttt", Assertions.assertThrows(BusinessException.class, () -> {
@@ -213,7 +213,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void checkStatus() throws Exception {
+	public void checkStatus() {
 		Assertions.assertTrue(validateAccess(HttpStatus.SC_OK));
 		final ProvAwsPluginResource resource = Mockito.spy(this.resource);
 		Mockito.doReturn(MOCK_URL).when(resource).toUrl(ArgumentMatchers.any());

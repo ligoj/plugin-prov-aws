@@ -63,29 +63,27 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 public class ProvAwsPriceImportResource {
 
+	private static final String BY_NODE = "node.id";
+
 	/**
-	 * File containing the mapping from the spot region name to the new format
-	 * one. This mapping is required because of the old naming format used for
-	 * the first region's name. All non mapped regions use the new name in spot
-	 * JSON file.
+	 * File containing the mapping from the spot region name to the new format one. This mapping is required because of
+	 * the old naming format used for the first region's name. All non mapped regions use the new name in spot JSON
+	 * file.
 	 */
 	private static final String SPOT_TO_NEW_REGION_FILE = "spot-to-new-region.json";
 
 	/**
-	 * File containing the mapping from the EBS/S3 JSON code name to API name.
-	 * All non mapped regions use the JSON name.
+	 * File containing the mapping from the EBS/S3 JSON code name to API name. All non mapped regions use the JSON name.
 	 */
 	private static final String STORAGE_TO_API = "storage-to-api.json";
 
 	/**
-	 * The EC2 reserved and on-demand price end-point, a CSV file, accepting the
-	 * region code with {@link Formatter}
+	 * The EC2 reserved and on-demand price end-point, a CSV file, accepting the region code with {@link Formatter}
 	 */
 	private static final String EC2_PRICES = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/%s/index.csv";
 
 	/**
-	 * The EC2 spot price end-point, a JSON file. Contains the prices for all
-	 * regions.
+	 * The EC2 spot price end-point, a JSON file. Contains the prices for all regions.
 	 */
 	private static final String EC2_PRICES_SPOT = "https://spot-price.s3.amazonaws.com/spot.js";
 	private static final Pattern LEASING_TIME = Pattern.compile("(\\d)yr");
@@ -183,7 +181,7 @@ public class ProvAwsPriceImportResource {
 		final Node node = nodeRepository.findOneExpected(ProvAwsPluginResource.KEY);
 
 		// The previously installed location cache. Key is the location AWS name
-		final Map<String, ProvLocation> regions = locationRepository.findAllBy("node.id", node.getId()).stream()
+		final Map<String, ProvLocation> regions = locationRepository.findAllBy(BY_NODE, node.getId()).stream()
 				.collect(Collectors.toMap(INamableBean::getName, Function.identity()));
 
 		// Update the workload : nb.regions + 3 (spot, EBS, S3, EFS)
@@ -207,29 +205,31 @@ public class ProvAwsPriceImportResource {
 	 */
 	private void installStoragePrices(final Node node, final Map<String, ProvLocation> regions) throws IOException {
 		// The previously installed storage types cache. Key is the storage name
-		final Map<String, ProvStorageType> storages = stRepository.findAllBy("node.id", node.getId()).stream()
+		final Map<String, ProvStorageType> storages = stRepository.findAllBy(BY_NODE, node.getId()).stream()
 				.collect(Collectors.toMap(INamableBean::getName, Function.identity()));
 
 		// Install EBS prices
-		installPrices(node, regions, "ebs", configuration.get(CONF_URL_EBS_PRICES, EBS_PRICES), EbsPrices.class, (r, region) -> {
-			// Get previous prices for this location
-			final Map<Integer, ProvStoragePrice> previous = spRepository.findAll(node.getId(), region.getName()).stream()
-					.collect(Collectors.toMap(p -> p.getType().getId(), Function.identity()));
-			return (int) r.getTypes().stream().filter(t -> containsKey(storages, t))
-					.filter(t -> t.getValues().stream().filter(j -> !"perPIOPSreq".equals(j.getRate()))
-							.anyMatch(j -> install(j, storages.get(t.getName()), region, previous)))
-					.count();
-		});
+		installPrices(node, regions, "ebs", configuration.get(CONF_URL_EBS_PRICES, EBS_PRICES), EbsPrices.class,
+				(r, region) -> {
+					// Get previous prices for this location
+					final Map<Integer, ProvStoragePrice> previous = spRepository.findAll(node.getId(), region.getName())
+							.stream().collect(Collectors.toMap(p -> p.getType().getId(), Function.identity()));
+					return (int) r.getTypes().stream().filter(t -> containsKey(storages, t))
+							.filter(t -> t.getValues().stream().filter(j -> !"perPIOPSreq".equals(j.getRate()))
+									.anyMatch(j -> install(j, storages.get(t.getName()), region, previous)))
+							.count();
+				});
 
-		// Install S3 prices, note only the first 50TB storage tiers is
-		// considered
-		installPrices(node, regions, "s3", configuration.get(CONF_URL_S3_PRICES, S3_PRICES), S3Prices.class, (r, region) -> {
-			// Get previous prices for this location
-			final Map<Integer, ProvStoragePrice> previous = spRepository.findAll(node.getId(), region.getName()).stream()
-					.collect(Collectors.toMap(p -> p.getType().getId(), Function.identity()));
-			return (int) r.getTiers().stream().limit(1).flatMap(tiers -> tiers.getStorageTypes().stream())
-					.filter(t -> containsKey(storages, t)).filter(t -> install(t, storages.get(t.getName()), region, previous)).count();
-		});
+		// Install S3 prices, note only the first 50TB storage tiers is considered
+		installPrices(node, regions, "s3", configuration.get(CONF_URL_S3_PRICES, S3_PRICES), S3Prices.class,
+				(r, region) -> {
+					// Get previous prices for this location
+					final Map<Integer, ProvStoragePrice> previous = spRepository.findAll(node.getId(), region.getName())
+							.stream().collect(Collectors.toMap(p -> p.getType().getId(), Function.identity()));
+					return (int) r.getTiers().stream().limit(1).flatMap(tiers -> tiers.getStorageTypes().stream())
+							.filter(t -> containsKey(storages, t))
+							.filter(t -> install(t, storages.get(t.getName()), region, previous)).count();
+				});
 	}
 
 	/**
@@ -241,7 +241,8 @@ public class ProvAwsPriceImportResource {
 	 *            The storage to evaluate.
 	 * @return <code>true</code> when the storage is valid.
 	 */
-	private <T extends INamableBean<?>> boolean containsKey(final Map<String, ProvStorageType> storages, final T storage) {
+	private <T extends INamableBean<?>> boolean containsKey(final Map<String, ProvStorageType> storages,
+			final T storage) {
 		storage.setName(mapStorageToApi.getOrDefault(storage.getName(), storage.getName()));
 		return storages.containsKey(storage.getName());
 	}
@@ -257,34 +258,35 @@ public class ProvAwsPriceImportResource {
 	private void installComputePrices(final Node node, final Map<String, ProvLocation> regions) throws IOException {
 		// Create the Spot instance price type
 		final ProvInstancePriceTerm spotPriceType = newSpotInstanceType(node);
-		final Map<String, ProvInstancePriceTerm> priceTypes = iptRepository.findAllBy("node.id", node.getId()).stream()
+		final Map<String, ProvInstancePriceTerm> priceTypes = iptRepository.findAllBy(BY_NODE, node.getId()).stream()
 				.collect(Collectors.toMap(ProvInstancePriceTerm::getCode, Function.identity()));
 
 		// The previously installed instance types cache. Key is the instance
 		// name
-		final Map<String, ProvInstanceType> instances = instanceRepository.findAllBy("node.id", node.getId()).stream()
+		final Map<String, ProvInstanceType> instances = instanceRepository.findAllBy(BY_NODE, node.getId()).stream()
 				.collect(Collectors.toMap(ProvInstanceType::getName, Function.identity()));
 
-		installPrices(node, regions, "ec2", configuration.get(CONF_URL_EC2_PRICES_SPOT, EC2_PRICES_SPOT), SpotPrices.class, (r, region) -> {
-			// Get previous prices for this location
-			final Map<String, ProvInstancePrice> previous = ipRepository.findAll(node.getId(), region.getName()).stream()
-					.collect(Collectors.toMap(ProvInstancePrice::getCode, Function.identity()));
+		installPrices(node, regions, "ec2", configuration.get(CONF_URL_EC2_PRICES_SPOT, EC2_PRICES_SPOT),
+				SpotPrices.class, (r, region) -> {
+					// Get previous prices for this location
+					final Map<String, ProvInstancePrice> previous = ipRepository.findAll(node.getId(), region.getName())
+							.stream().collect(Collectors.toMap(ProvInstancePrice::getCode, Function.identity()));
 
-			// Install the EC2 prices and related instance details used later
-			final int ec2Prices = installEC2Prices(instances, priceTypes, node, region, previous);
-			nextStep(node, region.getName(), 1);
+					// Install the EC2 prices and related instance details used later
+					final int ec2Prices = installEC2Prices(instances, priceTypes, node, region, previous);
+					nextStep(node, region.getName(), 1);
 
-			// Install the SPOT EC2 prices
-			return ec2Prices + r.getInstanceTypes().stream().flatMap(t -> t.getSizes().stream()).filter(j -> {
-				final boolean availability = instances.containsKey(j.getName());
-				if (!availability) {
-					// Unavailable instances type of spot are ignored
-					log.warn("Instance {} is referenced from spot but not available", j.getName());
-				}
-				return availability;
-			}).mapToInt(j -> install(j, instances, spotPriceType, region, previous)).sum();
+					// Install the SPOT EC2 prices
+					return ec2Prices + r.getInstanceTypes().stream().flatMap(t -> t.getSizes().stream()).filter(j -> {
+						final boolean availability = instances.containsKey(j.getName());
+						if (!availability) {
+							// Unavailable instances type of spot are ignored
+							log.warn("Instance {} is referenced from spot but not available", j.getName());
+						}
+						return availability;
+					}).mapToInt(j -> install(j, instances, spotPriceType, region, previous)).sum();
 
-		});
+				});
 	}
 
 	/**
@@ -303,9 +305,9 @@ public class ProvAwsPriceImportResource {
 	 * @param mapper
 	 *            The mapping function from JSON at region level to JPA entity.
 	 */
-	private <R extends AwsRegionPrices, T extends AwsPrices<R>> void installPrices(final Node node, final Map<String, ProvLocation> regions,
-			final String api, final String endpoint, final Class<T> apiClass, final BiFunction<R, ProvLocation, Integer> mapper)
-			throws IOException {
+	private <R extends AwsRegionPrices, T extends AwsPrices<R>> void installPrices(final Node node,
+			final Map<String, ProvLocation> regions, final String api, final String endpoint, final Class<T> apiClass,
+			final BiFunction<R, ProvLocation, Integer> mapper) throws IOException {
 		log.info("AWS {} prices...", api);
 
 		// Track the created instance to cache instance and price type
@@ -314,7 +316,8 @@ public class ProvAwsPriceImportResource {
 
 		try {
 			// Get the remote prices stream
-			String rawJson = StringUtils.defaultString(new CurlProcessor().get(endpoint), "callback({\"config\":{\"regions\":[]}});");
+			final String rawJson = StringUtils.defaultString(new CurlProcessor().get(endpoint),
+					"callback({\"config\":{\"regions\":[]}});");
 
 			// All regions are considered
 			final int configIndex = rawJson.indexOf('{');
@@ -322,12 +325,15 @@ public class ProvAwsPriceImportResource {
 			final T prices = objectMapper.readValue(rawJson.substring(configIndex, configCloseIndex + 1), apiClass);
 
 			// Install the region as needed
-			prices.getConfig().getRegions().forEach(r -> r
-					.setRegion(installRegion(regions, mapSpotToNewRegion.getOrDefault(r.getRegion(), r.getRegion()), node).getName()));
+			prices.getConfig().getRegions()
+					.forEach(r -> r.setRegion(
+							installRegion(regions, mapSpotToNewRegion.getOrDefault(r.getRegion(), r.getRegion()), node)
+									.getName()));
 			nextStep(node, null, 0);
 
 			// Install the (EC2 + Spot) prices for each region
-			priceCounter = prices.getConfig().getRegions().stream().mapToInt(r -> mapper.apply(r, regions.get(r.getRegion()))).sum();
+			priceCounter = prices.getConfig().getRegions().stream()
+					.mapToInt(r -> mapper.apply(r, regions.get(r.getRegion()))).sum();
 		} finally {
 			// Report
 			log.info("AWS {} import finished : {} prices", api, priceCounter);
@@ -350,16 +356,14 @@ public class ProvAwsPriceImportResource {
 	 *            The mapping model from JSON at region level.
 	 * @param mapper
 	 *            The mapping function from JSON at region level to JPA entity.
-	 * @param <R>
-	 *            Prices specific to a region type.
 	 */
-	private <R extends AwsRegionPrices> void installEfsPrices(final Node node,
-			final Map<String, ProvLocation> regions) throws IOException, URISyntaxException {
+	private void installEfsPrices(final Node node, final Map<String, ProvLocation> regions)
+			throws IOException, URISyntaxException {
 		log.info("AWS EFS prices ...");
 
 		// Track the created instance to cache partial costs
-		final ProvStorageType efs = stRepository.findAllBy("node.id", node.getId()).stream().filter(t -> t.getName().equals("efs"))
-				.findAny().get();
+		final ProvStorageType efs = stRepository.findAllBy(BY_NODE, node.getId()).stream()
+				.filter(t -> t.getName().equals("efs")).findAny().get();
 		final Map<ProvLocation, ProvStoragePrice> previous = spRepository.findAllBy("type", efs).stream()
 				.collect(Collectors.toMap(ProvStoragePrice::getLocation, Function.identity()));
 
@@ -367,8 +371,8 @@ public class ProvAwsPriceImportResource {
 		BufferedReader reader = null;
 		try {
 			// Get the remote prices stream
-			reader = new BufferedReader(
-					new InputStreamReader(new URI(configuration.get(CONF_URL_EFS_PRICES, EFS_PRICES)).toURL().openStream()));
+			reader = new BufferedReader(new InputStreamReader(
+					new URI(configuration.get(CONF_URL_EFS_PRICES, EFS_PRICES)).toURL().openStream()));
 			// Pipe to the CSV reader
 			final CsvForBeanEfs csvReader = new CsvForBeanEfs(reader);
 
@@ -378,32 +382,37 @@ public class ProvAwsPriceImportResource {
 				// Read the next one
 				csv = csvReader.read();
 				if (csv == null) {
+					// EOF
 					break;
 				}
 				final ProvLocation location = getRegionByHumanName(regions, csv.getLocation());
-				if (location == null) {
-					// Unsupported location, ignore this price
-					continue;
+				if (location != null) {
+					// Supported location
+					instalEfsPrice(efs, previous, csv, location);
+					priceCounter++;
 				}
-				final ProvStoragePrice price = previous.computeIfAbsent(location, r -> {
-					ProvStoragePrice p = new ProvStoragePrice();
-					p.setLocation(r);
-					p.setType(efs);
-					return p;
-				});
-
-				// Update the price
-				price.setCostGb(csv.getPricePerUnit());
-
-				// Persist this price
-				spRepository.saveAndFlush(price);
-				priceCounter++;
 			} while (true);
 		} finally {
 			// Report
 			log.info("AWS EFS finished : {} prices", priceCounter);
 			IOUtils.closeQuietly(reader);
 		}
+	}
+
+	private void instalEfsPrice(final ProvStorageType efs, final Map<ProvLocation, ProvStoragePrice> previous,
+			AwsCsvPrice csv, final ProvLocation location) {
+		final ProvStoragePrice price = previous.computeIfAbsent(location, r -> {
+			ProvStoragePrice p = new ProvStoragePrice();
+			p.setLocation(r);
+			p.setType(efs);
+			return p;
+		});
+
+		// Update the price
+		price.setCostGb(csv.getPricePerUnit());
+
+		// Persist this price
+		spRepository.saveAndFlush(price);
 	}
 
 	/**
@@ -416,8 +425,8 @@ public class ProvAwsPriceImportResource {
 	 * @return The corresponding {@link ProvLocation} or <code>null</code>.
 	 */
 	private ProvLocation getRegionByHumanName(final Map<String, ProvLocation> regions, final String humanName) {
-		return regions.entrySet().stream().filter(e -> humanName.equals(e.getValue().getDescription())).findAny().map(Entry::getValue)
-				.orElse(null);
+		return regions.entrySet().stream().filter(e -> humanName.equals(e.getValue().getDescription())).findAny()
+				.map(Entry::getValue).orElse(null);
 	}
 
 	/**
@@ -426,8 +435,7 @@ public class ProvAwsPriceImportResource {
 	private void nextStep(final Node node, final String location, final int step) {
 		importCatalogResource.nextStep(node.getId(), t -> {
 			importCatalogResource.updateStats(t);
-			t.setWorkload(t.getNbLocations() + 4); // NB region + 4
-													// (Spot+S3+EBS+EFS)
+			t.setWorkload(t.getNbLocations() + 4); // NB region + 4 (Spot+S3+EBS+EFS)
 			t.setDone(t.getDone() + step);
 			t.setLocation(location);
 		});
@@ -464,14 +472,12 @@ public class ProvAwsPriceImportResource {
 	}
 
 	/**
-	 * EC2 spot installer. Install the instance type (if needed), the instance
-	 * price type (if needed) and the price.
+	 * EC2 spot installer. Install the instance type (if needed), the instance price type (if needed) and the price.
 	 * 
 	 * @param json
 	 *            The current JSON entry.
 	 * @param instances
-	 *            The previously installed instance types. Key is the instance
-	 *            name.
+	 *            The previously installed instance types. Key is the instance name.
 	 * @param spotPriceType
 	 *            The related AWS Spot instance price type.
 	 * @param region
@@ -481,18 +487,19 @@ public class ProvAwsPriceImportResource {
 	 * @return The amount of installed prices. Only for the report.
 	 */
 	private int install(final AwsEc2SpotPrice json, final Map<String, ProvInstanceType> instances,
-			final ProvInstancePriceTerm spotPriceType, final ProvLocation region, final Map<String, ProvInstancePrice> previous) {
-		return (int) json.getOsPrices().stream().filter(op -> !StringUtils.startsWithIgnoreCase(op.getPrices().get("USD"), "N/A"))
-				.map(op -> {
+			final ProvInstancePriceTerm spotPriceType, final ProvLocation region,
+			final Map<String, ProvInstancePrice> previous) {
+		return (int) json.getOsPrices().stream()
+				.filter(op -> !StringUtils.startsWithIgnoreCase(op.getPrices().get("USD"), "N/A")).map(op -> {
 					final VmOs os = op.getName().equals("mswin") ? VmOs.WINDOWS : VmOs.LINUX;
-					final ProvInstanceType instance = instances.get(json.getName());
+					final ProvInstanceType type = instances.get(json.getName());
 
 					// Build the key for this spot
-					final String code = "spot-" + region.getName() + "-" + instance.getName() + "-" + os.name();
+					final String code = "spot-" + region.getName() + "-" + type.getName() + "-" + os.name();
 					final ProvInstancePrice price = Optional.ofNullable(previous.get(code)).orElseGet(() -> {
 						final ProvInstancePrice p = new ProvInstancePrice();
 						p.setCode(code);
-						p.setType(instance);
+						p.setType(type);
 						p.setTerm(spotPriceType);
 						p.setTenancy(ProvTenancy.SHARED);
 						p.setOs(os);
@@ -507,14 +514,12 @@ public class ProvAwsPriceImportResource {
 	}
 
 	/**
-	 * Install the install the instance type (if needed), the instance price
-	 * type (if needed) and the price.
+	 * Install the install the instance type (if needed), the instance price type (if needed) and the price.
 	 * 
 	 * @param csv
 	 *            The current CSV entry.
 	 * @param instances
-	 *            The previously installed instance types. Key is the instance
-	 *            name.
+	 *            The previously installed instance types. Key is the instance name.
 	 * @param priceTypes
 	 *            The previously installed price types.
 	 * @param partialCost
@@ -528,8 +533,8 @@ public class ProvAwsPriceImportResource {
 	 * @return The amount of installed prices. Only for the report.
 	 */
 	private int install(final AwsEc2Price csv, final Map<String, ProvInstanceType> instances,
-			final Map<String, ProvInstancePriceTerm> priceTypes, final Map<String, ProvInstancePrice> partialCost, final Node node,
-			final ProvLocation region, final Map<String, ProvInstancePrice> previous) {
+			final Map<String, ProvInstancePriceTerm> priceTypes, final Map<String, ProvInstancePrice> partialCost,
+			final Node node, final ProvLocation region, final Map<String, ProvInstancePrice> previous) {
 		// Upfront, partial or not
 		int priceCounter = 0;
 		if (StringUtils.equalsAnyIgnoreCase(csv.getPurchaseOption(), "All Upfront", "Partial Upfront")) {
@@ -544,8 +549,8 @@ public class ProvAwsPriceImportResource {
 				ipRepository.save(ipUpfront);
 			} else {
 				// First time, save this instance for a future completion
-				handleUpfront(csv,
-						partialCost.computeIfAbsent(code, k -> newInstancePrice(csv, instances, priceTypes, node, region, previous)));
+				handleUpfront(csv, partialCost.computeIfAbsent(code,
+						k -> newInstancePrice(csv, instances, priceTypes, node, region, previous)));
 			}
 		} else {
 			// No leasing, cost is fixed
@@ -589,19 +594,18 @@ public class ProvAwsPriceImportResource {
 	 * Download and install EC2 prices from AWS server.
 	 * 
 	 * @param instances
-	 *            The previously instance types already installed. Key is the
-	 *            instance name.
+	 *            The previously instance types already installed. Key is the instance name.
 	 * @param priceTypes
-	 *            The previously price types already installed. Key is the offer
-	 *            English name.
+	 *            The previously price types already installed. Key is the offer English name.
 	 * @param node
 	 *            The related AWS {@link Node}
 	 * @param region
 	 *            The region to fetch.
 	 * @return The amount installed EC2 instances.
 	 */
-	protected int installEC2Prices(final Map<String, ProvInstanceType> instances, final Map<String, ProvInstancePriceTerm> priceTypes,
-			final Node node, final ProvLocation region, final Map<String, ProvInstancePrice> previous) {
+	protected int installEC2Prices(final Map<String, ProvInstanceType> instances,
+			final Map<String, ProvInstancePriceTerm> priceTypes, final Node node, final ProvLocation region,
+			final Map<String, ProvInstancePrice> previous) {
 		log.info("AWS EC2 OnDemand/Reserved import started for region {} ...", region);
 
 		// Track the created instance to cache partial costs
@@ -636,8 +640,8 @@ public class ProvAwsPriceImportResource {
 			log.info("AWS EC2 OnDemand/Reserved import failed for region {}", region.getName(), use);
 		} finally {
 			// Report
-			log.info("AWS EC2 OnDemand/Reserved import finished for region {} : {} instance, {} price types, {} prices", region.getName(),
-					instances.size(), priceTypes.size(), priceCounter);
+			log.info("AWS EC2 OnDemand/Reserved import finished for region {} : {} instance, {} price types, {} prices",
+					region.getName(), instances.size(), priceTypes.size(), priceCounter);
 			IOUtils.closeQuietly(reader);
 		}
 
@@ -667,12 +671,15 @@ public class ProvAwsPriceImportResource {
 			final Map<String, ProvInstancePriceTerm> priceTypes, final Node node, final ProvLocation region,
 			final Map<String, ProvInstancePrice> previous) {
 		final VmOs os = VmOs.valueOf(csv.getOs().toUpperCase(Locale.ENGLISH));
-		final ProvInstanceType instance = instances.computeIfAbsent(csv.getInstanceType(), k -> newInstanceType(csv, node));
-		final String license = StringUtils.trimToNull(
-				StringUtils.remove(csv.getLicenseModel().replace("License Included", StringUtils.defaultString(csv.getSoftware(), ""))
-						.replace("NA", "License Included"), "No License required"));
+		final ProvInstanceType instance = instances.computeIfAbsent(csv.getInstanceType(),
+				k -> newInstanceType(csv, node));
+		final String license = StringUtils.trimToNull(StringUtils.remove(
+				csv.getLicenseModel().replace("License Included", StringUtils.defaultString(csv.getSoftware(), ""))
+						.replace("NA", "License Included"),
+				"No License required"));
 		final ProvTenancy tenancy = ProvTenancy.valueOf(StringUtils.upperCase(csv.getTenancy()));
-		final ProvInstancePriceTerm term = priceTypes.computeIfAbsent(csv.getOfferTermCode(), k -> newInstancePriceTerm(csv, node));
+		final ProvInstancePriceTerm term = priceTypes.computeIfAbsent(csv.getOfferTermCode(),
+				k -> newInstancePriceTerm(csv, node));
 		final String code = toCode(csv);
 		final ProvInstancePrice price = previous.computeIfAbsent(code, c -> {
 			final ProvInstancePrice p = new ProvInstancePrice();
@@ -699,18 +706,18 @@ public class ProvAwsPriceImportResource {
 	 * Install a new EC2 instance type
 	 */
 	private ProvInstanceType newInstanceType(final AwsEc2Price csv, final Node node) {
-		final ProvInstanceType instance = new ProvInstanceType();
-		instance.setNode(node);
-		instance.setCpu(csv.getCpu());
-		instance.setName(csv.getInstanceType());
+		final ProvInstanceType type = new ProvInstanceType();
+		type.setNode(node);
+		type.setCpu(csv.getCpu());
+		type.setName(csv.getInstanceType());
 
 		// Convert GiB to MiB, and rounded
-		instance.setRam(
-				(int) Math.round(Double.parseDouble(StringUtils.removeEndIgnoreCase(csv.getMemory(), " GiB").replace(",", "")) * 1024d));
-		instance.setConstant(!"Variable".equals(csv.getEcu()));
-		instance.setDescription(ArrayUtils.toString(new String[] { csv.getPhysicalProcessor(), csv.getClockSpeed() }));
-		instanceRepository.saveAndFlush(instance);
-		return instance;
+		type.setRam((int) Math.round(
+				Double.parseDouble(StringUtils.removeEndIgnoreCase(csv.getMemory(), " GiB").replace(",", "")) * 1024d));
+		type.setConstant(!"Variable".equals(csv.getEcu()));
+		type.setDescription(ArrayUtils.toString(new String[] { csv.getPhysicalProcessor(), csv.getClockSpeed() }));
+		instanceRepository.saveAndFlush(type);
+		return type;
 	}
 
 	/**
@@ -724,28 +731,28 @@ public class ProvAwsPriceImportResource {
 	 * Build a new instance price type from the CSV line.
 	 */
 	private ProvInstancePriceTerm newInstancePriceTerm(final AwsEc2Price csvPrice, final Node node) {
-		final ProvInstancePriceTerm result = new ProvInstancePriceTerm();
-		result.setNode(node);
-		result.setCode(csvPrice.getOfferTermCode());
+		final ProvInstancePriceTerm term = new ProvInstancePriceTerm();
+		term.setNode(node);
+		term.setCode(csvPrice.getOfferTermCode());
 
 		// Build the name from the leasing, purchase option and offering class
-		result.setName(Arrays
+		term.setName(Arrays
 				.stream(new String[] { csvPrice.getTermType(), csvPrice.getLeaseContractLength(),
 						StringUtils.trimToNull(StringUtils.remove(csvPrice.getPurchaseOption(), "No Upfront")),
 						StringUtils.trimToNull(StringUtils.remove(csvPrice.getOfferingClass(), "standard")) })
 				.filter(Objects::nonNull).collect(Collectors.joining(", ")));
 
 		// By default, hourly period
-		result.setPeriod(60);
+		term.setPeriod(60);
 
 		// Handle leasing
 		final Matcher matcher = LEASING_TIME.matcher(StringUtils.defaultIfBlank(csvPrice.getLeaseContractLength(), ""));
 		if (matcher.find()) {
 			// Convert years to minutes
-			result.setPeriod(Integer.parseInt(matcher.group(1)) * 60 * 24 * 365);
+			term.setPeriod(Integer.parseInt(matcher.group(1)) * 60 * 24 * 365);
 		}
-		iptRepository.saveAndFlush(result);
-		return result;
+		iptRepository.saveAndFlush(term);
+		return term;
 	}
 
 	/**
@@ -756,11 +763,11 @@ public class ProvAwsPriceImportResource {
 	 */
 	@PostConstruct
 	public void initSpotToNewRegion() throws IOException {
-		mapSpotToNewRegion.putAll(objectMapper.readValue(
-				IOUtils.toString(new ClassPathResource(SPOT_TO_NEW_REGION_FILE).getInputStream(), StandardCharsets.UTF_8),
-				new TypeReference<Map<String, String>>() {
-					// Nothing to extend
-				}));
+		mapSpotToNewRegion.putAll(
+				objectMapper.readValue(IOUtils.toString(new ClassPathResource(SPOT_TO_NEW_REGION_FILE).getInputStream(),
+						StandardCharsets.UTF_8), new TypeReference<Map<String, String>>() {
+							// Nothing to extend
+						}));
 	}
 
 	/**
@@ -771,10 +778,10 @@ public class ProvAwsPriceImportResource {
 	 */
 	@PostConstruct
 	public void initEbsToApi() throws IOException {
-		mapStorageToApi.putAll(
-				objectMapper.readValue(IOUtils.toString(new ClassPathResource(STORAGE_TO_API).getInputStream(), StandardCharsets.UTF_8),
-						new TypeReference<Map<String, String>>() {
-							// Nothing to extend
-						}));
+		mapStorageToApi.putAll(objectMapper.readValue(
+				IOUtils.toString(new ClassPathResource(STORAGE_TO_API).getInputStream(), StandardCharsets.UTF_8),
+				new TypeReference<Map<String, String>>() {
+					// Nothing to extend
+				}));
 	}
 }

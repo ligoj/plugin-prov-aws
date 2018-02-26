@@ -1,10 +1,10 @@
 node.id;name;optimized;latency;minimal;maximal;instanceCompatible
-service:prov:aws;gp2;IOPS;LOWEST;1;16384;true
-service:prov:aws;io1;IOPS;LOWEST;4;16384;true
-service:prov:aws;st1;THROUGHPUT;LOW;500;16384;true
-service:prov:aws;sc1;THROUGHPUT;LOW;500;16384;true
-service:prov:aws;snapshot;DURABILITY;LOWEST;0;;false
+service:prov:aws;gp2;IOPS;BEST;1;16384;true
+service:prov:aws;io1;IOPS;BEST;4;16384;true
+service:prov:aws;st1;THROUGHPUT;GOOD;500;16384;true
+service:prov:aws;sc1;THROUGHPUT;GOOD;500;16384;true
+service:prov:aws;snapshot;DURABILITY;BEST;0;;false
 service:prov:aws;s3;DURABILITY;MEDIUM;0;;false
 service:prov:aws;s3-ia;DURABILITY;MEDIUM;0;;false
-service:prov:aws;glacier;DURABILITY;HIGHEST;0;;false
-service:prov:aws;efs;THROUGHPUT;LOW;0;;true
+service:prov:aws;glacier;DURABILITY;WORST;0;;false
+service:prov:aws;efs;THROUGHPUT;GOOD;0;;true

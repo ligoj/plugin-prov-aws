@@ -24,4 +24,7 @@ public class AwsEc2Price extends AwsCsvPrice {
 	private String priceUnit;
 	private String licenseModel;
 	private String software;
+	private String networkPerformance;
+	private String ebsOptimized;
+	private String currentGeneration;
 }

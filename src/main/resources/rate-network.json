@@ -1,0 +1,11 @@
+{
+	"Moderate":"MEDIUM",
+	"Very Low":"WORST",
+	"Low to Moderate":"LOW",
+	"Low": "LOW",
+	"High": "GOOD",
+	"10 Gigabit": "BEST",
+	"20 Gigabit": "BEST",
+	"Up to 10 Gbps": "GOOD",
+	"25 Gigabit": "BEST"
+}

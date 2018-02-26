@@ -35,6 +35,7 @@ import org.ligoj.app.plugin.prov.dao.ProvInstanceTypeRepository;
 import org.ligoj.app.plugin.prov.dao.ProvLocationRepository;
 import org.ligoj.app.plugin.prov.dao.ProvStoragePriceRepository;
 import org.ligoj.app.plugin.prov.dao.ProvStorageTypeRepository;
+import org.ligoj.app.plugin.prov.in.AbstractImportCatalogResource;
 import org.ligoj.app.plugin.prov.in.ImportCatalogResource;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
@@ -43,6 +44,7 @@ import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.model.ProvTenancy;
+import org.ligoj.app.plugin.prov.model.Rate;
 import org.ligoj.app.plugin.prov.model.VmOs;
 import org.ligoj.app.resource.plugin.CurlProcessor;
 import org.ligoj.bootstrap.core.INamableBean;
@@ -52,7 +54,6 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -61,21 +62,9 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Service
-public class ProvAwsPriceImportResource {
+public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 	private static final String BY_NODE = "node.id";
-
-	/**
-	 * File containing the mapping from the spot region name to the new format one. This mapping is required because of
-	 * the old naming format used for the first region's name. All non mapped regions use the new name in spot JSON
-	 * file.
-	 */
-	private static final String SPOT_TO_NEW_REGION_FILE = "spot-to-new-region.json";
-
-	/**
-	 * File containing the mapping from the EBS/S3 JSON code name to API name. All non mapped regions use the JSON name.
-	 */
-	private static final String STORAGE_TO_API = "storage-to-api.json";
 
 	/**
 	 * The EC2 reserved and on-demand price end-point, a CSV file, accepting the region code with {@link Formatter}
@@ -159,9 +148,6 @@ public class ProvAwsPriceImportResource {
 
 	@Autowired
 	protected ImportCatalogResource importCatalogResource;
-
-	@Autowired
-	private ObjectMapper objectMapper;
 
 	/**
 	 * Mapping from Spot region name to API name.
@@ -715,9 +701,63 @@ public class ProvAwsPriceImportResource {
 		type.setRam((int) Math.round(
 				Double.parseDouble(StringUtils.removeEndIgnoreCase(csv.getMemory(), " GiB").replace(",", "")) * 1024d));
 		type.setConstant(!"Variable".equals(csv.getEcu()));
-		type.setDescription(ArrayUtils.toString(new String[] { csv.getPhysicalProcessor(), csv.getClockSpeed() }));
+		type.setDescription(ArrayUtils.toString(ArrayUtils
+				.removeAllOccurences(new String[] { csv.getPhysicalProcessor(), csv.getClockSpeed() }, null)));
+
+		// Rating
+		type.setCpuRate(getRate("cpu", csv));
+		type.setRamRate(getRate("ram", csv));
+		type.setNetworkRate(getRate("network", csv, csv.getNetworkPerformance()));
+		type.setStorageRate(toStorage(csv));
+
 		instanceRepository.saveAndFlush(type);
 		return type;
+	}
+
+	private Rate toStorage(final AwsEc2Price csv) {
+		Rate rate = getRate("storage", csv);
+		if ("Yes".equals(csv.getEbsOptimized())) {
+			// Up to "GOOD" for not "BEST" rate
+			rate = Rate.values()[Math.min(rate.ordinal(), Math.min(Rate.values().length - 2, rate.ordinal() + 1))];
+		}
+		return rate;
+	}
+
+	/**
+	 * Return the most precise rate from the AWS instance type definition.
+	 * 
+	 * @param type
+	 *            The rating mapping name.
+	 * @param csv
+	 *            The CSV price row.
+	 * @return The direct [class, generation, size] rate association, or the [class, generation] rate association, or
+	 *         the [class] association, of the explicit "default association or {@link Rate#MEDIUM} value.
+	 */
+	private Rate getRate(final String type, final AwsEc2Price csv) {
+		return getRate(type, csv, csv.getInstanceType());
+	}
+
+	/**
+	 * Return the most precise rate from a name.
+	 * 
+	 * @param type
+	 *            The rating mapping name.
+	 * @param name
+	 *            The name to map.
+	 * @param csv
+	 *            The CSV price row.
+	 * @return The direct [class, generation, size] rate association, or the [class, generation] rate association, or
+	 *         the [class] association, of the explicit "default association or {@link Rate#MEDIUM} value. Previous
+	 *         generations types are downgraded.
+	 */
+	protected Rate getRate(final String type, final AwsEc2Price csv, final String name) {
+		Rate rate = getRate(type, name);
+
+		// Downgrade the rate for a previous generation
+		if ("No".equals(csv.getCurrentGeneration())) {
+			rate = Rate.values()[Math.max(0, rate.ordinal() - 1)];
+		}
+		return rate;
 	}
 
 	/**
@@ -756,18 +796,21 @@ public class ProvAwsPriceImportResource {
 	}
 
 	/**
-	 * Read the spot region to the new format from an external JSON file.
+	 * 
+	 * Read the spot region to the new format from an external JSON file. File containing the mapping from the spot
+	 * region name to the new format one. This mapping is required because of the old naming format used for the first
+	 * region's name. Non mapped regions use the new name in spot JSON file.
 	 * 
 	 * @throws IOException
 	 *             When the JSON mapping file cannot be read.
 	 */
 	@PostConstruct
 	public void initSpotToNewRegion() throws IOException {
-		mapSpotToNewRegion.putAll(
-				objectMapper.readValue(IOUtils.toString(new ClassPathResource(SPOT_TO_NEW_REGION_FILE).getInputStream(),
-						StandardCharsets.UTF_8), new TypeReference<Map<String, String>>() {
-							// Nothing to extend
-						}));
+		mapSpotToNewRegion.putAll(objectMapper.readValue(IOUtils
+				.toString(new ClassPathResource("spot-to-new-region.json").getInputStream(), StandardCharsets.UTF_8),
+				new TypeReference<Map<String, String>>() {
+					// Nothing to extend
+				}));
 	}
 
 	/**
@@ -779,9 +822,27 @@ public class ProvAwsPriceImportResource {
 	@PostConstruct
 	public void initEbsToApi() throws IOException {
 		mapStorageToApi.putAll(objectMapper.readValue(
-				IOUtils.toString(new ClassPathResource(STORAGE_TO_API).getInputStream(), StandardCharsets.UTF_8),
+				IOUtils.toString(new ClassPathResource("storage-to-api.json").getInputStream(), StandardCharsets.UTF_8),
 				new TypeReference<Map<String, String>>() {
 					// Nothing to extend
 				}));
+	}
+
+	/**
+	 * Read the network rate mapping. File containing the mapping from the AWS network rate to the normalized
+	 * application rating.
+	 * 
+	 * @see <a href="https://calculator.s3.amazonaws.com/index.html">calculator</a>
+	 * @see <a href="https://aws.amazon.com/ec2/instance-types/">instance-types</a>
+	 * 
+	 * @throws IOException
+	 *             When the JSON mapping file cannot be read.
+	 */
+	@PostConstruct
+	public void initRate() throws IOException {
+		initRate("storage");
+		initRate("cpu");
+		initRate("ram");
+		initRate("network");
 	}
 }

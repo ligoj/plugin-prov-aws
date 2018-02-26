@@ -100,7 +100,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		initSpringSecurityContext("any");
 
 		// Re-Install a new configuration
-		Assertions.assertEquals("ttt", Assertions.assertThrows(BusinessException.class, () -> {
+		Assertions.assertEquals("read-only-node", Assertions.assertThrows(BusinessException.class, () -> {
 			resource.updateCatalog("service:prov:aws:account");
 		}).getMessage());
 	}
@@ -183,7 +183,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	public void createFailed() {
 		final ProvAwsPluginResource resource = Mockito.spy(ProvAwsPluginResource.class);
 		Mockito.doReturn(false).when(resource).validateAccess(ArgumentMatchers.anyInt());
-		Assertions.assertEquals("ttt", Assertions.assertThrows(BusinessException.class, () -> {
+		Assertions.assertEquals("Cannot access to AWS services with these parameters", Assertions.assertThrows(BusinessException.class, () -> {
 			resource.create(-1);
 		}).getMessage());
 	}

@@ -9,9 +9,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Formatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -26,17 +26,9 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.ligoj.app.dao.NodeRepository;
 import org.ligoj.app.model.Node;
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
-import org.ligoj.app.plugin.prov.dao.ProvInstancePriceRepository;
-import org.ligoj.app.plugin.prov.dao.ProvInstancePriceTermRepository;
-import org.ligoj.app.plugin.prov.dao.ProvInstanceTypeRepository;
-import org.ligoj.app.plugin.prov.dao.ProvLocationRepository;
-import org.ligoj.app.plugin.prov.dao.ProvStoragePriceRepository;
-import org.ligoj.app.plugin.prov.dao.ProvStorageTypeRepository;
 import org.ligoj.app.plugin.prov.in.AbstractImportCatalogResource;
-import org.ligoj.app.plugin.prov.in.ImportCatalogResource;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
 import org.ligoj.app.plugin.prov.model.ProvInstanceType;
@@ -48,8 +40,6 @@ import org.ligoj.app.plugin.prov.model.Rate;
 import org.ligoj.app.plugin.prov.model.VmOs;
 import org.ligoj.app.resource.plugin.CurlProcessor;
 import org.ligoj.bootstrap.core.INamableBean;
-import org.ligoj.bootstrap.resource.system.configuration.ConfigurationResource;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
@@ -122,32 +112,10 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 */
 	public static final String CONF_URL_S3_PRICES = String.format(CONF_URL_API_PRICES, "s3");
 
-	@Autowired
-	private ConfigurationResource configuration;
-
-	@Autowired
-	private NodeRepository nodeRepository;
-
-	@Autowired
-	private ProvLocationRepository locationRepository;
-
-	@Autowired
-	private ProvInstancePriceTermRepository iptRepository;
-
-	@Autowired
-	private ProvInstanceTypeRepository instanceRepository;
-
-	@Autowired
-	private ProvInstancePriceRepository ipRepository;
-
-	@Autowired
-	private ProvStoragePriceRepository spRepository;
-
-	@Autowired
-	private ProvStorageTypeRepository stRepository;
-
-	@Autowired
-	protected ImportCatalogResource importCatalogResource;
+	/**
+	 * Configuration key used for enabled regions pattern names. When value is <code>null</code>, no restriction.
+	 */
+	public static final String CONF_REGIONS = ProvAwsPluginResource.KEY + ":regions";
 
 	/**
 	 * Mapping from Spot region name to API name.
@@ -168,7 +136,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 		// The previously installed location cache. Key is the location AWS name
 		final Map<String, ProvLocation> regions = locationRepository.findAllBy(BY_NODE, node.getId()).stream()
-				.collect(Collectors.toMap(INamableBean::getName, Function.identity()));
+				.filter(this::isEnabledRegion).collect(Collectors.toMap(INamableBean::getName, Function.identity()));
 
 		// Update the workload : nb.regions + 3 (spot, EBS, S3, EFS)
 		nextStep(node, null, 0);
@@ -249,7 +217,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 		// The previously installed instance types cache. Key is the instance
 		// name
-		final Map<String, ProvInstanceType> instances = instanceRepository.findAllBy(BY_NODE, node.getId()).stream()
+		final Map<String, ProvInstanceType> instances = itRepository.findAllBy(BY_NODE, node.getId()).stream()
 				.collect(Collectors.toMap(ProvInstanceType::getName, Function.identity()));
 
 		installPrices(node, regions, "ec2", configuration.get(CONF_URL_EC2_PRICES_SPOT, EC2_PRICES_SPOT),
@@ -310,16 +278,15 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			final int configCloseIndex = rawJson.lastIndexOf('}');
 			final T prices = objectMapper.readValue(rawJson.substring(configIndex, configCloseIndex + 1), apiClass);
 
-			// Install the region as needed
-			prices.getConfig().getRegions()
-					.forEach(r -> r.setRegion(
-							installRegion(regions, mapSpotToNewRegion.getOrDefault(r.getRegion(), r.getRegion()), node)
-									.getName()));
+			// Install the enabled region as needed
+			final List<R> eRegions = prices.getConfig().getRegions().stream()
+					.peek(r -> r.setRegion(mapSpotToNewRegion.getOrDefault(r.getRegion(), r.getRegion())))
+					.filter(this::isEnabledRegion).collect(Collectors.toList());
+			eRegions.forEach(r -> installRegion(regions, r.getRegion(), node));
 			nextStep(node, null, 0);
 
 			// Install the (EC2 + Spot) prices for each region
-			priceCounter = prices.getConfig().getRegions().stream()
-					.mapToInt(r -> mapper.apply(r, regions.get(r.getRegion()))).sum();
+			priceCounter = eRegions.stream().mapToInt(r -> mapper.apply(r, regions.get(r.getRegion()))).sum();
 		} finally {
 			// Report
 			log.info("AWS {} import finished : {} prices", api, priceCounter);
@@ -388,7 +355,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	private void instalEfsPrice(final ProvStorageType efs, final Map<ProvLocation, ProvStoragePrice> previous,
 			AwsCsvPrice csv, final ProvLocation location) {
 		final ProvStoragePrice price = previous.computeIfAbsent(location, r -> {
-			ProvStoragePrice p = new ProvStoragePrice();
+			final ProvStoragePrice p = new ProvStoragePrice();
 			p.setLocation(r);
 			p.setType(efs);
 			return p;
@@ -398,7 +365,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		price.setCostGb(csv.getPricePerUnit());
 
 		// Persist this price
-		spRepository.saveAndFlush(price);
+		spRepository.save(price);
 	}
 
 	/**
@@ -411,8 +378,8 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 * @return The corresponding {@link ProvLocation} or <code>null</code>.
 	 */
 	private ProvLocation getRegionByHumanName(final Map<String, ProvLocation> regions, final String humanName) {
-		return regions.entrySet().stream().filter(e -> humanName.equals(e.getValue().getDescription())).findAny()
-				.map(Entry::getValue).orElse(null);
+		return regions.values().stream().filter(this::isEnabledRegion).filter(r -> humanName.equals(r.getDescription()))
+				.findAny().orElse(null);
 	}
 
 	/**
@@ -710,7 +677,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		type.setNetworkRate(getRate("network", csv, csv.getNetworkPerformance()));
 		type.setStorageRate(toStorage(csv));
 
-		instanceRepository.saveAndFlush(type);
+		itRepository.saveAndFlush(type);
 		return type;
 	}
 
@@ -793,6 +760,39 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		}
 		iptRepository.saveAndFlush(term);
 		return term;
+	}
+
+	/**
+	 * Indicate the given region is enabled.
+	 * 
+	 * @param region
+	 *            The region API name to test.
+	 * @return <code>true</code> when the configuration enable the given region.
+	 */
+	private boolean isEnabledRegion(final AwsRegionPrices region) {
+		return isEnabledRegion(region.getRegion());
+	}
+
+	/**
+	 * Indicate the given region is enabled.
+	 * 
+	 * @param region
+	 *            The region API name to test.
+	 * @return <code>true</code> when the configuration enable the given region.
+	 */
+	private boolean isEnabledRegion(final ProvLocation region) {
+		return isEnabledRegion(region.getName());
+	}
+
+	/**
+	 * Indicate the given region is enabled.
+	 * 
+	 * @param region
+	 *            The region API name to test.
+	 * @return <code>true</code> when the configuration enable the given region.
+	 */
+	private boolean isEnabledRegion(final String region) {
+		return region.matches(StringUtils.defaultIfBlank(configuration.get(CONF_REGIONS), ".*"));
 	}
 
 	/**

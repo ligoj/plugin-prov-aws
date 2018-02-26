@@ -115,15 +115,15 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		this.resource.initSpotToNewRegion();
 		this.resource.initEbsToApi();
 		this.resource.initRate();
-		this.resource.importCatalogResource = new ImportCatalogResource();
-		applicationContext.getAutowireCapableBeanFactory().autowireBean(this.resource.importCatalogResource);
+		this.resource.setImportCatalogResource(new ImportCatalogResource());
+		applicationContext.getAutowireCapableBeanFactory().autowireBean(this.resource.getImportCatalogResource());
 		initSpringSecurityContext(DEFAULT_USER);
 		resetImportTask();
 	}
 
 	private void resetImportTask() {
-		this.resource.importCatalogResource.endTask("service:prov:aws", false);
-		this.resource.importCatalogResource.startTask("service:prov:aws", t -> {
+		this.resource.getImportCatalogResource().endTask("service:prov:aws", false);
+		this.resource.getImportCatalogResource().startTask("service:prov:aws", t -> {
 			t.setLocation(null);
 			t.setNbInstancePrices(null);
 			t.setNbInstanceTypes(null);
@@ -220,7 +220,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		Assertions.assertEquals("Reserved, 3yr, All Upfront", priceType.getName());
 		Assertions.assertFalse(priceType.isEphemeral());
 		Assertions.assertEquals(1576800, priceType.getPeriod().intValue());
-		
+
 		ProvInstanceType type = price.getType();
 		Assertions.assertEquals("c1.medium", type.getName());
 		Assertions.assertEquals("{Intel Xeon Family}", type.getDescription());
@@ -244,7 +244,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 	}
 
 	private void checkImportStatus() {
-		final ImportCatalogStatus status = this.resource.importCatalogResource.getTask("service:prov:aws");
+		final ImportCatalogStatus status = this.resource.getImportCatalogResource().getTask("service:prov:aws");
 		Assertions.assertEquals(6, status.getDone());
 		Assertions.assertEquals(8, status.getWorkload());
 		Assertions.assertEquals("ec2", status.getPhase());
@@ -334,13 +334,14 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 	@Test
 	public void installOnLine() throws Exception {
 		configuration.delete(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES);
-		configuration.delete(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES_SPOT);
+		configuration.delete(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES_SPOT); // Only one region for UTs
+		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_REGIONS, "eu-west-1");
 
 		// Aligned to :
-		// https://aws.amazon.com/fr/ec2/pricing/reserved-instances/pricing/
+		// https://aws.amazon.com/ec2/pricing/reserved-instances/pricing/
 		// Check the reserved
 		final QuoteVo quote = installAndConfigure();
-		final ProvQuoteInstance instance = check(quote, 47.549d, 46.669d);
+		final ProvQuoteInstance instance = quote.getInstances().get(0);
 
 		// Check the spot
 		final QuoteInstanceLookup spotPrice = qiResource.lookup(instance.getConfiguration().getSubscription().getId(),
@@ -591,7 +592,8 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		svo.setName("sda1");
 		svo.setSubscription(subscription);
 		final UpdatedCost createStorage = qsResource.create(svo);
-		Assertions.assertTrue(createStorage.getTotalCost().getMin() > 0.5);
+		Assertions.assertTrue(createStorage.getResourceCost().getMin() >= 0.5);
+		Assertions.assertTrue(createStorage.getTotalCost().getMin() > 40);
 
 		// Add storage (EFS) to this quote
 		final QuoteStorageLoopup efsLookpup = qsResource

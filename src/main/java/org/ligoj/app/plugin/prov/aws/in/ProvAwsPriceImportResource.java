@@ -65,7 +65,8 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 * The EC2 spot price end-point, a JSON file. Contains the prices for all regions.
 	 */
 	private static final String EC2_PRICES_SPOT = "https://spot-price.s3.amazonaws.com/spot.js";
-	private static final Pattern LEASING_TIME = Pattern.compile("(\\d)yr");
+	private static final Pattern LEASING_TIME = Pattern.compile("(\\d)\\s*yr");
+	private static final Pattern UPFRONT_MODE = Pattern.compile("(All|Partial)\\s*Upfront");
 
 	/**
 	 * The EBS prices end-point. Contains the prices for all regions.
@@ -488,9 +489,10 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	private int install(final AwsEc2Price csv, final Map<String, ProvInstanceType> instances,
 			final Map<String, ProvInstancePriceTerm> priceTypes, final Map<String, ProvInstancePrice> partialCost,
 			final Node node, final ProvLocation region, final Map<String, ProvInstancePrice> previous) {
-		// Upfront, partial or not
+		// Up-front, partial or not
 		int priceCounter = 0;
-		if (StringUtils.equalsAnyIgnoreCase(csv.getPurchaseOption(), "All Upfront", "Partial Upfront")) {
+		if (UPFRONT_MODE.matcher(StringUtils.defaultString(csv.getPurchaseOption())).find()) {
+			// Up-front ALL/PARTIAL
 			final String code = csv.getSku() + csv.getOfferTermCode();
 			if (partialCost.containsKey(code)) {
 				final ProvInstancePrice ipUpfront = partialCost.get(code);
@@ -506,7 +508,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 						k -> newInstancePrice(csv, instances, priceTypes, node, region, previous)));
 			}
 		} else {
-			// No leasing, cost is fixed
+			// No up-front, cost is fixed
 			priceCounter++;
 			final ProvInstancePrice price = newInstancePrice(csv, instances, priceTypes, node, region, previous);
 			price.setCost(csv.getPricePerUnit());
@@ -744,8 +746,9 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 		// Build the name from the leasing, purchase option and offering class
 		term.setName(Arrays
-				.stream(new String[] { csvPrice.getTermType(), csvPrice.getLeaseContractLength(),
-						StringUtils.trimToNull(StringUtils.remove(csvPrice.getPurchaseOption(), "No Upfront")),
+				.stream(new String[] { csvPrice.getTermType(),
+						StringUtils.replace(csvPrice.getLeaseContractLength(), " ", ""),
+						StringUtils.trimToNull(StringUtils.removeAll(csvPrice.getPurchaseOption(), "No\\s*Upfront")),
 						StringUtils.trimToNull(StringUtils.remove(csvPrice.getOfferingClass(), "standard")) })
 				.filter(Objects::nonNull).collect(Collectors.joining(", ")));
 

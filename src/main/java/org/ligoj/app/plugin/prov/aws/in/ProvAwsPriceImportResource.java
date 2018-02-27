@@ -122,6 +122,10 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 * Mapping from Spot region name to API name.
 	 */
 	private Map<String, String> mapSpotToNewRegion = new HashMap<>();
+	/**
+	 * Mapping from API region identifier to region name.
+	 */
+	private Map<String, String> mapRegionToName = new HashMap<>();
 
 	/**
 	 * Mapping from storage human name to API name.
@@ -399,13 +403,15 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 * Install a new region.
 	 */
 	private ProvLocation installRegion(final Map<String, ProvLocation> regions, final String region, final Node node) {
-		return regions.computeIfAbsent(region, r -> {
-			final ProvLocation location = new ProvLocation();
-			location.setNode(node);
-			location.setName(r);
-			locationRepository.saveAndFlush(location);
-			return location;
+		final ProvLocation entity = regions.computeIfAbsent(region, r -> {
+			final ProvLocation newRegion = new ProvLocation();
+			newRegion.setNode(node);
+			newRegion.setName(r);
+			locationRepository.saveAndFlush(newRegion);
+			return newRegion;
 		});
+		entity.setDescription(mapRegionToName.get(region));
+		return entity;
 	}
 
 	/**
@@ -809,6 +815,11 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 */
 	@PostConstruct
 	public void initSpotToNewRegion() throws IOException {
+		mapRegionToName.putAll(objectMapper.readValue(
+				IOUtils.toString(new ClassPathResource("aws-regions.json").getInputStream(), StandardCharsets.UTF_8),
+				new TypeReference<Map<String, String>>() {
+					// Nothing to extend
+				}));
 		mapSpotToNewRegion.putAll(objectMapper.readValue(IOUtils
 				.toString(new ClassPathResource("spot-to-new-region.json").getInputStream(), StandardCharsets.UTF_8),
 				new TypeReference<Map<String, String>>() {

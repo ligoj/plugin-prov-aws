@@ -171,6 +171,9 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		Assertions.assertTrue(spotPrice.getPrice().getTerm().isEphemeral());
 		Assertions.assertEquals("r4.large", spotPrice.getPrice().getType().getName());
 		Assertions.assertEquals(6, ipRepository.findAllBy("term.name", "Spot").size());
+
+		Assertions.assertEquals("eu-west-1", spotPrice.getPrice().getLocation().getName());
+		Assertions.assertEquals("EU (Ireland)", spotPrice.getPrice().getLocation().getDescription());
 		checkImportStatus();
 
 		// Install again to check the update without change
@@ -255,7 +258,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		Assertions.assertEquals(9, status.getNbStorageTypes().intValue());
 	}
 
-	private void mockAwsServer() throws IOException {
+	private void mockServer() throws IOException {
 		patchConfigurationUrl();
 		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
 				IOUtils.toString(new ClassPathResource("mock-server/aws/index.csv").getInputStream(), "UTF-8"))));
@@ -325,7 +328,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 	 * @return The new quote from the installed
 	 */
 	private QuoteVo install() throws Exception {
-		mockAwsServer();
+		mockServer();
 
 		// Check the basic quote
 		return installAndConfigure();

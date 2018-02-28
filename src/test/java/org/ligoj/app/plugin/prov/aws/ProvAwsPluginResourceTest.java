@@ -6,6 +6,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
@@ -63,8 +64,10 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	@BeforeEach
 	public void prepareData() throws IOException {
 		persistSystemEntities();
-		persistEntities("csv", new Class[] { Node.class, Project.class, CacheCompany.class, CacheUser.class, DelegateNode.class,
-				Parameter.class, ProvLocation.class, Subscription.class, ParameterValue.class, ProvQuote.class },
+		persistEntities("csv",
+				new Class[] { Node.class, Project.class, CacheCompany.class, CacheUser.class, DelegateNode.class,
+						Parameter.class, ProvLocation.class, Subscription.class, ParameterValue.class,
+						ProvQuote.class },
 				StandardCharsets.UTF_8.name());
 		this.subscription = getSubscription("gStack");
 	}
@@ -80,14 +83,14 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void install() throws Exception {
+	public void install() throws IOException, URISyntaxException {
 		final ProvAwsPluginResource resource2 = new ProvAwsPluginResource();
 		resource2.priceImport = Mockito.mock(ProvAwsPriceImportResource.class);
 		resource2.install();
 	}
 
 	@Test
-	public void updateCatalog() throws Exception {
+	public void updateCatalog() throws IOException, URISyntaxException {
 		// Re-Install a new configuration
 		final ProvAwsPluginResource resource2 = new ProvAwsPluginResource();
 		super.applicationContext.getAutowireCapableBeanFactory().autowireBean(resource2);
@@ -106,7 +109,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void terraform() throws Exception {
+	public void terraform() throws IOException {
 		final ProvAwsPluginResource resource2 = new ProvAwsPluginResource();
 		super.applicationContext.getAutowireCapableBeanFactory().autowireBean(resource2);
 		resource2.terraformService = Mockito.mock(ProvAwsTerraformService.class);
@@ -135,8 +138,8 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		mockRequest.setSaveResponse(true);
 		Mockito.doReturn(mockRequest).when(resource).newRequest(ArgumentMatchers.any(AWS4SignatureQueryBuilder.class),
 				ArgumentMatchers.eq(subscription));
-		httpServer.stubFor(
-				get(urlEqualTo("/mock")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody("<keyName>my-key</keyName>")));
+		httpServer.stubFor(get(urlEqualTo("/mock"))
+				.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody("<keyName>my-key</keyName>")));
 		httpServer.start();
 
 		final List<NamedBean<String>> keys = resource.getEC2Keys(subscription);
@@ -164,8 +167,8 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	 */
 	@Test
 	public void newRequest() {
-		final CurlRequest request = resource.newRequest(AWS4SignatureQuery.builder().host("mock").path("/").body("body").service("s3"),
-				subscription);
+		final CurlRequest request = resource.newRequest(
+				AWS4SignatureQuery.builder().host("mock").path("/").body("body").service("s3"), subscription);
 		Assertions.assertTrue(request.getHeaders().containsKey("Authorization"));
 		Assertions.assertEquals("https://mock/", request.getUrl());
 		Assertions.assertEquals("POST", request.getMethod());
@@ -173,7 +176,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void create() throws Exception {
+	public void create() {
 		final ProvAwsPluginResource resource = Mockito.spy(ProvAwsPluginResource.class);
 		Mockito.doReturn(true).when(resource).validateAccess(ArgumentMatchers.anyInt());
 		resource.create(subscription);
@@ -183,22 +186,25 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	public void createFailed() {
 		final ProvAwsPluginResource resource = Mockito.spy(ProvAwsPluginResource.class);
 		Mockito.doReturn(false).when(resource).validateAccess(ArgumentMatchers.anyInt());
-		Assertions.assertEquals("Cannot access to AWS services with these parameters", Assertions.assertThrows(BusinessException.class, () -> {
-			resource.create(-1);
-		}).getMessage());
+		Assertions.assertEquals("Cannot access to AWS services with these parameters",
+				Assertions.assertThrows(BusinessException.class, () -> {
+					resource.create(-1);
+				}).getMessage());
 	}
 
 	@Test
-	public void checkSubscriptionStatusUp() throws Exception {
-		final SubscriptionStatusWithData status = resource.checkSubscriptionStatus(subscription, null, new HashMap<String, String>());
+	public void checkSubscriptionStatusUp() {
+		final SubscriptionStatusWithData status = resource.checkSubscriptionStatus(subscription, null,
+				new HashMap<String, String>());
 		Assertions.assertTrue(status.getStatus().isUp());
 	}
 
 	@Test
-	public void checkSubscriptionStatusDown() throws Exception {
+	public void checkSubscriptionStatusDown() {
 		final ProvAwsPluginResource resource = Mockito.spy(ProvAwsPluginResource.class);
 		Mockito.doReturn(false).when(resource).validateAccess(ArgumentMatchers.anyInt());
-		final SubscriptionStatusWithData status = resource.checkSubscriptionStatus(subscription, null, new HashMap<String, String>());
+		final SubscriptionStatusWithData status = resource.checkSubscriptionStatus(subscription, null,
+				new HashMap<String, String>());
 		Assertions.assertFalse(status.getStatus().isUp());
 	}
 
@@ -238,8 +244,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	}
 
 	/**
-	 * Return the subscription identifier of the given project. Assumes there is
-	 * only one subscription for a service.
+	 * Return the subscription identifier of the given project. Assumes there is only one subscription for a service.
 	 */
 	protected int getSubscription(final String project) {
 		return getSubscription(project, ProvAwsPluginResource.KEY);

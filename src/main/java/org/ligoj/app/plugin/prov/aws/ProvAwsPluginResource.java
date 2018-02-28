@@ -34,7 +34,6 @@ import org.ligoj.app.plugin.prov.aws.in.ProvAwsPriceImportResource;
 import org.ligoj.app.plugin.prov.in.ImportCatalogService;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.terraform.Terraforming;
-import org.ligoj.app.resource.node.NodeResource;
 import org.ligoj.app.resource.plugin.CurlProcessor;
 import org.ligoj.app.resource.plugin.CurlRequest;
 import org.ligoj.bootstrap.core.NamedBean;
@@ -44,8 +43,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * The provisioning service for AWS. There is complete quote configuration along
- * the subscription.
+ * The provisioning service for AWS. There is complete quote configuration along the subscription.
  */
 @Service
 @Path(ProvAwsPluginResource.URL)
@@ -94,9 +92,6 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	private ConfigurationResource configuration;
 
 	@Autowired
-	private NodeResource nodeResource;
-
-	@Autowired
 	private SubscriptionRepository sRepository;
 
 	@Autowired
@@ -130,7 +125,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	}
 
 	@Override
-	public void create(final int subscription) throws Exception {
+	public void create(final int subscription) {
 		if (!validateAccess(subscription)) {
 			throw new BusinessException("Cannot access to AWS services with these parameters");
 		}
@@ -138,7 +133,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 
 	@Override
 	public SubscriptionStatusWithData checkSubscriptionStatus(final int subscription, final String node,
-			final Map<String, String> parameters) throws Exception {
+			final Map<String, String> parameters) {
 		// Validate the account
 		if (validateAccess(subscription)) {
 			// Return the quote details
@@ -203,37 +198,37 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	}
 
 	/**
-	 * Create Curl request for AWS service. Initialize default values for
-	 * awsAccessKey, awsSecretKey and regionName and compute signature.
+	 * Create Curl request for AWS service. Initialize default values for awsAccessKey, awsSecretKey and regionName and
+	 * compute signature.
 	 * 
-	 * @param signatureBuilder
-	 *            {@link AWS4SignatureQueryBuilder} initialized with values used for
-	 *            this call (headers, parameters, host, ...)
+	 * @param builder
+	 *            {@link AWS4SignatureQueryBuilder} initialized with values used for this call (headers, parameters,
+	 *            host, ...)
 	 * @param subscription
 	 *            Subscription's identifier.
 	 * @return initialized request
 	 */
-	protected CurlRequest newRequest(final AWS4SignatureQueryBuilder signatureBuilder, final int subscription) {
-		return newRequest(signatureBuilder, subscriptionResource.getParameters(subscription));
+	protected CurlRequest newRequest(final AWS4SignatureQueryBuilder builder, final int subscription) {
+		return newRequest(builder, subscriptionResource.getParameters(subscription));
 	}
 
 	/**
-	 * Create Curl request for AWS service. Initialize default values for
-	 * awsAccessKey, awsSecretKey and regionName and compute signature.
+	 * Create Curl request for AWS service. Initialize default values for awsAccessKey, awsSecretKey and regionName and
+	 * compute signature.
 	 * 
-	 * @param signatureBuilder
-	 *            {@link AWS4SignatureQueryBuilder} initialized with values used for
-	 *            this call (headers, parameters, host, ...)
+	 * @param builder
+	 *            {@link AWS4SignatureQueryBuilder} initialized with values used for this call (headers, parameters,
+	 *            host, ...)
 	 * @param subscription
 	 *            Subscription's identifier.
 	 * @return initialized request
 	 */
-	protected CurlRequest newRequest(final AWS4SignatureQueryBuilder signatureBuilder, final Map<String, String> parameters) {
-		final AWS4SignatureQuery signatureQuery = signatureBuilder.accessKey(parameters.get(PARAMETER_ACCESS_KEY_ID))
+	protected CurlRequest newRequest(final AWS4SignatureQueryBuilder builder, final Map<String, String> parameters) {
+		final AWS4SignatureQuery query = builder.accessKey(parameters.get(PARAMETER_ACCESS_KEY_ID))
 				.secretKey(parameters.get(PARAMETER_SECRET_ACCESS_KEY)).region(getRegion()).build();
-		final String authorization = signer.computeSignature(signatureQuery);
-		final CurlRequest request = new CurlRequest(signatureQuery.getMethod(), toUrl(signatureQuery), signatureQuery.getBody());
-		request.getHeaders().putAll(signatureQuery.getHeaders());
+		final String authorization = signer.computeSignature(query);
+		final CurlRequest request = new CurlRequest(query.getMethod(), toUrl(query), query.getBody());
+		request.getHeaders().putAll(query.getHeaders());
 		request.getHeaders().put("Authorization", authorization);
 		request.setSaveResponse(true);
 		return request;
@@ -242,8 +237,8 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	/**
 	 * Return the URL built from the {@link AWS4SignatureQuery}
 	 */
-	protected String toUrl(final AWS4SignatureQuery signatureQuery) {
-		return "https://" + signatureQuery.getHost() + signatureQuery.getPath();
+	protected String toUrl(final AWS4SignatureQuery query) {
+		return "https://" + query.getHost() + query.getPath();
 	}
 
 	/**
@@ -256,9 +251,9 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	private boolean validateAccess(final Map<String, String> parameters) {
 		// Call S3 ls service
 		// TODO Use EC2 instead of S3
-		final AWS4SignatureQueryBuilder signatureQueryBuilder = AWS4SignatureQuery.builder().method("GET").service("s3").host(getS3Host())
-				.path("/");
-		return new CurlProcessor().process(newRequest(signatureQueryBuilder, parameters));
+		final AWS4SignatureQueryBuilder builder = AWS4SignatureQuery.builder().method("GET").service("s3")
+				.host(getS3Host()).path("/");
+		return new CurlProcessor().process(newRequest(builder, parameters));
 	}
 
 	/**
@@ -285,9 +280,8 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	public boolean validateAccess(final int subscription) {
 		// Call S3 ls service
 		// TODO Use EC2 instead of S3
-		final AWS4SignatureQueryBuilder signatureQueryBuilder = AWS4SignatureQuery.builder().method("GET").service("s3").host(getS3Host())
-				.path("/");
-		return new CurlProcessor().process(newRequest(signatureQueryBuilder, subscription));
+		final AWS4SignatureQueryBuilder builder = AWS4SignatureQuery.builder().method("GET").service("s3")
+				.host(getS3Host()).path("/");
+		return new CurlProcessor().process(newRequest(builder, subscription));
 	}
-
 }

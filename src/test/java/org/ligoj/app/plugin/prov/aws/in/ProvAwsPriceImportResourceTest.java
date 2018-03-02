@@ -160,13 +160,14 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		final QuoteVo quote = install();
 
 		// Check the whole quote
-		final ProvQuoteInstance instance = check(quote, 47.549d, 46.669d);
+		final ProvQuoteInstance instance = check(quote, 47.547d, 46.667d);
 
 		// Check the spot
 		final QuoteInstanceLookup spotPrice = qiResource.lookup(instance.getConfiguration().getSubscription().getId(),
 				2, 1741, true, VmOs.LINUX, null, null, true, null, null);
-		Assertions.assertEquals(12.629, spotPrice.getCost(), DELTA);
-		Assertions.assertEquals(0.0173d, spotPrice.getPrice().getCost(), 0.0001);
+		Assertions.assertEquals(12.664, spotPrice.getCost(), DELTA);
+		Assertions.assertEquals(12.664d, spotPrice.getPrice().getCost(), 0.0001);
+		Assertions.assertEquals(0.0173d, spotPrice.getPrice().getCostPeriod(), 0.0001);
 		Assertions.assertEquals("Spot", spotPrice.getPrice().getTerm().getName());
 		Assertions.assertTrue(spotPrice.getPrice().getTerm().isEphemeral());
 		Assertions.assertEquals("r4.large", spotPrice.getPrice().getType().getName());
@@ -180,7 +181,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		resetImportTask();
 		resource.install();
 		provResource.refreshCost(subscription);
-		check(provResource.getConfiguration(subscription), 47.549d, 46.669d);
+		check(provResource.getConfiguration(subscription), 47.547d, 46.667d);
 		checkImportStatus();
 
 		// Now, change a price within the remote catalog
@@ -218,11 +219,11 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		Assertions.assertEquals(1678d, price.getInitialCost(), DELTA);
 		Assertions.assertEquals(VmOs.LINUX, price.getOs());
 		Assertions.assertEquals(ProvTenancy.SHARED, price.getTenancy());
-		Assertions.assertEquals(0.06385, price.getCost(), DELTA);
+		Assertions.assertEquals(46.611d, price.getCost(), DELTA);
 		final ProvInstancePriceTerm priceType = price.getTerm();
 		Assertions.assertEquals("Reserved, 3yr, All Upfront", priceType.getName());
 		Assertions.assertFalse(priceType.isEphemeral());
-		Assertions.assertEquals(1576800, priceType.getPeriod().intValue());
+		Assertions.assertEquals(36, priceType.getPeriod());
 
 		ProvInstanceType type = price.getType();
 		Assertions.assertEquals("c1.medium", type.getName());
@@ -304,11 +305,12 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		Assertions.assertEquals(1680d, price.getInitialCost(), DELTA);
 		Assertions.assertEquals(VmOs.LINUX, price.getOs());
 		Assertions.assertEquals(ProvTenancy.SHARED, price.getTenancy());
-		Assertions.assertEquals(0.06393, price.getCost(), DELTA);
+		Assertions.assertEquals(46.667, price.getCost(), DELTA);
+		Assertions.assertEquals(1680d, price.getCostPeriod(), DELTA);
 		final ProvInstancePriceTerm priceType = price.getTerm();
 		Assertions.assertEquals("Reserved, 3yr, All Upfront", priceType.getName());
 		Assertions.assertFalse(priceType.isEphemeral());
-		Assertions.assertEquals(1576800, priceType.getPeriod().intValue());
+		Assertions.assertEquals(36, priceType.getPeriod());
 		Assertions.assertEquals("c1.medium", price.getType().getName());
 		return instance;
 	}
@@ -347,13 +349,13 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		final ProvQuoteInstance instance = quote.getInstances().get(0);
 
 		// Check the spot
-		final QuoteInstanceLookup spotPrice = qiResource.lookup(instance.getConfiguration().getSubscription().getId(),
-				2, 1741, null, VmOs.LINUX, "r4.large", null, true, null, null);
-		Assertions.assertTrue(spotPrice.getCost() > 5d);
-		Assertions.assertTrue(spotPrice.getCost() < 100d);
-		final ProvInstancePrice instance2 = spotPrice.getPrice();
-		Assertions.assertTrue(instance2.getCost() > 0.005d);
-		Assertions.assertTrue(instance2.getCost() < 1d);
+		final QuoteInstanceLookup price = qiResource.lookup(instance.getConfiguration().getSubscription().getId(), 2,
+				1741, null, VmOs.LINUX, "r4.large", null, true, null, null);
+		Assertions.assertTrue(price.getCost() > 5d);
+		Assertions.assertTrue(price.getCost() < 100d);
+		final ProvInstancePrice instance2 = price.getPrice();
+		Assertions.assertTrue(instance2.getCostPeriod() > 0.002d);
+		Assertions.assertTrue(instance2.getCost() > 5d);
 		Assertions.assertEquals("Spot", instance2.getTerm().getName());
 		Assertions.assertTrue(instance2.getTerm().isEphemeral());
 		Assertions.assertEquals("r4.large", instance2.getType().getName());

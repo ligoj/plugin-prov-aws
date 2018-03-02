@@ -1,4 +1,4 @@
-node.id;name;optimized;latency;minimal;maximal;instanceCompatible;iops;throughput 
+node.id;name;optimized;latency;minimal;maximal;instanceCompatible;iops;throughput
 service:prov:aws;gp2;IOPS;BEST;1;16384;true;10000;160
 service:prov:aws;io1;IOPS;BEST;4;16384;true;32000;500
 service:prov:aws;st1;THROUGHPUT;GOOD;500;16384;true;500;500

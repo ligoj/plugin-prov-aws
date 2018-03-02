@@ -422,7 +422,6 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			final ProvInstancePriceTerm spotPriceType = new ProvInstancePriceTerm();
 			spotPriceType.setName("Spot");
 			spotPriceType.setNode(node);
-			spotPriceType.setPeriod(60); // 1h
 			spotPriceType.setVariable(true);
 			spotPriceType.setEphemeral(true);
 			spotPriceType.setCode("spot");
@@ -468,7 +467,8 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 					});
 
 					// Update the price
-					price.setCost(Double.valueOf(op.getPrices().get("USD")));
+					price.setCostPeriod(Double.valueOf(op.getPrices().get("USD")));
+					price.setCost(round3Decimals(price.getCostPeriod() * 24 * 30.5));
 					return ipRepository.save(price);
 				}).count();
 	}
@@ -517,7 +517,8 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			// No up-front, cost is fixed
 			priceCounter++;
 			final ProvInstancePrice price = newInstancePrice(csv, instances, priceTypes, node, region, previous);
-			price.setCost(csv.getPricePerUnit());
+			price.setCost(round3Decimals(csv.getPricePerUnit() * 24 * 30.5));
+			price.setCostPeriod(round3Decimals(csv.getPricePerUnit() * 24 * 30.5 * price.getTerm().getPeriod()));
 			ipRepository.save(price);
 		}
 		return priceCounter;
@@ -611,18 +612,19 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	}
 
 	private void handleUpfront(final AwsEc2Price csv, final ProvInstancePrice ipUpfront) {
-		final double hourlyCost;
+		final double cost;
 		if (csv.getPriceUnit().equals("Quantity")) {
 			// Upfront price part , update the effective hourly cost
 			ipUpfront.setInitialCost(Double.valueOf(csv.getPricePerUnit()));
-			hourlyCost = ipUpfront.getCost() + ipUpfront.getInitialCost() * 60 / ipUpfront.getTerm().getPeriod();
+			cost = ipUpfront.getCost() + ipUpfront.getInitialCost() / ipUpfront.getTerm().getPeriod();
 		} else {
 			// Remaining hourly cost of the leasing
-			hourlyCost = csv.getPricePerUnit() + ipUpfront.getCost();
+			cost = csv.getPricePerUnit() + ipUpfront.getCost();
 		}
 
 		// Round the computed hourly cost
-		ipUpfront.setCost(round5Decimals(hourlyCost));
+		ipUpfront.setCost(round3Decimals(cost));
+		ipUpfront.setCostPeriod(round3Decimals(cost * ipUpfront.getTerm().getPeriod()));
 	}
 
 	/**
@@ -736,10 +738,10 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	}
 
 	/**
-	 * Round up to 5 decimals the given value.
+	 * Round up to 3 decimals the given value.
 	 */
-	private double round5Decimals(final double value) {
-		return Math.round(value * 100000d) / 100000d;
+	private double round3Decimals(final double value) {
+		return Math.round(value * 1000d) / 1000d;
 	}
 
 	/**
@@ -758,14 +760,11 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 						StringUtils.trimToNull(StringUtils.remove(csvPrice.getOfferingClass(), "standard")) })
 				.filter(Objects::nonNull).collect(Collectors.joining(", ")));
 
-		// By default, hourly period
-		term.setPeriod(60);
-
 		// Handle leasing
 		final Matcher matcher = LEASING_TIME.matcher(StringUtils.defaultIfBlank(csvPrice.getLeaseContractLength(), ""));
 		if (matcher.find()) {
-			// Convert years to minutes
-			term.setPeriod(Integer.parseInt(matcher.group(1)) * 60 * 24 * 365);
+			// Convert years to months
+			term.setPeriod(Integer.parseInt(matcher.group(1)) * 12);
 		}
 		iptRepository.saveAndFlush(term);
 		return term;

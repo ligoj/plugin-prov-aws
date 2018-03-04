@@ -16,5 +16,5 @@
 Provides the following features :
 - Price fetching from AWS site, including Spot
 - Region configuration. For now only one region at once
-- Supported services : EC2, S3 (IA, Glacier,..) and EBS(SSD, HDD, ...)
+- Supported services : EC2, S3 (IA, Glacier,..), EBS(SSD, HDD, ...) and EFS
 - Terraform port 

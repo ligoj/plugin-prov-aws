@@ -219,9 +219,9 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	 * @param builder
 	 *            {@link AWS4SignatureQueryBuilder} initialized with values used for this call (headers, parameters,
 	 *            host, ...)
-	 * @param subscription
-	 *            Subscription's identifier.
-	 * @return initialized request
+	 * @param parameters
+	 *            Subscription's parameters.
+	 * @return Initialized request.
 	 */
 	protected CurlRequest newRequest(final AWS4SignatureQueryBuilder builder, final Map<String, String> parameters) {
 		final AWS4SignatureQuery query = builder.accessKey(parameters.get(PARAMETER_ACCESS_KEY_ID))
@@ -235,7 +235,11 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	}
 
 	/**
-	 * Return the URL built from the {@link AWS4SignatureQuery}
+	 * Return the URL from a query.
+	 * 
+	 * @param query
+	 *            Source {@link AWS4SignatureQuery}
+	 * @return The base host URL from a query.
 	 */
 	protected String toUrl(final AWS4SignatureQuery query) {
 		return "https://" + query.getHost() + query.getPath();

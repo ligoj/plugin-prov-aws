@@ -1,0 +1,7 @@
+sep=,
+some
+header
+from
+AWS
+SKU,OfferTermCode,RateCode,TermType,PriceDescription,EffectiveDate,StartingRange,EndingRange,Unit,PricePerUnit,Currency,LeaseContractLength,PurchaseOption,OfferingClass,Product Family,serviceCode,Location,Location Type,Instance Type,Current Generation,Instance Family,vCPU,Physical Processor,Clock Speed,Memory,Storage,Network Performance,Processor Architecture,Storage Media,Volume Type,Max Volume Size,Max IOPS/volume,Max IOPS Burst Performance,Max throughput/volume,Provisioned,Tenancy,EBS Optimized,Operating System,License Model,Group,Group Description,Transfer Type,From Location,From Location Type,To Location,To Location Type,usageType,operation,Comments,Dedicated EBS Throughput,ECU,Enhanced Networking Supported,GPU,Instance Capacity - 10xlarge,Instance Capacity - 16xlarge,Instance Capacity - 2xlarge,Instance Capacity - 4xlarge,Instance Capacity - 8xlarge,Instance Capacity - large,Instance Capacity - medium,Instance Capacity - xlarge,Intel AVX Available,Intel AVX2 Available,Intel Turbo Available,Physical Cores,Pre Installed S/W,Processor Features,Sockets
+HB5V2X8TXQUTDZBV,JRTCKXETXF,HB5V2X8TXQUTDZBV.JRTCKXETXF.6YS6EN2CT7,OnDemand,$0.148 per On Demand Linux c1.medium Instance Hour,01/05/2017,0,Inf,Hrs,0.1480000000,USD,,,,Compute Instance,AmazonEC2,EU (Ireland),AWS Region,c1.medium,No,Compute optimized,2,Intel Xeon Family,,1.7 GiB,1 x 350,Moderate,32-bit or 64-bit,,,,,,,,Host,,Linux,No License required,,,,,,,,EU-BoxUsage:c1.medium,RunInstances,,,2,,,,,,,,,,,,,,NA,,

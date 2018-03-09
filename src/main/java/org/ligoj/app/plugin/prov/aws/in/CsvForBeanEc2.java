@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.ligoj.bootstrap.core.csv.CsvBeanReader;
 
 /**
@@ -36,8 +37,8 @@ public class CsvForBeanEc2 extends AbstractAwsCsvForBean<AwsEc2Price> {
 	}
 
 	/**
-	 * Build the reader parsing the CSV file from AWS to build {@link AwsEc2Price}
-	 * instances. Non AWS instances data are skipped, and headers are ignored.
+	 * Build the reader parsing the CSV file from AWS to build {@link AwsEc2Price} instances. Non AWS instances data are
+	 * skipped, and headers are ignored.
 	 * 
 	 * @param reader
 	 *            The original AWS CSV input.
@@ -49,7 +50,8 @@ public class CsvForBeanEc2 extends AbstractAwsCsvForBean<AwsEc2Price> {
 	}
 
 	@Override
-	protected CsvBeanReader<AwsEc2Price> newCsvReader(final Reader reader, final String[] headers, final Class<AwsEc2Price> beanType) {
+	protected CsvBeanReader<AwsEc2Price> newCsvReader(final Reader reader, final String[] headers,
+			final Class<AwsEc2Price> beanType) {
 		return new AwsCsvReader<>(reader, headers, beanType) {
 
 			@Override
@@ -57,9 +59,10 @@ public class CsvForBeanEc2 extends AbstractAwsCsvForBean<AwsEc2Price> {
 				// Only Compute Instance with a valid OS
 				// Only compute instance for now
 				// Only OS compliant
-				// No RI for now
-				return rawValues.size() > 38 && "Compute Instance".equals(rawValues.get(14)) && rawValues.get(37) != null
-						&& !"NA".equals(rawValues.get(37)) && !"Host".equals(rawValues.get(35));
+				// No dedicated host for now
+				return rawValues.size() > 38 && "Compute Instance".equals(rawValues.get(14))
+						&& StringUtils.isNotEmpty(rawValues.get(37)) && !"NA".equals(rawValues.get(37))
+						&& !"Host".equals(rawValues.get(35));
 			}
 
 		};

@@ -112,7 +112,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	}
 
 	/**
-	 * check generated terraform
+	 * check generated terraform with autoscale, min and max involved.
 	 * 
 	 * @throws Exception
 	 *             unexpected exception
@@ -128,6 +128,44 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 		quoteVo.setStorages(Lists.newArrayList());
 
 		testTerraformGeneration(subscription, quoteVo, "terraform/terraform-scale.tf");
+	}
+
+	/**
+	 * check generated terraform with autoscale, min only involved.
+	 * 
+	 * @throws Exception
+	 *             unexpected exception
+	 */
+	@Test
+	public void testTerraformGenerationWithAutoscale2() throws Exception {
+		final QuoteVo quoteVo = new QuoteVo();
+		final ProvQuoteInstance instance = generateQuoteInstance("OnDemand");
+		instance.setInternet(InternetAccess.PRIVATE);
+		instance.setMinQuantity(1);
+		instance.setMaxQuantity(null);
+		quoteVo.setInstances(Lists.newArrayList(instance));
+		quoteVo.setStorages(Lists.newArrayList());
+
+		testTerraformGeneration(subscription, quoteVo, "terraform/terraform-scale-default-max.tf");
+	}
+
+	/**
+	 * check generated terraform with autoscale, hight min involved.
+	 * 
+	 * @throws Exception
+	 *             unexpected exception
+	 */
+	@Test
+	public void testTerraformGenerationWithAutoscale100() throws Exception {
+		final QuoteVo quoteVo = new QuoteVo();
+		final ProvQuoteInstance instance = generateQuoteInstance("OnDemand");
+		instance.setInternet(InternetAccess.PRIVATE);
+		instance.setMinQuantity(100);
+		instance.setMaxQuantity(null);
+		quoteVo.setInstances(Lists.newArrayList(instance));
+		quoteVo.setStorages(Lists.newArrayList());
+
+		testTerraformGeneration(subscription, quoteVo, "terraform/terraform-scale-100.tf");
 	}
 
 	/**

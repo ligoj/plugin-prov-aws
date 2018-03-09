@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.ObjectUtils;
 import org.ligoj.app.model.Subscription;
 import org.ligoj.app.plugin.prov.QuoteVo;
 import org.ligoj.app.plugin.prov.model.InternetAccess;
@@ -79,7 +80,8 @@ public class ProvAwsTerraformService {
 	 * @throws IOException
 	 *             When Terraform content cannot be written.
 	 */
-	public void writeTerraform(final Writer writer, final QuoteVo quote, final Subscription subscription) throws IOException {
+	public void writeTerraform(final Writer writer, final QuoteVo quote, final Subscription subscription)
+			throws IOException {
 		final String projectName = subscription.getProject().getName();
 		writeProvider(writer);
 		if (!quote.getInstances().isEmpty()) {
@@ -95,7 +97,8 @@ public class ProvAwsTerraformService {
 			}
 
 			// AMI part
-			final String account = subscriptionResource.getParameters(subscription.getId()).get(ProvAwsPluginResource.PARAMETER_ACCOUNT);
+			final String account = subscriptionResource.getParameters(subscription.getId())
+					.get(ProvAwsPluginResource.PARAMETER_ACCOUNT);
 			for (final VmOs os : osToSearch) {
 				writeAmiSearch(writer, os, account);
 			}
@@ -115,7 +118,8 @@ public class ProvAwsTerraformService {
 	 * @throws IOException
 	 *             exception
 	 */
-	private void writeNetwork(final Writer writer, final String project, final Set<InternetAccess> types) throws IOException {
+	private void writeNetwork(final Writer writer, final String project, final Set<InternetAccess> types)
+			throws IOException {
 		writer.write("/* network */\n");
 		writer.write("resource \"aws_vpc\" \"terraform\" {\n");
 		writer.write("  cidr_block = \"10.0.0.0/16\"\n");
@@ -165,7 +169,8 @@ public class ProvAwsTerraformService {
 	 * @throws IOException
 	 *             exception
 	 */
-	private void writeRouteTable(final Writer writer, final String project, final InternetAccess type) throws IOException {
+	private void writeRouteTable(final Writer writer, final String project, final InternetAccess type)
+			throws IOException {
 		writer.write("resource \"aws_route_table\" \"" + type.name() + "\" {\n");
 		writer.write("  vpc_id     = \"${aws_vpc.terraform.id}\"\n");
 		writer.write("  route {\n");
@@ -212,7 +217,8 @@ public class ProvAwsTerraformService {
 	 * @throws IOException
 	 *             exception
 	 */
-	private void writeSubnet(final Writer writer, final String project, final InternetAccess type, final String cidr) throws IOException {
+	private void writeSubnet(final Writer writer, final String project, final InternetAccess type, final String cidr)
+			throws IOException {
 		writer.write("/* " + type.name() + " subnet */\n");
 		writer.write("resource \"aws_subnet\" \"" + type + "\" {\n");
 		writer.write("  vpc_id     = \"${aws_vpc.terraform.id}\"\n");
@@ -238,8 +244,8 @@ public class ProvAwsTerraformService {
 	 * @throws IOException
 	 *             exception thrown during write
 	 */
-	private void writeInstance(final Writer writer, final QuoteVo quote, final ProvQuoteInstance instance, final String projectName)
-			throws IOException {
+	private void writeInstance(final Writer writer, final QuoteVo quote, final ProvQuoteInstance instance,
+			final String projectName) throws IOException {
 		final VmOs os = instance.getPrice().getOs();
 		final String instanceName = instance.getName();
 		final String instanceType = instance.getPrice().getType().getName();
@@ -254,11 +260,13 @@ public class ProvAwsTerraformService {
 		} else {
 			writer.write("resource \"aws_instance\" \"vm-" + instanceName + "\" {\n");
 		}
-		writer.write("  " + (autoscaling ? "image_id" : "ami") + "           = \"${data.aws_ami.ami-" + os.name() + ".id}\"\n");
+		writer.write("  " + (autoscaling ? "image_id" : "ami") + "           = \"${data.aws_ami.ami-" + os.name()
+				+ ".id}\"\n");
 		writer.write("  name    		= \"" + instanceName + "\"\n");
 		writer.write("  instance_type = \"" + instanceType + "\"\n");
 		writer.write("  key_name    	= \"" + projectName + "-key\"\n");
-		writer.write("  " + (autoscaling ? "security_groups" : "vpc_security_group_ids") + " = [ \"${aws_security_group.vm-sg.id}\" ]\n");
+		writer.write("  " + (autoscaling ? "security_groups" : "vpc_security_group_ids")
+				+ " = [ \"${aws_security_group.vm-sg.id}\" ]\n");
 		writeInstanceStorages(writer, instance);
 		if (!autoscaling) {
 			writer.write("  subnet_id     = \"${aws_subnet." + instance.getInternet().name() + ".id}\"\n");
@@ -271,8 +279,11 @@ public class ProvAwsTerraformService {
 			writer.write("/* autoscaling */\n");
 			writer.write("resource \"aws_autoscaling_group\" \"" + instanceName + "autoscaling-group\" {\n");
 			writer.write("  min_size                  = " + instance.getMinQuantity() + "\n");
-			writer.write("  max_size                  = " + instance.getMaxQuantity() + "\n");
-			writer.write("  launch_configuration      = \"${aws_launch_configuration.vm-" + instanceName + ".name}\"\n");
+			writer.write("  max_size                  = "
+					+ ObjectUtils.defaultIfNull(instance.getMaxQuantity(), Math.max(10, instance.getMinQuantity()))
+					+ "\n");
+			writer.write(
+					"  launch_configuration      = \"${aws_launch_configuration.vm-" + instanceName + ".name}\"\n");
 			writer.write("  vpc_zone_identifier     = [\"${aws_subnet." + instance.getInternet().name() + ".id}\"]\n");
 			writer.write("  tags = [{\n");
 			writer.write("    key=\"Project\"\n");
@@ -357,7 +368,8 @@ public class ProvAwsTerraformService {
 		writer.write("/* security group */\n");
 		writer.write("resource \"aws_security_group\" \"vm-sg\" {\n");
 		writer.write("  name        = \"" + projectName + "-sg\"\n");
-		writer.write("  description = \"Allow ssh inbound traffic, all inbound traffic in security group and all outbund traffic\"\n");
+		writer.write(
+				"  description = \"Allow ssh inbound traffic, all inbound traffic in security group and all outbund traffic\"\n");
 		writer.write("  vpc_id     = \"${aws_vpc.terraform.id}\"\n");
 		writer.write("  ingress {\n");
 		writer.write("    from_port   = 22\n");
@@ -450,8 +462,8 @@ public class ProvAwsTerraformService {
 	 * @param storages
 	 *            Storages of the quote.
 	 */
-	private void writeStandaloneStorages(final Writer writer, final String projectName, final List<ProvQuoteStorage> storages)
-			throws IOException {
+	private void writeStandaloneStorages(final Writer writer, final String projectName,
+			final List<ProvQuoteStorage> storages) throws IOException {
 		for (final ProvQuoteStorage storage : storages) {
 			if (storage.getQuoteInstance() == null) {
 				writer.write("resource \"aws_ebs_volume\" \"" + storage.getName() + "\" {\n");

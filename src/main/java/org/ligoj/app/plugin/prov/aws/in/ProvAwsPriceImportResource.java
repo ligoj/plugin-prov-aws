@@ -632,11 +632,12 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		}
 
 		// Round the computed hourly cost and save as needed
-		final double cost = hourly.getPricePerUnit() + quantity.getPricePerUnit() / price.getTerm().getPeriod();
+		final double initCost = quantity.getPricePerUnit() / price.getTerm().getPeriod();
+		final double cost = hourly.getPricePerUnit() * 24 * 30.5 + initCost;
 		saveAsNeeded(price, round3Decimals(cost), p -> {
 			p.setInitialCost(quantity.getPricePerUnit());
-			p.setCostPeriod(
-					round3Decimals(quantity.getPricePerUnit() + hourly.getPricePerUnit() * p.getTerm().getPeriod()));
+			p.setCostPeriod(round3Decimals(
+					p.getInitialCost() + hourly.getPricePerUnit() * p.getTerm().getPeriod() * 24 * 30.5));
 			ipRepository.save(p);
 		});
 	}

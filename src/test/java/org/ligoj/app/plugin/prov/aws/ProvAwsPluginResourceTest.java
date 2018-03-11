@@ -167,10 +167,10 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	 */
 	@Test
 	public void newRequest() {
-		final CurlRequest request = resource.newRequest(
-				AWS4SignatureQuery.builder().host("mock").path("/").body("body").service("s3"), subscription);
+		final CurlRequest request = resource
+				.newRequest(AWS4SignatureQuery.builder().path("/").body("body").service("s3"), subscription);
 		Assertions.assertTrue(request.getHeaders().containsKey("Authorization"));
-		Assertions.assertEquals("https://mock/", request.getUrl());
+		Assertions.assertEquals("https://s3-eu-west-1.amazonaws.com/", request.getUrl());
 		Assertions.assertEquals("POST", request.getMethod());
 		Assertions.assertEquals("body", request.getContent());
 	}

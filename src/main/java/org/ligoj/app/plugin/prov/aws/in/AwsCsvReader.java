@@ -22,8 +22,8 @@ public class AwsCsvReader<T> extends CsvBeanReader<T> {
 	 * 
 	 * @param reader
 	 *            The CSV input, without headers and starting from the first raw.
-	 * @param The
-	 *            CSV headers.
+	 * @param headers
+	 *            The header used to parse the CSV file.
 	 * @param beanType
 	 *            The target bean type.
 	 */
@@ -53,8 +53,7 @@ public class AwsCsvReader<T> extends CsvBeanReader<T> {
 	}
 
 	/**
-	 * Check the given raw is valid to build an AWS Price. When invalid, the record
-	 * is dropped.
+	 * Check the given raw is valid to build an AWS Price. When invalid, the record is dropped.
 	 * 
 	 * @param rawValues
 	 *            The column of the current record.

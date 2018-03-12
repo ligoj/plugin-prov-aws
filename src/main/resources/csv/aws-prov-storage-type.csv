@@ -1,0 +1,10 @@
+name;optimized;latency;minimal;maximal;instanceCompatible;iops;throughput
+gp2;IOPS;BEST;1;16384;true;10000;160
+io1;IOPS;BEST;4;16384;true;32000;500
+st1;THROUGHPUT;GOOD;500;16384;true;500;500
+sc1;THROUGHPUT;GOOD;500;16384;true;250;250
+snapshot;DURABILITY;BEST;0;;false
+s3;DURABILITY;MEDIUM;0;;false
+s3-ia;DURABILITY;MEDIUM;0;;false
+glacier;DURABILITY;WORST;0;;false
+efs;THROUGHPUT;GOOD;0;;true

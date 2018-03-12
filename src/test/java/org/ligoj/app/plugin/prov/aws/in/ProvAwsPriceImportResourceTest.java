@@ -52,7 +52,6 @@ import org.ligoj.app.plugin.prov.model.ProvQuote;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
 import org.ligoj.app.plugin.prov.model.ProvQuoteStorage;
 import org.ligoj.app.plugin.prov.model.ProvStorageOptimized;
-import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.model.ProvTenancy;
 import org.ligoj.app.plugin.prov.model.ProvUsage;
 import org.ligoj.app.plugin.prov.model.Rate;
@@ -109,8 +108,8 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		persistSystemEntities();
 		persistEntities("csv",
 				new Class[] { Node.class, Project.class, CacheCompany.class, CacheUser.class, DelegateNode.class,
-						Parameter.class, ProvLocation.class, ProvStorageType.class, Subscription.class,
-						ParameterValue.class, ProvQuote.class },
+						Parameter.class, ProvLocation.class, Subscription.class, ParameterValue.class,
+						ProvQuote.class },
 				StandardCharsets.UTF_8.name());
 		this.subscription = getSubscription("gStack");
 
@@ -576,12 +575,12 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		em.flush();
 		em.clear();
 		Assertions.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), DELTA);
-		
+
 		final ProvUsage usage = new ProvUsage();
 		usage.setName("36month");
 		usage.setRate(100);
 		usage.setDuration(36);
-		usage.setConfiguration(repository.findBy("subscription.id",  subscription));
+		usage.setConfiguration(repository.findBy("subscription.id", subscription));
 		em.persist(usage);
 		em.flush();
 		em.clear();

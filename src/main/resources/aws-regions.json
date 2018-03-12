@@ -1,20 +1,182 @@
 {
-  "us-east-1": "US East (N. Virginia)",
-  "us-east-2": "US East (Ohio)",
-  "us-west-1": "US West (N. California)",
-  "us-west-2": "US West (Oregon)",
-  "ca-central-1": "Canada (Central)",
-  "cn-northwest-1": "China (Ningxia)",
-  "cn-north-1": "China (Beijing)",
-  "eu-central-1": "EU (Frankfurt)",
-  "eu-west-1": "EU (Ireland)",
-  "eu-west-2": "EU (London)",
-  "eu-west-3": "EU (Paris)",
-  "ap-northeast-1": "Asia Pacific (Tokyo)",
-  "ap-northeast-2": "Asia Pacific (Seoul)",
-  "ap-southeast-1": "Asia Pacific (Singapore)",
-  "ap-southeast-2": "Asia Pacific (Sydney)",
-  "ap-south-1": "Asia Pacific (Mumbai)",
-  "sa-east-1": "South America (São Paulo)",
-  "us-gov-west-1": "US Gov West 1"
+  "us-east-1": {
+    "name": "US East (N. Virginia)",
+    "continentM49": 19,
+    "regionM49": 21,
+    "countryM49": 840,
+    "placement": "east",
+    "subRegion": "Virginia",
+    "latitude": 37.6000,
+    "longitude": -78.6000
+  },
+  "us-east-2": {
+    "name": "US East (Ohio)",
+    "continentM49": 19,
+    "regionM49": 21,
+    "countryM49": 840,
+    "placement": "east",
+    "subRegion": "Ohio",
+    "latitude": 40.2000,
+    "longitude": -82.6000
+  },
+  "us-west-1": {
+    "name": "US West (N. California)",
+    "continentM49": 19,
+    "regionM49": 21,
+    "countryM49": 840,
+    "placement": "west",
+    "subRegion": "California",
+    "latitude": 37.9000,
+    "longitude": -120.7000
+  },
+  "us-west-2": {
+    "name": "US West (Oregon)",
+    "continentM49": 19,
+    "regionM49": 21,
+    "countryM49": 840,
+    "placement": "west",
+    "subRegion": "Oregon",
+    "latitude": 45.2000,
+    "longitude": -122.7000
+  },
+  "ca-central-1": {
+    "name": "Canada (Central)",
+    "continentM49": 19,
+    "regionM49": 21,
+    "countryM49": 124,
+    "placement": "central",
+    "latitude": 43.6000,
+    "longitude": -79.3000
+  },
+  "cn-northwest-1": {
+    "name": "China (Ningxia)",
+    "continentM49": 142,
+    "regionM49": 30,
+    "countryM49": 156,
+    "placement": "north",
+    "subRegion": "Ningxia",
+    "latitude": 35.9000,
+    "longitude": 106.2000
+  },
+  "cn-north-1": {
+    "name": "China (Beijing)",
+    "continentM49": 142,
+    "regionM49": 30,
+    "countryM49": 156,
+    "placement": "northeast",
+    "subRegion": "Beijing",
+    "latitude": 39.9000,
+    "longitude": 116.3000
+  },
+  "eu-central-1": {
+    "name": "EU (Frankfurt)",
+    "continentM49": 150,
+    "regionM49": 155,
+    "countryM49": 276,
+    "subRegion": "Frankfurt",
+    "latitude": 50.1000,
+    "longitude": 8.6000
+  },
+  "eu-west-1": {
+    "name": "EU (Ireland)",
+    "continentM49": 150,
+    "regionM49": 154,
+    "countryM49": 372,
+    "latitude": 53.3000,
+    "longitude": -6.2000
+  },
+  "eu-west-2": {
+    "name": "EU (London)",
+    "continentM49": 150,
+    "regionM49": 155,
+    "countryM49": 826,
+    "placement": "south",
+    "subRegion": "London",
+    "latitude": 50.9000,
+    "longitude": -0.7000
+  },
+  "eu-west-3": {
+    "name": "EU (Paris)",
+    "continentM49": 150,
+    "regionM49": 155,
+    "countryM49": 250,
+    "subRegion": "Paris",
+    "latitude": 48.7000,
+    "longitude": 2.2000
+  },
+  "ap-northeast-1": {
+    "name": "Asia Pacific (Tokyo)",
+    "continentM49": 142,
+    "regionM49": 30,
+    "countryM49": 392,
+    "placement": "east",
+    "subRegion": "Tokyo",
+    "latitude": 35.6000,
+    "longitude": 139.7000
+  },
+  "ap-northeast-2": {
+    "name": "Asia Pacific (Seoul)",
+    "continentM49": 142,
+    "regionM49": 30,
+    "countryM49": 410,
+    "subRegion": "Seoul",
+    "latitude": 37.5000,
+    "longitude": 126.9000
+  },
+  "ap-northeast-3": {
+    "name": "Asia Pacific (Osaka-Local)",
+    "continentM49": 142,
+    "regionM49": 30,
+    "countryM49": 392,
+    "placement": "central",
+    "subRegion": "Osaka",
+    "latitude": 34.6000,
+    "longitude": 135.50000
+  },
+  "ap-southeast-1": {
+    "name": "Asia Pacific (Singapore)",
+    "continentM49": 142,
+    "regionM49": 35,
+    "countryM49": 702,
+    "latitude": 1.2000,
+    "longitude": 103.8000
+  },
+  "ap-southeast-2": {
+    "name": "Asia Pacific (Sydney)",
+    "continentM49": 9,
+    "regionM49": 53,
+    "countryM49": 36,
+    "subRegion": "Sydney",
+    "latitude": -33.8000,
+    "longitude": 151.2000
+  },
+  "ap-south-1": {
+    "name": "Asia Pacific (Mumbai)",
+    "continentM49": 142,
+    "regionM49": 34,
+    "countryM49": 356,
+    "placement": "west",
+    "subRegion": "Mumbai",
+    "latitude": 19.0000,
+    "longitude": 72.8000
+  },
+  "sa-east-1": {
+    "name": "South America (São Paulo)",
+    "continentM49": 19,
+    "regionM49": 5,
+    "countryM49": 76,
+    "placement": "south",
+    "subRegion": "São Paulo",
+    "latitude": -23.5000,
+    "longitude": -46.6000
+  },
+  "us-gov-west-1": {
+    "name": "US Gov West 1",
+    "continentM49": 19,
+    "regionM49": 21,
+    "countryM49": 840,
+    "placement": "west",
+    "latitude": 36.8000,
+    "longitude": -121.1000
+  }
 }

@@ -15,7 +15,7 @@ define(function () {
 			var result = '';
 			if (subscription.parameters && subscription.parameters['service:prov:aws:account']) {
 				// Add console login page
-				result += current.$super('renderServicelink')('home', 'https://'+ subscription.parameters['service:prov:aws:account'] + '.signin.aws.amazon.com/console', 'service:prov:aws:console', null, ' target="_blank"');
+				result += current.$super('renderServicelink')('home', 'https://' + subscription.parameters['service:prov:aws:account'] + '.signin.aws.amazon.com/console', 'service:prov:aws:console', null, ' target="_blank"');
 			}
 			return result;
 		},
@@ -33,4 +33,3 @@ define(function () {
 	};
 	return current;
 });
-	

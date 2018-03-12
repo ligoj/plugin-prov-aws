@@ -34,7 +34,6 @@ import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery.AWS4SignatureQueryB
 import org.ligoj.app.plugin.prov.aws.in.ProvAwsPriceImportResource;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvQuote;
-import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.resource.plugin.CurlRequest;
 import org.ligoj.bootstrap.core.NamedBean;
 import org.ligoj.bootstrap.core.resource.BusinessException;
@@ -70,11 +69,6 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 						ProvQuote.class },
 				StandardCharsets.UTF_8.name());
 		this.subscription = getSubscription("gStack");
-	}
-
-	@Test
-	public void getInstalledEntities() {
-		Assertions.assertTrue(resource.getInstalledEntities().contains(ProvStorageType.class));
 	}
 
 	@Test

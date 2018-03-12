@@ -43,7 +43,9 @@ import org.ligoj.app.plugin.prov.model.Rate;
 import org.ligoj.app.plugin.prov.model.VmOs;
 import org.ligoj.app.resource.plugin.CurlProcessor;
 import org.ligoj.bootstrap.core.INamableBean;
+import org.ligoj.bootstrap.core.dao.csv.CsvForJpa;
 import org.ligoj.bootstrap.core.model.AbstractNamedEntity;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
@@ -58,7 +60,11 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
-	private static final TypeReference<Map<String, String>> MAP_STR = new TypeReference<Map<String, String>>() {
+	private static final TypeReference<Map<String, String>> MAP_STR = new TypeReference<>() {
+		// Nothing to extend
+	};
+
+	private static final TypeReference<Map<String, ProvLocation>> MAP_LOCATION = new TypeReference<>() {
 		// Nothing to extend
 	};
 
@@ -133,12 +139,15 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	/**
 	 * Mapping from API region identifier to region name.
 	 */
-	private Map<String, String> mapRegionToName = new HashMap<>();
+	private Map<String, ProvLocation> mapRegionToName = new HashMap<>();
 
 	/**
 	 * Mapping from storage human name to API name.
 	 */
 	private Map<String, String> mapStorageToApi = new HashMap<>();
+
+	@Autowired
+	protected CsvForJpa csvForBean;
 
 	/**
 	 * Install or update prices.
@@ -173,8 +182,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	private void installStoragePrices(final UpdateContext context) throws IOException {
 		// The previously installed storage types cache. Key is the storage name
 		final Node node = context.getNode();
-		context.setStorageTypes(stRepository.findAllBy(BY_NODE, node.getId()).stream()
-				.collect(Collectors.toMap(INamableBean::getName, Function.identity())));
+		context.setStorageTypes(installStorageTypes(context));
 
 		// Install EBS prices
 		installPrices(context, "ebs", configuration.get(CONF_URL_EBS_PRICES, EBS_PRICES), EbsPrices.class,
@@ -197,6 +205,30 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 					.filter(t -> containsKey(context, t))
 					.filter(t -> install(t, context.getStorageTypes().get(t.getName()), region, previous)).count();
 		});
+	}
+
+	private Map<String, ProvStorageType> installStorageTypes(UpdateContext context) throws IOException {
+		final Map<String, ProvStorageType> previous = stRepository.findAllBy(BY_NODE, context.getNode().getId())
+				.stream().collect(Collectors.toMap(INamableBean::getName, Function.identity()));
+		csvForBean.toBean(ProvStorageType.class, "csv/aws-prov-storage-type.csv").forEach(t -> {
+			final ProvStorageType entity = previous.computeIfAbsent(t.getName(), n -> {
+				t.setNode(context.getNode());
+				return t;
+			});
+
+			// Merge the storage type details
+			entity.setDescription(t.getDescription());
+			entity.setInstanceCompatible(t.isInstanceCompatible());
+			entity.setIops(t.getIops());
+			entity.setLatency(t.getLatency());
+			entity.setMaximal(t.getMaximal());
+			entity.setMinimal(t.getMinimal());
+			entity.setOptimized(t.getOptimized());
+			entity.setThroughput(t.getThroughput());
+			stRepository.save(entity);
+
+		});
+		return previous;
 	}
 
 	/**
@@ -412,10 +444,22 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			final ProvLocation newRegion = new ProvLocation();
 			newRegion.setNode(context.getNode());
 			newRegion.setName(r);
-			locationRepository.saveAndFlush(newRegion);
 			return newRegion;
 		});
-		entity.setDescription(mapRegionToName.get(region));
+
+		// Update the location details as needed
+		if (context.getRegionsMerged().add(region)) {
+			final ProvLocation regionStats = mapRegionToName.getOrDefault(region, new ProvLocation());
+			entity.setContinentM49(regionStats.getContinentM49());
+			entity.setCountryM49(regionStats.getCountryM49());
+			entity.setPlacement(regionStats.getPlacement());
+			entity.setRegionM49(regionStats.getRegionM49());
+			entity.setSubRegion(regionStats.getSubRegion());
+			entity.setLatitude(regionStats.getLatitude());
+			entity.setLongitude(regionStats.getLongitude());
+			entity.setDescription(regionStats.getName());
+			locationRepository.saveAndFlush(entity);
+		}
 		return entity;
 	}
 
@@ -836,7 +880,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	public void initSpotToNewRegion() throws IOException {
 		mapRegionToName.putAll(objectMapper.readValue(
 				IOUtils.toString(new ClassPathResource("aws-regions.json").getInputStream(), StandardCharsets.UTF_8),
-				MAP_STR));
+				MAP_LOCATION));
 		mapSpotToNewRegion.putAll(objectMapper.readValue(IOUtils.toString(
 				new ClassPathResource("spot-to-new-region.json").getInputStream(), StandardCharsets.UTF_8), MAP_STR));
 	}

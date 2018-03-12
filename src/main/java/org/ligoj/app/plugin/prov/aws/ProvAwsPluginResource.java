@@ -8,7 +8,6 @@ import java.io.Writer;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -22,8 +21,6 @@ import javax.ws.rs.core.MediaType;
 
 import org.ligoj.app.api.SubscriptionStatusWithData;
 import org.ligoj.app.dao.SubscriptionRepository;
-import org.ligoj.app.model.Node;
-import org.ligoj.app.model.Parameter;
 import org.ligoj.app.plugin.prov.AbstractProvResource;
 import org.ligoj.app.plugin.prov.ProvResource;
 import org.ligoj.app.plugin.prov.QuoteVo;
@@ -32,7 +29,6 @@ import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery.AWS4SignatureQueryB
 import org.ligoj.app.plugin.prov.aws.auth.AWS4SignerForAuthorizationHeader;
 import org.ligoj.app.plugin.prov.aws.in.ProvAwsPriceImportResource;
 import org.ligoj.app.plugin.prov.in.ImportCatalogService;
-import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.terraform.Terraforming;
 import org.ligoj.app.resource.plugin.CurlProcessor;
 import org.ligoj.app.resource.plugin.CurlRequest;
@@ -117,11 +113,6 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	@Override
 	public boolean checkStatus(final String node, final Map<String, String> parameters) {
 		return validateAccess(parameters);
-	}
-
-	@Override
-	public List<Class<?>> getInstalledEntities() {
-		return Arrays.asList(Node.class, ProvStorageType.class, Parameter.class);
 	}
 
 	@Override

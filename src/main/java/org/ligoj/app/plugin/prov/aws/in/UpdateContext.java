@@ -67,6 +67,12 @@ public class UpdateContext {
 	private Map<String, ProvLocation> regions;
 
 	/**
+	 * The available merged regions.
+	 */
+	@Getter
+	private Set<String> regionsMerged = new HashSet<>();
+
+	/**
 	 * The accepted and existing storage type.
 	 */
 	@Getter

@@ -151,6 +151,11 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 	/**
 	 * Install or update prices.
+	 * 
+	 * @throws IOException
+	 *             When CSV or XML files cannot be read.
+	 * @throws URISyntaxException
+	 *             When CSV or XML files cannot be read.
 	 */
 	public void install() throws IOException, URISyntaxException {
 		final UpdateContext context = new UpdateContext();

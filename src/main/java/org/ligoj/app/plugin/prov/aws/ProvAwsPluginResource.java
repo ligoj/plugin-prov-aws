@@ -175,7 +175,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 		// Call "DescribeKeyPairs" service
 		final String query = "Action=DescribeKeyPairs&Version=2016-11-15";
 		final AWS4SignatureQueryBuilder signatureQueryBuilder = AWS4SignatureQuery.builder().service("ec2")
-				.host("ec2." + getRegion() + ".amazonaws.com").path("/").body(query);
+				.region(getRegion()).path("/").body(query);
 		final CurlRequest request = newRequest(signatureQueryBuilder, subscription);
 		// extract key pairs from response
 		final List<NamedBean<String>> keys = new ArrayList<>();
@@ -247,19 +247,14 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 		// Call S3 ls service
 		// TODO Use EC2 instead of S3
 		final AWS4SignatureQueryBuilder builder = AWS4SignatureQuery.builder().method("GET").service("s3")
-				.host(getS3Host()).path("/");
+				.region(getRegion()).path("/");
 		return new CurlProcessor().process(newRequest(builder, parameters));
 	}
 
 	/**
-	 * Return the default S3 hot to validate the account
-	 */
-	protected String getS3Host() {
-		return "s3-" + getRegion() + ".amazonaws.com";
-	}
-
-	/**
 	 * Return the default region for this plug-in.
+	 * 
+	 * @return the default region.
 	 */
 	protected String getRegion() {
 		return configuration.get(CONF_REGION, DEFAULT_REGION);
@@ -276,7 +271,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 		// Call S3 ls service
 		// TODO Use EC2 instead of S3
 		final AWS4SignatureQueryBuilder builder = AWS4SignatureQuery.builder().method("GET").service("s3")
-				.host(getS3Host()).path("/");
+				.region(getRegion()).path("/");
 		return new CurlProcessor().process(newRequest(builder, subscription));
 	}
 }

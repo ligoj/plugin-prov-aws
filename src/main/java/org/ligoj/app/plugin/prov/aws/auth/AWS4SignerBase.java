@@ -26,17 +26,25 @@ public abstract class AWS4SignerBase {
 	private URLCodec urlCodec = new URLCodec();
 
 	/**
-	 * Returns the canonical collection of header names that will be included in the
-	 * signature. For AWS4, all header names must be included in the process in
-	 * sorted canonicalized order.
+	 * Returns the canonical collection of header names that will be included in the signature. For AWS4, all header
+	 * names must be included in the process in sorted canonicalized order.
+	 * 
+	 * @param headers
+	 *            Current headers.
+	 * @return Appended headers names only.
 	 */
 	protected String getCanonicalizeHeaderNames(final Map<String, String> headers) {
-		return headers.keySet().stream().sorted(String.CASE_INSENSITIVE_ORDER).map(String::toLowerCase).collect(Collectors.joining(";"));
+		return headers.keySet().stream().sorted(String.CASE_INSENSITIVE_ORDER).map(String::toLowerCase)
+				.collect(Collectors.joining(";"));
 	}
 
 	/**
-	 * Computes the canonical headers with values for the request. For AWS4, all
-	 * headers must be included in the signing process.
+	 * Computes the canonical headers with values for the request. For AWS4, all headers must be included in the signing
+	 * process.
+	 * 
+	 * @param headers
+	 *            Current headers.
+	 * @return Appended headers names and values.
 	 */
 	protected String getCanonicalizedHeaderString(final Map<String, String> headers) {
 		if (headers.isEmpty()) {
@@ -52,35 +60,47 @@ public abstract class AWS4SignerBase {
 	}
 
 	/**
-	 * Returns the canonical request string to go into the signer process; this
-	 * consists of several canonical sub-parts.
-	 *
-	 * @return
+	 * Returns the canonical request string to go into the signer process; this consists of several canonical sub-parts.
+	 * 
+	 * @param path
+	 *            URL path.
+	 * @param method
+	 *            The HTTP method.
+	 * @param headerNames
+	 *            Canonicalized header names.
+	 * @param headers
+	 *            Canonicalized header names and values.
+	 * @param bodyHash
+	 *            Hash digest of the body..
+	 * @return The canonicalized string request without body.
 	 */
-	protected String getCanonicalRequest(final String path, final String httpMethod, final String queryParameters,
-			final String canonicalizedHeaderNames, final String canonicalizedHeaders, final String bodyHash) {
-		return httpMethod + LF + getCanonicalizedResourcePath(path) + LF + queryParameters + LF + canonicalizedHeaders + LF
-				+ canonicalizedHeaderNames + LF + bodyHash;
+	protected String getCanonicalRequest(final String path, final String method, final String parameters,
+			final String headerNames, final String headers, final String bodyHash) {
+		return method + LF + getCanonicalizedResourcePath(path) + LF + parameters + LF + headers + LF + headerNames + LF
+				+ bodyHash;
 	}
 
 	/**
 	 * Returns the canonicalized resource path for the service endpoint.
+	 * 
+	 * @param path
+	 *            URL path.
+	 * @return The canonicalized URL request.
 	 */
 	protected String getCanonicalizedResourcePath(final String path) {
 		try {
-			return StringUtils.prependIfMissing(urlCodec.encode(StringUtils.trimToEmpty(path)).replace("%2F", "/"), "/");
+			return StringUtils.prependIfMissing(urlCodec.encode(StringUtils.trimToEmpty(path)).replace("%2F", "/"),
+					"/");
 		} catch (final EncoderException e) {
 			throw new TechnicalException("Error during resource path encoding", e);
 		}
 	}
 
 	/**
-	 * Examines the specified query string parameters and returns a canonicalized
-	 * form.
+	 * Examines the specified query string parameters and returns a canonicalized form.
 	 * <p>
-	 * The canonicalized query string is formed by first sorting all the query
-	 * string parameters, then URI encoding both the key and value and then joining
-	 * them, in order, separating key value pairs with an '&amp;'.
+	 * The canonicalized query string is formed by first sorting all the query string parameters, then URI encoding both
+	 * the key and value and then joining them, in order, separating key value pairs with an '&amp;'.
 	 *
 	 * @param parameters
 	 *            The query string parameters to be canonicalized.
@@ -116,11 +136,12 @@ public abstract class AWS4SignerBase {
 	 * Hashes the string contents (assumed to be UTF-8) using the SHA-256 algorithm.
 	 * 
 	 * @param text
-	 *            The text to hash.
-	 * @return The hash text.
+	 *            Text to hash.
+	 * @return Hashed text.
 	 */
 	public String hash(final String text) {
-		return Hex.encodeHexString(DigestUtils.getSha256Digest().digest(org.apache.commons.codec.binary.StringUtils.getBytesUtf8(text)));
+		return Hex.encodeHexString(
+				DigestUtils.getSha256Digest().digest(org.apache.commons.codec.binary.StringUtils.getBytesUtf8(text)));
 	}
 
 	/**

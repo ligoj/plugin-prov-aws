@@ -456,6 +456,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		if (context.getRegionsMerged().add(region)) {
 			final ProvLocation regionStats = mapRegionToName.getOrDefault(region, new ProvLocation());
 			entity.setContinentM49(regionStats.getContinentM49());
+			entity.setCountryA2(regionStats.getCountryA2());
 			entity.setCountryM49(regionStats.getCountryM49());
 			entity.setPlacement(regionStats.getPlacement());
 			entity.setRegionM49(regionStats.getRegionM49());

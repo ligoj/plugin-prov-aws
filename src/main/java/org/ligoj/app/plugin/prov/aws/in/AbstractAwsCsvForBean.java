@@ -29,9 +29,6 @@ abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 		HEADERS_MAPPING.put("TermType", "termType");
 		HEADERS_MAPPING.put("PricePerUnit", "pricePerUnit");
 		HEADERS_MAPPING.put("Location", "location");
-		HEADERS_MAPPING.put("Network Performance", "networkPerformance");
-		HEADERS_MAPPING.put("EBS Optimized", "ebsOptimized");
-		HEADERS_MAPPING.put("Current Generation", "currentGeneration");
 	}
 
 	/**

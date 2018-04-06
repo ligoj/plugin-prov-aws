@@ -34,6 +34,9 @@ public class CsvForBeanEc2 extends AbstractAwsCsvForBean<AwsEc2Price> {
 		HEADERS_MAPPING.put("License Model", "licenseModel");
 		HEADERS_MAPPING.put("ECU", "ecu");
 		HEADERS_MAPPING.put("Pre Installed S/W", "software");
+		HEADERS_MAPPING.put("Network Performance", "networkPerformance");
+		HEADERS_MAPPING.put("EBS Optimized", "ebsOptimized");
+		HEADERS_MAPPING.put("Current Generation", "currentGeneration");
 	}
 
 	/**

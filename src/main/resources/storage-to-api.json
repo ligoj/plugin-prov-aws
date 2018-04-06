@@ -4,7 +4,9 @@
 	"ebsTOHDD":"st1",
 	"ebsColdHDD":"sc1",
 	"ebsSnapsToS3":"snapshot",
-	"storage": "s3",
-	"infrequentAccessStorage": "s3-ia",
-	"glacierStorage": "glacier"
+	"Standard": "s3",
+	"Standard - Infrequent Access": "s3-ia",
+	"One Zone - Infrequent Access": "s3-z-ia",
+	"Reduced Redundancy": "s3-rr",
+	"Amazon Glacier": "glacier"
 }

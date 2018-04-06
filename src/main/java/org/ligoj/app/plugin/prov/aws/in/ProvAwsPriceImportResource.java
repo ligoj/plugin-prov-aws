@@ -36,6 +36,7 @@ import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
 import org.ligoj.app.plugin.prov.model.ProvInstanceType;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
+import org.ligoj.app.plugin.prov.model.ProvStorageOptimized;
 import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.model.ProvTenancy;
@@ -50,6 +51,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Functions;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -93,9 +95,9 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	private static final String EFS_PRICES = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEFS/current/index.csv";
 
 	/**
-	 * The S3 prices end-point. Contains the prices for all regions.
+	 * The S3 price end-point, a CSV file. Multi-region.
 	 */
-	private static final String S3_PRICES = "https://a0.awsstatic.com/pricing/1/s3/pricing-storage-s3.js";
+	private static final String S3_PRICES = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonS3/current/index.csv";
 
 	/**
 	 * Configuration key used for AWS URL prices.
@@ -166,15 +168,14 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		// The previously installed location cache. Key is the location AWS name
 		context.setRegions(locationRepository.findAllBy(BY_NODE, node.getId()).stream().filter(this::isEnabledRegion)
 				.collect(Collectors.toMap(INamableBean::getName, Function.identity())));
-
-		// Update the workload : nb.regions + 3 (spot, EBS, S3, EFS)
 		nextStep(node, null, 0);
 
 		// Proceed to the install
 		installStoragePrices(context);
 		installComputePrices(context);
 
-		// EFS need to be processed after EC2 for region mapping
+		// S3 and NFS need to be processed after EC2 for region mapping
+		installS3Prices(context);
 		installEfsPrices(context);
 	}
 
@@ -200,16 +201,6 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 									j -> install(j, context.getStorageTypes().get(t.getName()), region, previous)))
 							.count();
 				});
-
-		// Install S3 prices, note only the first 50TB storage tiers is considered
-		installPrices(context, "s3", configuration.get(CONF_URL_S3_PRICES, S3_PRICES), S3Prices.class, (r, region) -> {
-			// Get previous prices for this location
-			final Map<Integer, ProvStoragePrice> previous = spRepository.findAll(node.getId(), region.getName())
-					.stream().collect(Collectors.toMap(p -> p.getType().getId(), Function.identity()));
-			return (int) r.getTiers().stream().limit(1).flatMap(tiers -> tiers.getStorageTypes().stream())
-					.filter(t -> containsKey(context, t))
-					.filter(t -> install(t, context.getStorageTypes().get(t.getName()), region, previous)).count();
-		});
 	}
 
 	private Map<String, ProvStorageType> installStorageTypes(UpdateContext context) throws IOException {
@@ -341,7 +332,116 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	}
 
 	/**
-	 * Install AWS prices from the JSON file.
+	 * Install S3 AWS prices from the CSV file. Note only the first 50TB storage tiers is considered
+	 * 
+	 * @param context
+	 *            The update context.
+	 * @param api
+	 *            The API name, only for log.
+	 * @param endpoint
+	 *            The prices end-point JSON URL.
+	 * @param apiClass
+	 *            The mapping model from JSON at region level.
+	 * @param mapper
+	 *            The mapping function from JSON at region level to JPA entity.
+	 */
+	private void installS3Prices(final UpdateContext context) throws IOException, URISyntaxException {
+		log.info("AWS S3 prices ...");
+		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("s3"));
+
+		// Track the created instance to cache partial costs
+		final Map<String, ProvStoragePrice> previous = spRepository.findAllBy("type.node.id", context.getNode().getId())
+				.stream().filter(p -> p.getType().getName().startsWith("s3") || "glacier".equals(p.getType().getName()))
+				.collect(Collectors.toMap(p2 -> p2.getLocation().getName() + p2.getType().getName(),
+						Function.identity()));
+		context.setPreviousStorage(previous);
+		context.setStorageTypes(previous.values().stream().map(ProvStoragePrice::getType).distinct()
+				.collect(Collectors.toMap(ProvStorageType::getName, Functions.identity())));
+		context.setStorageTypesMerged(new HashMap<>());
+
+		int priceCounter = 0;
+		BufferedReader reader = null;
+		try {
+			// Get the remote prices stream
+			reader = new BufferedReader(new InputStreamReader(
+					new URI(configuration.get(CONF_URL_S3_PRICES, S3_PRICES)).toURL().openStream()));
+			// Pipe to the CSV reader
+			final CsvForBeanS3 csvReader = new CsvForBeanS3(reader);
+
+			// Build the AWS storage prices from the CSV
+			AwsS3Price csv = null;
+			do {
+				// Read the next one
+				csv = csvReader.read();
+				if (csv == null) {
+					// EOF
+					break;
+				}
+				final ProvLocation location = getRegionByHumanName(context, csv.getLocation());
+				if (location != null) {
+					// Supported location
+					instalS3Price(context, csv, location);
+					priceCounter++;
+				}
+			} while (true);
+		} finally {
+			// Report
+			log.info("AWS S3 finished : {} prices", priceCounter);
+			IOUtils.closeQuietly(reader);
+			nextStep(context, null, 1);
+		}
+	}
+
+	private Double toPercent(String raw) {
+		if (StringUtils.endsWith(raw, "%")) {
+			return Double.valueOf(raw.substring(0, raw.length() - 1));
+		}
+
+		// Not a valid percent
+		return null;
+	}
+
+	private void instalS3Price(final UpdateContext context, final AwsS3Price csv, final ProvLocation location) {
+		// Resolve the type
+		final String name = mapStorageToApi.get(csv.getVolumeType());
+		if (name == null) {
+			log.warn("Unknown storage type {}, ignored", csv.getVolumeType());
+			return;
+		}
+
+		final ProvStorageType type = context.getStorageTypesMerged().computeIfAbsent(name, n -> {
+			final ProvStorageType t = context.getStorageTypes().computeIfAbsent(name, n2 -> {
+				// New storage type
+				final ProvStorageType newType = new ProvStorageType();
+				newType.setName(n2);
+				newType.setNode(context.getNode());
+				return newType;
+			});
+
+			// Update storage details
+			t.setAvailability(toPercent(csv.getAvailability()));
+			t.setDurability(toPercent(csv.getDurability()));
+			t.setOptimized(ProvStorageOptimized.DURABILITY);
+			t.setLatency(name.equals("glacier") ? Rate.WORST : Rate.MEDIUM);
+			t.setDescription("{\"class\":\"" + csv.getStorageClass() + "\",\"type\":\"" + csv.getVolumeType() + "\"}");
+			stRepository.saveAndFlush(t);
+			return t;
+		});
+
+		// Update the price as needed
+		saveAsNeeded(context.getPreviousStorage().computeIfAbsent(location.getName() + name, r -> {
+			final ProvStoragePrice p = new ProvStoragePrice();
+			p.setLocation(location);
+			p.setType(type);
+			p.setCode(csv.getSku());
+			return p;
+		}), csv.getPricePerUnit(), p -> {
+			spRepository.save(p);
+		});
+	}
+
+	/**
+	 * Install AWS prices from the CSV file.
 	 * 
 	 * @param context
 	 *            The update context.
@@ -356,10 +456,11 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 */
 	private void installEfsPrices(final UpdateContext context) throws IOException, URISyntaxException {
 		log.info("AWS EFS prices ...");
+		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("efs"));
 
 		// Track the created instance to cache partial costs
-		final ProvStorageType efs = stRepository.findAllBy(BY_NODE, context.getNode().getId()).stream()
-				.filter(t -> t.getName().equals("efs")).findAny().get();
+		final ProvStorageType efs = stRepository
+				.findAllBy(BY_NODE, context.getNode().getId(), new String[] { "name" }, "efs").get(0);
 		final Map<ProvLocation, ProvStoragePrice> previous = spRepository.findAllBy("type", efs).stream()
 				.collect(Collectors.toMap(ProvStoragePrice::getLocation, Function.identity()));
 
@@ -392,6 +493,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			// Report
 			log.info("AWS EFS finished : {} prices", priceCounter);
 			IOUtils.closeQuietly(reader);
+			nextStep(context, null, 1);
 		}
 	}
 
@@ -402,6 +504,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			final ProvStoragePrice p = new ProvStoragePrice();
 			p.setLocation(r);
 			p.setType(efs);
+			p.setCode(csv.getSku());
 			return p;
 		}), csv.getPricePerUnit(), p -> {
 			spRepository.save(p);
@@ -428,7 +531,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	private void nextStep(final Node node, final String location, final int step) {
 		importCatalogResource.nextStep(node.getId(), t -> {
 			importCatalogResource.updateStats(t);
-			t.setWorkload(t.getNbLocations() + 4); // NB region + 4 (Spot+S3+EBS+EFS)
+			t.setWorkload(t.getNbLocations() + 4); // NB region (for EC2) + 4 (Spot+S3+EBS+EFS)
 			t.setDone(t.getDone() + step);
 			t.setLocation(location);
 		});

@@ -9,6 +9,7 @@ import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
 import org.ligoj.app.plugin.prov.model.ProvInstanceType;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
+import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
 
 import lombok.Getter;
@@ -53,6 +54,13 @@ public class UpdateContext {
 	private Map<String, ProvInstancePrice> previous;
 
 	/**
+	 * The previous installed storage prices.
+	 */
+	@Getter
+	@Setter
+	private Map<String, ProvStoragePrice> previousStorage;
+
+	/**
 	 * The current partial cost for up-front options.
 	 */
 	@Getter
@@ -78,5 +86,12 @@ public class UpdateContext {
 	@Getter
 	@Setter
 	private Map<String, ProvStorageType> storageTypes;
+
+	/**
+	 * The merged storage type.
+	 */
+	@Getter
+	@Setter
+	private Map<String, ProvStorageType> storageTypesMerged;
 
 }

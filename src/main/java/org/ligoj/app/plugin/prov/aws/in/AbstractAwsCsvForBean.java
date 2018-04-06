@@ -42,7 +42,8 @@ abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 			throws IOException {
 
 		// Complete the standard mappings
-		mapping.putAll(HEADERS_MAPPING);
+		final Map<String, String> mMapping = new HashMap<>(HEADERS_MAPPING);
+		mMapping.putAll(mapping);
 
 		final CsvReader csvReader = new CsvReader(reader, ',');
 
@@ -55,7 +56,7 @@ abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 			}
 			if (values.get(0).equals("SKU")) {
 				// The real CSV header has be reached
-				this.beanReader = newCsvReader(reader, values.stream().map(v -> mapping.getOrDefault(v, "drop")).toArray(String[]::new),
+				this.beanReader = newCsvReader(reader, values.stream().map(v -> mMapping.getOrDefault(v, "drop")).toArray(String[]::new),
 						beanType);
 				break;
 			}

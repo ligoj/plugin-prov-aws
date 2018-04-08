@@ -51,7 +51,6 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Functions;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -356,7 +355,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 						Function.identity()));
 		context.setPreviousStorage(previous);
 		context.setStorageTypes(previous.values().stream().map(ProvStoragePrice::getType).distinct()
-				.collect(Collectors.toMap(ProvStorageType::getName, Functions.identity())));
+				.collect(Collectors.toMap(ProvStorageType::getName, Function.identity())));
 		context.setStorageTypesMerged(new HashMap<>());
 
 		int priceCounter = 0;

@@ -419,7 +419,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 			// Update storage details
 			t.setAvailability(toPercent(csv.getAvailability()));
-			t.setDurability(toPercent(csv.getDurability()));
+			t.setDurability9(StringUtils.countMatches(StringUtils.defaultString(csv.getDurability()), '9'));
 			t.setOptimized(ProvStorageOptimized.DURABILITY);
 			t.setLatency(name.equals("glacier") ? Rate.WORST : Rate.MEDIUM);
 			t.setDescription("{\"class\":\"" + csv.getStorageClass() + "\",\"type\":\"" + csv.getVolumeType() + "\"}");

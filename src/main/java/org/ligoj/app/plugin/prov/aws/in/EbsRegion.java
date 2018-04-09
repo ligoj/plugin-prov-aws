@@ -29,6 +29,11 @@ public class EbsRegion extends AwsRegionPrices {
 	@Setter
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	public static class EbsType extends NamedBean<Integer> {
+
+		/**
+		 * SID
+		 */
+		private static final long serialVersionUID = 1L;
 		private Collection<EbsValue> values;
 	}
 

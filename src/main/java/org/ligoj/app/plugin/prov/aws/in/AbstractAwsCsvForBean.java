@@ -6,6 +6,7 @@ package org.ligoj.app.plugin.prov.aws.in;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -75,8 +76,8 @@ abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 	 */
 	@Override
 	public final <B> List<B> toBean(final Class<B> beanType, final Reader input) {
-		// Disable this method,
-		return null;
+		// Disable this method
+		return Collections.emptyList();
 	}
 
 	/**

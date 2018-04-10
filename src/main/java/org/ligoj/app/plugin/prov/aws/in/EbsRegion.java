@@ -37,7 +37,7 @@ public class EbsRegion extends AwsRegionPrices {
 		 * SID
 		 */
 		private static final long serialVersionUID = 1L;
-		private Collection<EbsValue> values;
+		private transient Collection<EbsValue> values;
 	}
 
 	/**

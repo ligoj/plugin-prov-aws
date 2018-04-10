@@ -437,9 +437,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			p.setType(type);
 			p.setCode(csv.getSku());
 			return p;
-		}), csv.getPricePerUnit(), p -> {
-			spRepository.save(p);
-		});
+		}), csv.getPricePerUnit(), p -> spRepository.save(p));
 	}
 
 	/**
@@ -508,9 +506,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			p.setType(efs);
 			p.setCode(csv.getSku());
 			return p;
-		}), csv.getPricePerUnit(), p -> {
-			spRepository.save(p);
-		});
+		}), csv.getPricePerUnit(), p -> spRepository.save(p));
 	}
 
 	/**
@@ -625,7 +621,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 							});
 
 					// Update the price as needed
-					final double cost = Double.valueOf(op.getPrices().get("USD"));
+					final double cost = Double.parseDouble(op.getPrices().get("USD"));
 					return saveAsNeeded(price, round3Decimals(cost * 24 * 30.5), p -> {
 						p.setCostPeriod(cost);
 						ipRepository.save(price);
@@ -716,9 +712,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			});
 
 			// Update the price as needed
-			return saveAsNeeded(price, Double.valueOf(usd), p -> {
-				spRepository.save(price);
-			});
+			return saveAsNeeded(price, Double.valueOf(usd), p -> spRepository.save(price));
 		}).isPresent();
 	}
 
@@ -812,7 +806,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		final ProvInstancePriceTerm term = context.getPriceTypes().computeIfAbsent(csv.getOfferTermCode(),
 				k -> newInstancePriceTerm(context, csv));
 		final String code = toCode(csv);
-		final ProvInstancePrice price = context.getPrevious().computeIfAbsent(code, c -> {
+		return context.getPrevious().computeIfAbsent(code, c -> {
 			final ProvInstancePrice p = new ProvInstancePrice();
 			p.setLocation(region);
 			p.setCode(code);
@@ -823,8 +817,6 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			p.setTerm(term);
 			return p;
 		});
-
-		return price;
 	}
 
 	private String toCode(final AwsEc2Price csv) {

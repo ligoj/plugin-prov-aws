@@ -660,8 +660,8 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		final QuoteStorageLoopup s3Lookpup = qsResource
 				.lookup(subscription, 1, Rate.MEDIUM, null, ProvStorageOptimized.DURABILITY, null).get(0);
 		final ProvStorageType type = s3Lookpup.getPrice().getType();
-		Assertions.assertEquals(99.999999999d, type.getAvailability(), 0.000000001d);
-		Assertions.assertEquals(4, type.getDurability9().intValue());
+		Assertions.assertEquals(99.5d, type.getAvailability(), 0.000000001d);
+		Assertions.assertEquals(11, type.getDurability9().intValue());
 		
 		final QuoteStorageEditionVo svo3 = new QuoteStorageEditionVo();
 		svo3.setSize(1);

@@ -1,7 +1,5 @@
 /*
- * This file is intended for use only on aws.amazon.com. We do not guarantee its availability or accuracy.
- *
- * Copyright 2017 Amazon.com, Inc. or its affiliates. All rights reserved.
+ * Licensed under MIT (https://github.com/ligoj/ligoj/blob/master/LICENSE)
  */
 callback({"vers":0.01,"config":{"currencies":["USD"],"rate":"perGB","regions":[
 {"region":"eu-west-1","types":[

@@ -1,0 +1,80 @@
+{
+    "widgets": [
+        {
+            "type": "metric",
+            "x": 9,
+            "y": 0,
+            "width": 9,
+            "height": 9,
+            "properties": {
+                "view": "timeSeries",
+                "metrics": [{{balancing}}
+                ],
+                "region": "${region}",
+                "title": "Balancing",
+                "stacked": true,
+                "period": ${period}
+            }
+        },
+        {
+            "type": "metric",
+            "x": 9,
+            "y": 9,
+            "width": 9,
+            "height": 9,
+            "properties": {
+                "view": "timeSeries",
+                "metrics": [{{scaling}}
+                ],
+                "region": "${region}",
+                "title": "Scaling",
+                "stacked": true,
+                "period": ${period}
+            }
+        },
+        {
+            "type": "metric",
+            "x": 18,
+            "y": 0,
+            "width": 6,
+            "height": 9,
+            "properties": {
+                "view": "timeSeries",
+                "stacked": false,
+                "metrics": [{{latency}}
+                ],
+                "region": "${region}",
+                "title": "Latency",
+                "period": ${period}
+            }
+        },
+        {
+            "type": "text",
+            "x": 0,
+            "y": 0,
+            "width": 9,
+            "height": 18,
+            "styles": "undefined",
+            "properties": {
+                "markdown": "\n${md}"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 18,
+            "y": 9,
+            "width": 6,
+            "height": 9,
+            "properties": {
+                "view": "timeSeries",
+                "metrics": [{{network}}
+                ],
+                "region": "eu-west-3",
+                "title": "Network",
+                "stacked": true,
+                "period": ${period}
+            }
+        }
+ 
+     ]
+}

@@ -3,13 +3,8 @@
  */
 package org.ligoj.app.plugin.prov.aws;
 
-import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +18,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
 import org.ligoj.app.api.SubscriptionStatusWithData;
-import org.ligoj.app.dao.SubscriptionRepository;
+import org.ligoj.app.model.Subscription;
 import org.ligoj.app.plugin.prov.AbstractProvResource;
 import org.ligoj.app.plugin.prov.ProvResource;
 import org.ligoj.app.plugin.prov.QuoteVo;
@@ -91,9 +86,6 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	private ConfigurationResource configuration;
 
 	@Autowired
-	private SubscriptionRepository sRepository;
-
-	@Autowired
 	protected ProvAwsPriceImportResource priceImport;
 
 	@Autowired
@@ -152,21 +144,12 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	}
 
 	@Override
-	public void terraform(final OutputStream output, final int subscription, final QuoteVo quote) throws IOException {
-		final Writer writer = new BufferedWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8));
-		terraformService.writeTerraform(writer, quote, sRepository.findOne(subscription));
-		writer.flush();
-	}
-
-	@Override
-	public String[] commandLineParameters(final int subscription) {
-		final Map<String, String> parameters = subscriptionResource.getParameters(subscription);
-		return new String[] { "-var", "'AWS_ACCESS_KEY_ID=" + parameters.get(PARAMETER_ACCESS_KEY_ID) + "'", "-var",
-				"'AWS_SECRET_ACCESS_KEY=" + parameters.get(PARAMETER_SECRET_ACCESS_KEY) + "'" };
+	public void generate(final Subscription subscription, final QuoteVo quote) throws IOException {
+		terraformService.write(subscription, quote);
 	}
 
 	/**
-	 * Return EC2 keys
+	 * Return EC2 key names.
 	 * 
 	 * @param subscription
 	 *            The related subscription.

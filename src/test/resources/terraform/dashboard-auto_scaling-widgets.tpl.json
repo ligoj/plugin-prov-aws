@@ -1,0 +1,94 @@
+{
+    "widgets": [
+        {
+            "type": "metric",
+            "x": 9,
+            "y": 0,
+            "width": 9,
+            "height": 9,
+            "properties": {
+                "view": "timeSeries",
+                "metrics": [
+[ "AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", "${alb0_tg}", "LoadBalancer", "${alb0}"", { "color": "#2ca02c", "yAxis": "left", "label": "OK ${alb0_name}", "period": ${metrics_period} } ],
+[ "AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", "${alb1_tg}", "LoadBalancer", "${alb1}"", { "color": "#2ca02c", "yAxis": "left", "label": "OK ${alb1_name}", "period": ${metrics_period} } ],
+[ "AWS/ApplicationELB", "UnHealthyHostCount", "TargetGroup", "${alb0_tg}", "LoadBalancer", "${alb0}"", { "color": "#d62728", "yAxis": "right", "label": "KO ${alb0_name}", "period": ${metrics_period} } ],
+[ "AWS/ApplicationELB", "UnHealthyHostCount", "TargetGroup", "${alb1_tg}", "LoadBalancer", "${alb1}"", { "color": "#d62728", "yAxis": "right", "label": "KO ${alb1_name}", "period": ${metrics_period} } ]
+                ],
+                "region": "${region}",
+                "title": "Balancing",
+                "stacked": true,
+                "period": ${period}
+            }
+        },
+        {
+            "type": "metric",
+            "x": 9,
+            "y": 9,
+            "width": 9,
+            "height": 9,
+            "properties": {
+                "view": "timeSeries",
+                "metrics": [
+[ "AWS/AutoScaling", "GroupInServiceInstances", "AutoScalingGroupName", "${asg0}", { "color": "#2ca02c", "yAxis": "left", "label": "${asg0_name}", "period": ${metrics_period} } ],
+[ "AWS/AutoScaling", "GroupInServiceInstances", "AutoScalingGroupName", "${asg1}", { "color": "#2ca02c", "yAxis": "left", "label": "${asg1_name}", "period": ${metrics_period} } ],
+[ "AWS/AutoScaling", "GroupPendingInstances", "AutoScalingGroupName", "${asg0}", { "color": "#ff7f0e", "yAxis": "right", "label": "Pending ${asg0_name}", "period": ${metrics_period} } ],
+[ "AWS/AutoScaling", "GroupPendingInstances", "AutoScalingGroupName", "${asg1}", { "color": "#ff7f0e", "yAxis": "right", "label": "Pending ${asg1_name}", "period": ${metrics_period} } ],
+[ "AWS/AutoScaling", "GroupTerminatingInstances", "AutoScalingGroupName", "${asg0}", { "color": "#d62728", "yAxis": "right", "label": "Term. ${asg0_name}", "period": ${metrics_period} } ],
+[ "AWS/AutoScaling", "GroupTerminatingInstances", "AutoScalingGroupName", "${asg1}", { "color": "#d62728", "yAxis": "right", "label": "Term. ${asg1_name}", "period": ${metrics_period} } ]
+                ],
+                "region": "${region}",
+                "title": "Scaling",
+                "stacked": true,
+                "period": ${period}
+            }
+        },
+        {
+            "type": "metric",
+            "x": 18,
+            "y": 0,
+            "width": 6,
+            "height": 9,
+            "properties": {
+                "view": "timeSeries",
+                "stacked": false,
+                "metrics": [
+[ "AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", "${alb0}", { "stat": "Average", "label": "${alb0_name}", "period": ${metrics_period} } ],
+[ "AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", "${alb1}", { "stat": "Average", "label": "${alb1_name}", "period": ${metrics_period} } ]
+                ],
+                "region": "${region}",
+                "title": "Latency",
+                "period": ${period}
+            }
+        },
+        {
+            "type": "text",
+            "x": 0,
+            "y": 0,
+            "width": 9,
+            "height": 18,
+            "styles": "undefined",
+            "properties": {
+                "markdown": "\n${md}"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 18,
+            "y": 9,
+            "width": 6,
+            "height": 9,
+            "properties": {
+                "view": "timeSeries",
+                "metrics": [
+[ "AWS/ApplicationELB", "ProcessedBytes", "LoadBalancer", "${alb0}", { "stat": "Average", "label": "${alb0_name}", "period": ${metrics_period} } ],
+[ "AWS/ApplicationELB", "ProcessedBytes", "LoadBalancer", "${alb1}", { "stat": "Average", "label": "${alb1_name}", "period": ${metrics_period} } ]
+                ],
+                "region": "eu-west-3",
+                "title": "Network",
+                "stacked": true,
+                "period": ${period}
+            }
+        }
+ 
+     ]
+}

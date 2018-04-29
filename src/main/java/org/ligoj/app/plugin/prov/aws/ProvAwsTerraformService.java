@@ -1,26 +1,42 @@
 /*
- * Licensed under MIT (https://github.com/ligoj/ligoj/blob/master/LICENSE)
+  * Licensed under MIT (https://github.com/ligoj/ligoj/blob/master/LICENSE)
  */
 package org.ligoj.app.plugin.prov.aws;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.function.Function;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.output.FileWriterWithEncoding;
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.ligoj.app.model.Project;
 import org.ligoj.app.model.Subscription;
 import org.ligoj.app.plugin.prov.QuoteVo;
-import org.ligoj.app.plugin.prov.model.InternetAccess;
+import org.ligoj.app.plugin.prov.model.AbstractQuoteResource;
+import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
 import org.ligoj.app.plugin.prov.model.ProvQuoteStorage;
 import org.ligoj.app.plugin.prov.model.VmOs;
+import org.ligoj.app.plugin.prov.terraform.TerraformUtils;
 import org.ligoj.app.resource.subscription.SubscriptionResource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 /**
@@ -28,473 +44,427 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class ProvAwsTerraformService {
+
+	/**
+	 * Mapping between OS name and AMI base name handled by Terraform.
+	 */
+	private Map<VmOs, String> mappingOsAmi = new EnumMap<>(VmOs.class);
+
+	/**
+	 * Mapping between OS name and root device name.
+	 */
+	private final Map<VmOs, String> mappingOsRootDevice = new EnumMap<>(VmOs.class);
+
+	/**
+	 * Mapping between OS name and EBS device name. The value is a format using the last char and increment it by the
+	 * index (base 0). Sample, for index <code>4</code>:
+	 * <ul>
+	 * <li>Format <code>/dev/sda1</code> gives <code>/dev/sda4</code></li>
+	 * <li>Format <code>/dev/xvda</code> gives <code>/dev/xvdj</code></li>
+	 * </ul>
+	 * Note that the root device does not use this format. The first non root EBS device has index <code>0</code>.
+	 * 
+	 * @see <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html">device_naming.html</a> for
+	 *      recommendations.
+	 * @see <a href="https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/device_naming.html">device_naming.html</a>
+	 *      for recommendations.
+	 * 
+	 */
+	private final Map<VmOs, String> mappingOsEbsDevice = new EnumMap<>(VmOs.class);
+
+	/**
+	 * Default Root device name.
+	 */
+	private static final String DEFAULT_ROOT_DEVICE = "/dev/sda1";
+
+	/**
+	 * Default EBS device format. See {@link #mappingOsEbsDevice} for more details.
+	 */
+	private static final String DEFAULT_EBS_DEVICE = "/dev/sdf";
+
+	public ProvAwsTerraformService() {
+		// AMIs
+		mappingOsAmi.put(VmOs.SUSE, "suse-sles");
+		mappingOsAmi.put(VmOs.LINUX, "amazon");
+
+		// Root devices
+		mappingOsRootDevice.put(VmOs.LINUX, "/dev/xvda"); // AMZ
+
+		// EBS devices
+		mappingOsEbsDevice.put(VmOs.WINDOWS, "xvdf"); // only Windows
+	}
+
 	@Autowired
 	private SubscriptionResource subscriptionResource;
 
-	private static final String SPOT_INSTANCE_PRICE_TYPE = "Spot";
+	@Autowired
+	protected TerraformUtils utils;
 
 	/**
-	 * mapping between OS name and AMI search string.
-	 */
-	private static final Map<VmOs, String[]> MAPPING_OS_AMI = new EnumMap<>(VmOs.class);
-
-	/**
-	 * mapping between OS name and AMI's owner search string.
-	 */
-	private static final Map<VmOs, String> MAPPING_OS_OWNER = new EnumMap<>(VmOs.class);
-
-	static {
-		// AWS Images
-		MAPPING_OS_AMI.put(VmOs.WINDOWS, new String[] { "name", "Windows_Server-2016-English-Full-Base*" });
-		MAPPING_OS_AMI.put(VmOs.SUSE, new String[] { "name", "suse-sles-12*hvm-ssd-x86_64" });
-		MAPPING_OS_AMI.put(VmOs.RHEL, new String[] { "name", "RHEL-7.4*" });
-		MAPPING_OS_AMI.put(VmOs.LINUX, new String[] { "name", "amzn-ami-hvm-*-x86_64-gp2" });
-
-		// CentOS https://wiki.centos.org/Cloud/AWS
-		MAPPING_OS_AMI.put(VmOs.CENTOS, new String[] { "product-code", "aw0evgkw8e5c1q413zgy5pjce" });
-
-		// Debian https://wiki.debian.org/Cloud/AmazonEC2Image
-		MAPPING_OS_AMI.put(VmOs.DEBIAN, new String[] { "name", "debian-stretch-hvm-x86_64-gp2-*" });
-	}
-
-	static {
-		// AWS Images
-		MAPPING_OS_OWNER.put(VmOs.WINDOWS, "amazon");
-		MAPPING_OS_OWNER.put(VmOs.SUSE, "amazon");
-		MAPPING_OS_OWNER.put(VmOs.RHEL, "amazon");
-		MAPPING_OS_OWNER.put(VmOs.LINUX, "amazon");
-
-		// CentOS https://wiki.centos.org/Cloud/AWS
-		MAPPING_OS_OWNER.put(VmOs.CENTOS, "aws-marketplace");
-
-		// Debian https://wiki.debian.org/Cloud/AmazonEC2Image
-		MAPPING_OS_OWNER.put(VmOs.DEBIAN, "379101102735");
-	}
-
-	/**
-	 * Write Terraform content from a quote instance.
+	 * Generate the Terraform configuration files:
+	 * <ul>
+	 * <li><code>./terraform.tfvars</code> the project, public keys, customizations and subscription variables.</li>
+	 * <li><code>./secrets.auto.tfvars</code> the secret variables, cannot be downloaded.</li>
+	 * <li><code>./$my-region.tf</code> the region specific configuration.</li>
+	 * <li><code>./$my-region/instance-$instance.tf</code> for instances of this quote in a region.</li>
+	 * <li><code>./$my-region/dashboard-*</code> for dashboard in a region.</li>
+	 * </ul>
+	 * Static files are:
+	 * <ul>
+	 * <li><code>./main.tf</code> declaring global configuration.</li>
+	 * <li><code>./variables.tf</code> declaring global variables.</li>
+	 * <li><code>./$my-region.tf</code> the region specific configuration.</li>
+	 * <li><code>./$my-region/variables.tf</code> a specific region variables.</li>
+	 * <li><code>./$my-region/provider.tf</code> for provider configuration.</li>
+	 * <li><code>./$my-region/vpc.tf</code> for VPC configuration.</li>
+	 * <li><code>./$my-region/ami-$os.tf</code> for enabled OS in this region.</li>
+	 * </ul>
 	 * 
-	 * @param writer
-	 *            Target output of Terraform content.
-	 * @param quote
-	 *            quote instance
 	 * @param subscription
-	 *            The related subscription.
+	 *            The subscription.
+	 * @param quote
+	 *            The fetched configuration : instance and storage.
 	 * @throws IOException
 	 *             When Terraform content cannot be written.
 	 */
-	public void writeTerraform(final Writer writer, final QuoteVo quote, final Subscription subscription)
-			throws IOException {
-		final String projectName = subscription.getProject().getName();
-		writeProvider(writer);
-		if (!quote.getInstances().isEmpty()) {
-			writePublicKey(writer);
-			writeNetwork(writer, projectName,
-					quote.getInstances().stream().map(ProvQuoteInstance::getInternet).collect(Collectors.toSet()));
-			writeSecurityGroup(writer, projectName);
-			writeKeyPair(writer, projectName);
-			final Set<VmOs> osToSearch = new HashSet<>();
-			for (final ProvQuoteInstance instance : quote.getInstances()) {
-				writeInstance(writer, quote, instance, projectName);
-				osToSearch.add(instance.getPrice().getOs());
+	public void write(final Subscription subscription, final QuoteVo quote) throws IOException {
+		final Context context = new Context();
+		context.setSubscription(subscription);
+		context.setQuote(quote);
+		writeStatics(context);
+		writeContext(context);
+		writeRegions(context);
+		writeSecrets(subscription);
+	}
+
+	/**
+	 * Write the global subscription and project context.
+	 */
+	private void writeContext(final Context context) throws IOException {
+		final Project project = context.getSubscription().getProject();
+		context.add("project.id", project.getId().toString()).add("project.pkey", project.getPkey())
+				.add("project.name", project.getName())
+				.add("subscription.id", context.getSubscription().getId().toString());
+		template(context, s -> replace(s, context), "terraform.tfvars");
+	}
+
+	private void writeStatics(final Context context) throws IOException {
+		copy(context, "main.tf");
+		copy(context, "variables.tf");
+	}
+
+	private void writeRegions(final Context context) throws IOException {
+		final Set<String> locations = new HashSet<>();
+		context.getQuote().getInstances().stream().map(this::getLocation).map(ProvLocation::getName)
+				.forEach(locations::add);
+		for (final String location : locations) {
+			context.setLocation(location);
+			writeRegion(context);
+		}
+	}
+
+	private ProvLocation getLocation(final AbstractQuoteResource resource) {
+		return Objects.requireNonNullElse(resource.getLocation(), resource.getConfiguration().getLocation());
+	}
+
+	private void writeRegion(final Context context) throws IOException {
+		final List<ProvQuoteInstance> instances = new ArrayList<>();
+		context.getQuote().getInstances().stream().filter(i -> getLocation(i).getName().equals(context.getLocation()))
+				.forEach(instances::add);
+		final Map<InstanceMode, List<ProvQuoteInstance>> modes = new EnumMap<>(InstanceMode.class);
+		Arrays.stream(InstanceMode.values()).forEach(m -> modes.put(m, new ArrayList<>()));
+		instances.stream().forEach(i -> modes.get(toMode(i)).add(i));
+		context.setModes(modes);
+
+		writeRegionStatics(context);
+		writeRegionOs(context, instances);
+		writeRegionDashboard(context);
+		writeRegionInstances(context);
+	}
+
+	private InstanceMode toMode(final ProvQuoteInstance instance) {
+		// xLB
+		if (instance.getMinQuantity() != 1 || instance.getMaxQuantity() == null
+				|| instance.getMaxQuantity().doubleValue() > instance.getMinQuantity()) {
+			return InstanceMode.AUTO_SCALING;
+		}
+
+		// Single EC2 but with a price condition
+		if (ObjectUtils.defaultIfNull(instance.getMaxVariableCost(), 0d) > 0) {
+			return InstanceMode.SPOT;
+		}
+		// Single EC2
+		return InstanceMode.EC2;
+	}
+
+	private String toString(final String path) throws IOException {
+		return IOUtils.toString(new ClassPathResource("terraform/" + path).getURI(), StandardCharsets.UTF_8);
+	}
+
+	/**
+	 * Write dashboard: charts and markdown
+	 */
+	private void writeRegionDashboard(final Context context) throws IOException {
+		final Map<InstanceMode, List<ProvQuoteInstance>> modes = context.getModes();
+		// Charts
+		context.setInstances(modes.get(InstanceMode.AUTO_SCALING));
+		templateFromTo(
+				context.add("scaling", getDashboardScaling(context)).add("balancing", getDashboardBalancing(context))
+						.add("latency", getDashboardLatency(context)).add("network", getDashboardNetwork(context)),
+				"my-region/dashboard-widgets.tpl.json", context.getLocation(), "dashboard-widgets.tpl.json");
+
+		// Markdown
+		templateFromTo(context.add("alb", getMd(modes.get(InstanceMode.AUTO_SCALING),
+				"ALB|[${alb{{i}}_name}](/ec2/v2/home?region=${region}#LoadBalancers:search=${alb{{i}}_dns})|[http](http://${alb{{i}}_dns})"))
+				.add("ec2", getMd(modes.get(InstanceMode.EC2),
+						"EC2|[${ec2{{i}}_name}](/ec2/v2/home?region=${region}#Instances:search=${ec2{{i}}})|[http](http://${ec2{{i}}_ip})"))
+				.add("spot", getMd(modes.get(InstanceMode.SPOT),
+						"EC2|[${spot{{i}}_name}](/ec2/v2/home?region=${region}#Instances:search=${spot{{i}}})|[http](http://${spot{{i}}_ip})"))
+				.add("asg", getMd(modes.get(InstanceMode.AUTO_SCALING),
+						"EC2/AS|[${asg{{i}}_name}](/ec2/autoscaling/home?region=${region}#AutoScalingGroups:id=${asg{{i}}};view=details)|")),
+				"my-region/dashboard-widgets.tpl.md", context.getLocation(), "dashboard-widgets.tpl.md");
+
+		// References for MD template and CloudWatch widgets
+		templateFromTo(context.add("references", getDashboardReferences(context)), "my-region/dashboard.tf",
+				context.getLocation(), "dashboard.tf");
+	}
+
+	private String getDashboardReferences(final Context context) {
+		final StringBuilder buffer = new StringBuilder();
+		appendDashboardReferences(buffer, context, context.getModes().get(InstanceMode.EC2),
+				"ec2{{i}} = \"${aws_instance.{{key}}.instance}\"", "ec2{{i}}_name = \"{{name}}\"",
+				"ec2{{i}}_ip = \"${aws_instance.{{key}}.public_ip}\"");
+		appendDashboardReferences(buffer, context, context.getModes().get(InstanceMode.SPOT),
+				"spot{{i}}    = \"${aws_instance.{{key}}.spot_instance_id}\"",
+				"spot{{i}}_ip = \"${aws_instance.{{key}}.public_ip}\"");
+		appendDashboardReferences(buffer, context, context.getModes().get(InstanceMode.AUTO_SCALING),
+				"asg{{i}}     = \"${aws_autoscaling_group.{{key}}.name}\"", "asg{{i}}_name = \"{{name}}\"");
+		appendDashboardReferences(buffer, context, context.getModes().get(InstanceMode.AUTO_SCALING),
+				"alb{{i}}     = \"${aws_lb.{{key}}.arn_suffix}\"",
+				"alb{{i}}_tg  = \"${aws_lb_target_group.{{key}}.arn_suffix}\"", "alb{{i}}_name = \"{{name}}\"",
+				"alb{{i}}_dns = \"${aws_lb.{{key}}.dns_name}\"");
+		return buffer.toString();
+	}
+
+	private void appendDashboardReferences(final StringBuilder buffer, final Context context,
+			final List<ProvQuoteInstance> instances, final String... formats) {
+		final NormalizeFormat normalizeFormat = new NormalizeFormat();
+		for (final String format : formats) {
+			int index = 0;
+			for (final ProvQuoteInstance instance : instances) {
+				buffer.append('\n').append(replace(format, context.add("i", String.valueOf(index))
+						.add("key", normalizeFormat.format(instance.getName())).add("name", instance.getName())));
+				index++;
 			}
+		}
+	}
 
-			// AMI part
-			final String account = subscriptionResource.getParameters(subscription.getId())
-					.get(ProvAwsPluginResource.PARAMETER_ACCOUNT);
-			for (final VmOs os : osToSearch) {
-				writeAmiSearch(writer, os, account);
+	private String getMd(final List<ProvQuoteInstance> instances, final String format) {
+		final StringBuilder buffer = new StringBuilder();
+		for (int index = 0; index < instances.size(); index++) {
+			buffer.append('\n').append(replace(format, "{{i}}", String.valueOf(index)));
+		}
+		return buffer.toString();
+	}
+
+	private String getDashboardNetwork(final Context context) throws IOException {
+		final String format = toString("my-region/dashboard-widgets-line.json");
+		return newMetric(context, format, "AWS/ApplicationELB", "LoadBalancer", "${alb{{i}}}",
+				new String[] { "ProcessedBytes", "-", "-", "${alb{{i}}_name}" });
+	}
+
+	private String getDashboardLatency(final Context context) throws IOException {
+		final String format = toString("my-region/dashboard-widgets-line.json");
+		return newMetric(context, format, "AWS/ApplicationELB", "LoadBalancer", "${alb{{i}}}",
+				new String[] { "TargetResponseTime", "-", "-", "${alb{{i}}_name}" });
+	}
+
+	private String getDashboardScaling(final Context context) throws IOException {
+		final String format = toString("my-region/dashboard-widgets-area.json");
+		return newMetric(context, format, "AWS/AutoScaling", "AutoScalingGroupName", "${asg{{i}}}",
+				new String[] { "GroupInServiceInstances", "2ca02c", "left", "${asg{{i}}_name}" },
+				new String[] { "GroupPendingInstances", "ff7f0e", "right", "Pending ${asg{{i}}_name}" },
+				new String[] { "GroupTerminatingInstances", "d62728", "right", "Term. ${asg{{i}}_name}" });
+	}
+
+	private String getDashboardBalancing(final Context context) throws IOException {
+		final String format = toString("my-region/dashboard-widgets-area.json");
+		return newMetric(context, format, "AWS/ApplicationELB", "TargetGroup",
+				"${alb{{i}}_tg}\", \"LoadBalancer\", \"${alb{{i}}}\"",
+				new String[] { "HealthyHostCount", "2ca02c", "left", "OK ${alb{{i}}_name}" },
+				new String[] { "UnHealthyHostCount", "d62728", "right", "KO ${alb{{i}}_name}" });
+	}
+
+	private String newMetric(final Context context, final String format, final String service, final String idProperty,
+			final String id, String[]... variants) throws IOException {
+		final List<ProvQuoteInstance> instances = context.getInstances();
+		final StringBuilder buffer = new StringBuilder();
+		final String serviceFmt = replace(format, "{{service}}", service);
+		Arrays.stream(variants).forEach(variant -> {
+			for (int index = 0; index < instances.size(); index++) {
+				if (buffer.length() > 0) {
+					buffer.append(',');
+				}
+				buffer.append('\n');
+				buffer.append(replace(serviceFmt, "{{property}}", replace(idProperty, "{{i}}", String.valueOf(index)),
+						"{{metric}}", variant[0], "{{id}}", id.replace("{{i}}", String.valueOf(index)), "{{color}}",
+						variant[1], "{{position}}", variant[2], "{{label}}",
+						replace(variant[3], "{{i}}", String.valueOf(index))));
+			}
+		});
+		return buffer.toString();
+	}
+
+	/**
+	 * Write referenced OS
+	 */
+	private void writeRegionOs(final Context context, final List<ProvQuoteInstance> instances) throws IOException {
+		final Set<VmOs> oss = new HashSet<>();
+		instances.stream().map(ProvQuoteInstance::getOs).forEach(oss::add);
+		for (final VmOs os : oss) {
+			templateFromTo(context.add("name", toAmiName(os)), "my-region/ami-os.tf", context.getLocation(),
+					"ami-" + toAmiName(os) + ".tf");
+		}
+	}
+
+	private String toAmiName(final VmOs os) {
+		return mappingOsAmi.getOrDefault(os, os.name().toLowerCase(Locale.ENGLISH));
+	}
+
+	private void writeRegionStatics(final Context context) throws IOException {
+		copyFromTo(context, "my-region/provider.tf", context.getLocation(), "provider.tf");
+		copyFromTo(context, "my-region/variables.tf", context.getLocation(), "variables.tf");
+		copyFromTo(context, "my-region/vpc.tf", context.getLocation(), "vpc.tf");
+	}
+
+	private void copy(final Context context, final String... fragments) throws IOException {
+		Files.copy(new ClassPathResource("terraform/" + String.join("/", fragments)).getInputStream(),
+				utils.toFile(context.getSubscription(), fragments).toPath());
+	}
+
+	private void copyFromTo(final Context context, final String from, final String... toFragments) throws IOException {
+		Files.copy(new ClassPathResource("terraform/" + from).getInputStream(),
+				utils.toFile(context.getSubscription(), toFragments).toPath());
+	}
+
+	private void template(final Context context, final Function<String, String> formater, final String... fragments)
+			throws IOException {
+		try (InputStream source = new ClassPathResource("terraform/" + String.join("/", fragments)).getInputStream();
+				FileOutputStream target = new FileOutputStream(utils.toFile(context.getSubscription(), fragments));
+				Writer targetW = new OutputStreamWriter(target);) {
+			targetW.write(formater.apply(IOUtils.toString(source, StandardCharsets.UTF_8)));
+		}
+	}
+
+	private void templateFromTo(final Context context, final String from, final String... toFragments)
+			throws IOException {
+		try (InputStream source = new ClassPathResource("terraform/" + from).getInputStream();
+				FileOutputStream target = new FileOutputStream(utils.toFile(context.getSubscription(), toFragments));
+				Writer targetW = new OutputStreamWriter(target);) {
+			targetW.write(replace(IOUtils.toString(source, StandardCharsets.UTF_8), context));
+		}
+	}
+
+	/**
+	 * Write instances configuration.
+	 */
+	private void writeRegionInstances(final Context context) throws IOException {
+		final NormalizeFormat normalizeFormat = new NormalizeFormat();
+		for (final Map.Entry<InstanceMode, List<ProvQuoteInstance>> entry : context.getModes().entrySet()) {
+			final List<ProvQuoteInstance> instances = entry.getValue();
+			final String mode = entry.getKey().name().toLowerCase(Locale.ENGLISH);
+			final String template = "my-region/instance-" + mode + ".tf";
+			for (final ProvQuoteInstance instance : instances) {
+				context.add("key", normalizeFormat.format(instance.getName())).add("os", toAmiName(instance.getOs()))
+						.add("type", instance.getPrice().getType().getName()).add("name", instance.getName())
+						.add("spot-price", String.valueOf(instance.getMaxVariableCost()))
+						.add("min", String.valueOf(instance.getMinQuantity()))
+						.add("max", String.valueOf(ObjectUtils.defaultIfNull(instance.getMaxQuantity(), 10)))
+						.add("ebs-devices", getEbsDevices(instance, entry.getKey() == InstanceMode.AUTO_SCALING));
+				templateFromTo(context, template, context.getLocation(), mode + "-" + context.get("key") + ".tf");
 			}
 		}
-		writeStandaloneStorages(writer, projectName, quote.getStorages());
 	}
 
-	/**
-	 * write Network
-	 * 
-	 * @param writer
-	 *            writer
-	 * @param project
-	 *            project name
-	 * @param types
-	 *            internet access types of instances
-	 * @throws IOException
-	 *             exception
-	 */
-	private void writeNetwork(final Writer writer, final String project, final Set<InternetAccess> types)
-			throws IOException {
-		writer.write("/* network */\n");
-		writer.write("resource \"aws_vpc\" \"terraform\" {\n");
-		writer.write("  cidr_block = \"10.0.0.0/16\"\n");
-		writer.write("}\n");
-		if (types.contains(InternetAccess.PUBLIC) || types.contains(InternetAccess.PRIVATE_NAT)) {
-			writeSubnet(writer, project, InternetAccess.PUBLIC, "10.0.1.0/24");
-			writeInternetGateway(writer);
-			writeRouteTable(writer, project, InternetAccess.PUBLIC);
-		}
-		if (types.contains(InternetAccess.PRIVATE_NAT)) {
-			writeSubnet(writer, project, InternetAccess.PRIVATE_NAT, "10.0.2.0/24");
-			writeNatGateway(writer);
-			writeRouteTable(writer, project, InternetAccess.PRIVATE_NAT);
-		}
-		if (types.contains(InternetAccess.PRIVATE)) {
-			writeSubnet(writer, project, InternetAccess.PRIVATE, "10.0.3.0/24");
-		}
-	}
-
-	/**
-	 * write a nat gateway
-	 * 
-	 * @param writer
-	 *            writer
-	 * @throws IOException
-	 *             exception
-	 */
-	private void writeNatGateway(final Writer writer) throws IOException {
-		writer.write("resource \"aws_eip\" \"" + InternetAccess.PRIVATE_NAT.name() + "\" {\n");
-		writer.write("  vpc      = true\n");
-		writer.write("}\n");
-		writer.write("resource \"aws_nat_gateway\" \"default\" {\n");
-		writer.write("  allocation_id = \"${aws_eip." + InternetAccess.PRIVATE_NAT.name() + ".id}\"\n");
-		writer.write("  subnet_id     = \"${aws_subnet." + InternetAccess.PUBLIC.name() + ".id}\"\n");
-		writer.write("}\n");
-	}
-
-	/**
-	 * write a route table
-	 * 
-	 * @param writer
-	 *            writer
-	 * @param project
-	 *            project name
-	 * @param type
-	 *            internet access
-	 * @throws IOException
-	 *             exception
-	 */
-	private void writeRouteTable(final Writer writer, final String project, final InternetAccess type)
-			throws IOException {
-		writer.write("resource \"aws_route_table\" \"" + type.name() + "\" {\n");
-		writer.write("  vpc_id     = \"${aws_vpc.terraform.id}\"\n");
-		writer.write("  route {\n");
-		writer.write("    cidr_block = \"0.0.0.0/0\"\n");
-		if (type == InternetAccess.PUBLIC) {
-			writer.write("    gateway_id = \"${aws_internet_gateway.default.id}\"\n");
-		} else {
-			writer.write("        nat_gateway_id = \"${aws_nat_gateway.default.id}\"\n");
-		}
-		writer.write("  }\n");
-		writeTags(writer, project, type.name());
-		writer.write("}\n");
-		writer.write("resource \"aws_route_table_association\" \"" + type.name() + "\" {\n");
-		writer.write("    subnet_id = \"${aws_subnet." + type.name() + ".id}\"\n");
-		writer.write("    route_table_id = \"${aws_route_table." + type.name() + ".id}\"\n");
-		writer.write("}\n");
-	}
-
-	/**
-	 * write internet gateway
-	 * 
-	 * @param writer
-	 *            writer
-	 * @throws IOException
-	 *             exception
-	 */
-	private void writeInternetGateway(final Writer writer) throws IOException {
-		writer.write("resource \"aws_internet_gateway\" \"default\" {\n");
-		writer.write("  vpc_id     = \"${aws_vpc.terraform.id}\"\n");
-		writer.write("}\n");
-	}
-
-	/**
-	 * write a subnet
-	 * 
-	 * @param writer
-	 *            writer
-	 * @param project
-	 *            project name
-	 * @param type
-	 *            internet access type
-	 * @param cidr
-	 *            cidr
-	 * @throws IOException
-	 *             exception
-	 */
-	private void writeSubnet(final Writer writer, final String project, final InternetAccess type, final String cidr)
-			throws IOException {
-		writer.write("/* " + type.name() + " subnet */\n");
-		writer.write("resource \"aws_subnet\" \"" + type + "\" {\n");
-		writer.write("  vpc_id     = \"${aws_vpc.terraform.id}\"\n");
-		writer.write("  cidr_block = \"" + cidr + "\"\n");
-		if (type == InternetAccess.PUBLIC) {
-			writer.write("  map_public_ip_on_launch = true\n");
-		}
-		writeTags(writer, project, type.name());
-		writer.write("}\n");
-	}
-
-	/**
-	 * Write an instance.
-	 * 
-	 * @param writer
-	 *            Target output of Terraform content.
-	 * @param quote
-	 *            quote instance
-	 * @param instance
-	 *            instance definition
-	 * @param projectName
-	 *            project name
-	 * @throws IOException
-	 *             exception thrown during write
-	 */
-	private void writeInstance(final Writer writer, final QuoteVo quote, final ProvQuoteInstance instance,
-			final String projectName) throws IOException {
-		final VmOs os = instance.getPrice().getOs();
-		final String instanceName = instance.getName();
-		final String instanceType = instance.getPrice().getType().getName();
-		final boolean spot = SPOT_INSTANCE_PRICE_TYPE.equals(instance.getPrice().getTerm().getName());
-		final boolean autoscaling = instance.getMinQuantity() != 1 || instance.getMaxQuantity() == null;
-		writer.write("/* instance */\n");
-		if (autoscaling) {
-			writer.write("resource \"aws_launch_configuration\" \"vm-" + instanceName + "\" {\n");
-		} else if (spot) {
-			writer.write("resource \"aws_spot_instance_request\" \"vm-" + instanceName + "\" {\n");
-			writer.write("  spot_price    = \"0.03\"\n");
-		} else {
-			writer.write("resource \"aws_instance\" \"vm-" + instanceName + "\" {\n");
-		}
-		writer.write("  " + (autoscaling ? "image_id" : "ami") + "           = \"${data.aws_ami.ami-" + os.name()
-				+ ".id}\"\n");
-		writer.write("  name    		= \"" + instanceName + "\"\n");
-		writer.write("  instance_type = \"" + instanceType + "\"\n");
-		writer.write("  key_name    	= \"" + projectName + "-key\"\n");
-		writer.write("  " + (autoscaling ? "security_groups" : "vpc_security_group_ids")
-				+ " = [ \"${aws_security_group.vm-sg.id}\" ]\n");
-		writeInstanceStorages(writer, instance);
-		if (!autoscaling) {
-			writer.write("  subnet_id     = \"${aws_subnet." + instance.getInternet().name() + ".id}\"\n");
-			writeTags(writer, projectName, projectName + "-" + instanceName);
-		}
-		writer.write("}\n");
-
-		// autoscaling
-		if (autoscaling) {
-			writer.write("/* autoscaling */\n");
-			writer.write("resource \"aws_autoscaling_group\" \"" + instanceName + "autoscaling-group\" {\n");
-			writer.write("  min_size                  = " + instance.getMinQuantity() + "\n");
-			writer.write("  max_size                  = "
-					+ ObjectUtils.defaultIfNull(instance.getMaxQuantity(), Math.max(10, instance.getMinQuantity()))
-					+ "\n");
-			writer.write(
-					"  launch_configuration      = \"${aws_launch_configuration.vm-" + instanceName + ".name}\"\n");
-			writer.write("  vpc_zone_identifier     = [\"${aws_subnet." + instance.getInternet().name() + ".id}\"]\n");
-			writer.write("  tags = [{\n");
-			writer.write("    key=\"Project\"\n");
-			writer.write("    value=\"" + projectName + "\"\n");
-			writer.write("    propagate_at_launch = true\n");
-			writer.write("  }, {\n");
-			writer.write("    key=\"Name\"\n");
-			writer.write("    value=\"" + projectName + "-" + instanceName + "\"\n");
-			writer.write("    propagate_at_launch = true\n");
-			writer.write("  }]\n");
-			writer.write("}\n");
-		}
-	}
-
-	/**
-	 * Write an AMI search Terraform query.
-	 * 
-	 * @param writer
-	 *            Target output of Terraform content.
-	 * @param os
-	 *            Instance OS.
-	 * @param account
-	 *            Target account Id used to filter the available AMI.
-	 * @throws IOException
-	 *             exception thrown during write
-	 * @see http://docs.aws.amazon.com/cli/latest/reference/ec2/describe-images.html
-	 * @see https://www.terraform.io/docs/providers/aws/d/ami.html
-	 */
-	private void writeAmiSearch(final Writer writer, final VmOs os, final String account) throws IOException {
-		writer.write("/* search ami id */\n");
-		writer.write("data \"aws_ami\" \"ami-" + os.name() + "\" {\n");
-		writer.write("  most_recent = true\n");
-
-		// Add specific filters of this OS
-		for (int i = 0; i < MAPPING_OS_AMI.get(os).length; i += 2) {
-			writer.write("  filter {\n");
-			writer.write("    name   = \"" + MAPPING_OS_AMI.get(os)[i] + "\"\n");
-			writer.write("    values = [\"" + MAPPING_OS_AMI.get(os)[i + 1] + "\"]\n");
-			writer.write("  }\n");
-		}
-
-		// Add generic filters : HVM, ...
-		writer.write("  filter {\n");
-		writer.write("    name   = \"virtualization-type\"\n");
-		writer.write("    values = [\"hvm\"]\n");
-		writer.write("  }\n");
-
-		// Target account before the generic account
-		writer.write("  owners = [\"" + account + "\", \"" + MAPPING_OS_OWNER.get(os) + "\"]\n");
-		writer.write("}\n");
-	}
-
-	/**
-	 * Write a key pair.
-	 * 
-	 * @param writer
-	 *            Target output of Terraform content.
-	 * @param projectName
-	 *            project Name
-	 * @throws IOException
-	 *             exception thrown during write
-	 */
-	private void writeKeyPair(final Writer writer, final String projectName) throws IOException {
-		writer.write("/* key pair*/\n");
-		writer.write("resource \"aws_key_pair\" \"vm-keypair\" {\n");
-		writer.write("  key_name   = \"" + projectName + "-key\"\n");
-		writer.write("  public_key = \"${var.publickey}\"\n");
-		writer.write("}\n");
-	}
-
-	/**
-	 * Write a security group.
-	 * 
-	 * @param writer
-	 *            Target output of Terraform content.
-	 * @param projectName
-	 *            project Name
-	 * @throws IOException
-	 *             exception thrown during write
-	 */
-	private void writeSecurityGroup(final Writer writer, final String projectName) throws IOException {
-		writer.write("/* security group */\n");
-		writer.write("resource \"aws_security_group\" \"vm-sg\" {\n");
-		writer.write("  name        = \"" + projectName + "-sg\"\n");
-		writer.write(
-				"  description = \"Allow ssh inbound traffic, all inbound traffic in security group and all outbund traffic\"\n");
-		writer.write("  vpc_id     = \"${aws_vpc.terraform.id}\"\n");
-		writer.write("  ingress {\n");
-		writer.write("    from_port   = 22\n");
-		writer.write("    to_port     = 22\n");
-		writer.write("    protocol    = \"TCP\"\n");
-		writer.write("    cidr_blocks = [\"0.0.0.0/0\"]\n");
-		writer.write("  }\n");
-		writer.write("  ingress {\n");
-		writer.write("    from_port   = 0\n");
-		writer.write("    to_port     = 0\n");
-		writer.write("    protocol    = \"TCP\"\n");
-		writer.write("    self        = true\n");
-		writer.write("  }\n");
-		writer.write("  egress {\n");
-		writer.write("    from_port = 0\n");
-		writer.write("    to_port = 0\n");
-		writer.write("    protocol = \"-1\"\n");
-		writer.write("    cidr_blocks = [\"0.0.0.0/0\"]\n");
-		writer.write("  }\n");
-		writeTags(writer, projectName, projectName);
-		writer.write("}\n");
-	}
-
-	/**
-	 * Write public key.
-	 * 
-	 * @param writer
-	 *            Target output of Terraform content.
-	 * @throws IOException
-	 *             exception thrown during write
-	 */
-	private void writePublicKey(final Writer writer) throws IOException {
-		writer.write("variable publickey {\n");
-		writer.write("  description = \"SSH Public key used to access nginx EC2 Server\"\n");
-		writer.write("}\n");
-	}
-
-	/**
-	 * Write provider.
-	 * 
-	 * @param writer
-	 *            Target output of Terraform content.
-	 * @throws IOException
-	 *             exception thrown during write
-	 */
-	private void writeProvider(final Writer writer) throws IOException {
-		writer.write("variable \"AWS_ACCESS_KEY_ID\" {}\n");
-		writer.write("variable \"AWS_SECRET_ACCESS_KEY\" {}\n");
-
-		writer.write("provider \"aws\" {\n");
-		writer.write("  region = \"eu-west-1\"\n");
-		writer.write("  access_key = \"${var.AWS_ACCESS_KEY_ID}\"\n");
-		writer.write("  secret_key = \"${var.AWS_SECRET_ACCESS_KEY}\"\n");
-		writer.write("}\n");
-	}
-
-	/**
-	 * Write instance storages.
-	 * 
-	 * @param writer
-	 *            Target output of Terraform content.
-	 * @param instance
-	 *            instance
-	 * @throws IOException
-	 *             exception thrown during write
-	 */
-	private void writeInstanceStorages(final Writer writer, final ProvQuoteInstance instance) throws IOException {
+	private String getEbsDevices(final ProvQuoteInstance instance, final boolean intern) throws IOException {
+		final StringBuilder builder = new StringBuilder();
 		int idx = 0;
+		final NormalizeFormat normalizeFormat = new NormalizeFormat();
 		for (final ProvQuoteStorage storage : instance.getStorages()) {
-			if (idx == 0) {
-				writer.write("  root_block_device {\n");
-			} else {
-				writer.write("  ebs_block_device {\n");
-				writer.write("    device_name = \"/dev/sda" + idx + "\"\n");
-			}
-			writer.write("    volume_type = \"" + storage.getPrice().getType().getName() + "\"\n");
-			writer.write("    volume_size = " + storage.getSize() + "\n");
-			writer.write("  }\n");
+			final String format = getDeviceFormat(intern, builder, idx);
+			builder.append(replace(format, "{{key}}", normalizeFormat.format(storage.getName()), "{{type}}",
+					storage.getPrice().getType().getName(), "{{device}}", toDeviceName(instance.getOs(), idx),
+					"{{instance}}", normalizeFormat.format(instance.getName()), "{{size}}",
+					String.valueOf(storage.getSize())));
 			idx++;
 		}
+		if (intern && idx > 1) {
+			builder.append("]");
+		}
+		return builder.toString();
+	}
+
+	private String getDeviceFormat(final boolean intern, final StringBuilder builder, int idx) throws IOException {
+		final String deviceSuffix;
+		if (intern) {
+			if (idx == 1) {
+				builder.append("\nebs_block_device = [ ");
+				deviceSuffix = "-1";
+			} else if (idx > 1) {
+				builder.append(",\n");
+				deviceSuffix = "-1";
+			} else {
+				deviceSuffix = "-0";
+			}
+		} else {
+			deviceSuffix = "";
+		}
+		return toString(String.format("my-region/instance-device%s.tf", deviceSuffix));
+	}
+
+	private String toDeviceName(final VmOs os, final int index) {
+		if (index == 0) {
+			// Root device
+			return mappingOsRootDevice.getOrDefault(os, DEFAULT_ROOT_DEVICE);
+		}
+		final String format = mappingOsEbsDevice.getOrDefault(os, DEFAULT_EBS_DEVICE);
+		return format.substring(0, format.length() - 1)
+				+ String.valueOf((char) (format.charAt(format.length() - 1) + index - 1));
 	}
 
 	/**
-	 * Write standalone storages.
+	 * Write the secrets required by the provider.
 	 * 
-	 * @param writer
-	 *            Target output of Terraform content.
-	 * @param projectName
-	 *            The project name.
-	 * @param storages
-	 *            Storages of the quote.
+	 * @param subscription
+	 *            The subscription identifier.
+	 * @throws IOException
+	 *             When secret cannot be written.
 	 */
-	private void writeStandaloneStorages(final Writer writer, final String projectName,
-			final List<ProvQuoteStorage> storages) throws IOException {
-		for (final ProvQuoteStorage storage : storages) {
-			if (storage.getQuoteInstance() == null) {
-				writer.write("resource \"aws_ebs_volume\" \"" + storage.getName() + "\" {\n");
-				writer.write("  availability_zone = \"eu-west-1a\"\n");
-				writer.write("  type = \"" + storage.getPrice().getType().getName() + "\"\n");
-				writer.write("  size = " + storage.getSize() + "\n");
-				writeTags(writer, projectName, projectName + "-" + storage.getName());
-				writer.write("}\n");
-			}
+	private void writeSecrets(Subscription subscription) throws IOException {
+		try (final Writer out = new FileWriterWithEncoding(utils.toFile(subscription, "secrets.auto.tfvars"),
+				StandardCharsets.UTF_8)) {
+			final Map<String, String> parameters = subscriptionResource.getParametersNoCheck(subscription.getId());
+			out.write("access_key = \"");
+			out.write(parameters.get(ProvAwsPluginResource.PARAMETER_ACCESS_KEY_ID));
+			out.write("\"\nsecret_key = \"");
+			out.write(parameters.get(ProvAwsPluginResource.PARAMETER_SECRET_ACCESS_KEY));
+			out.write("\"\n");
 		}
 	}
 
-	/**
-	 * Write a tag.
-	 * 
-	 * @param writer
-	 *            Target output of Terraform content.
-	 * @param project
-	 *            project name
-	 * @param name
-	 *            resource name
-	 * @throws IOException
-	 *             exception thrown during write
-	 */
-	private void writeTags(final Writer writer, final String project, final String name) throws IOException {
-		writer.write("  tags = {\n");
-		writer.write("    Project = \"" + project + "\"\n");
-		writer.write("    Name = \"" + name + "\"\n");
-		writer.write("  }\n");
+	private String replace(String source, String... replaces) {
+		String result = source;
+		for (int index = 0; index < replaces.length; index += 2) {
+			result = StringUtils.replace(result, replaces[index], replaces[index + 1]);
+		}
+		return result;
+	}
+
+	private String replace(String source, final Context context) {
+		String result = source;
+		for (final Map.Entry<String, String> entry : context.getContext().entrySet()) {
+			result = StringUtils.replace(result, String.format("{{%s}}", entry.getKey()), entry.getValue());
+		}
+		return result;
 	}
 }

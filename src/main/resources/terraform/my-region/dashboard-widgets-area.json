@@ -1,0 +1,1 @@
+[ "{{service}}", "{{metric}}", "{{property}}", "{{id}}", { "color": "#{{color}}", "yAxis": "{{position}}", "label": "{{label}}", "period": ${metrics_period} } ]

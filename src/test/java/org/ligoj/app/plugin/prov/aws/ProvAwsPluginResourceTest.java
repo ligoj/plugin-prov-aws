@@ -7,7 +7,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
@@ -106,20 +105,11 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void terraform() throws IOException {
+	public void generate() throws IOException {
 		final ProvAwsPluginResource resource2 = new ProvAwsPluginResource();
 		super.applicationContext.getAutowireCapableBeanFactory().autowireBean(resource2);
 		resource2.terraformService = Mockito.mock(ProvAwsTerraformService.class);
-		final ByteArrayOutputStream bos = new ByteArrayOutputStream();
-		resource2.terraform(bos, subscription, null);
-	}
-
-	@Test
-	public void terraformCommandLineParameters() {
-		final String[] parameters = resource.commandLineParameters(subscription);
-		Assertions.assertTrue(parameters.length == 4);
-		Assertions.assertTrue("'AWS_ACCESS_KEY_ID=12345678901234567890'".equals(parameters[1]));
-		Assertions.assertTrue("'AWS_SECRET_ACCESS_KEY=abcdefghtiklmnopqrstuvwxyz'".equals(parameters[3]));
+		resource2.generate(em.find(Subscription.class, subscription), null);
 	}
 
 	/**

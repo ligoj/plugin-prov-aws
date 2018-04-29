@@ -3,13 +3,20 @@
  */
 package org.ligoj.app.plugin.prov.aws;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.io.File;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.stream.IntStream;
 
 import javax.transaction.Transactional;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,22 +29,21 @@ import org.ligoj.app.model.ParameterValue;
 import org.ligoj.app.model.Project;
 import org.ligoj.app.model.Subscription;
 import org.ligoj.app.plugin.prov.QuoteVo;
-import org.ligoj.app.plugin.prov.model.InternetAccess;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
 import org.ligoj.app.plugin.prov.model.ProvInstanceType;
+import org.ligoj.app.plugin.prov.model.ProvLocation;
+import org.ligoj.app.plugin.prov.model.ProvQuote;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
 import org.ligoj.app.plugin.prov.model.ProvQuoteStorage;
 import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.model.VmOs;
+import org.ligoj.app.plugin.prov.terraform.TerraformUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-
-import com.google.common.base.Charsets;
-import com.google.common.collect.Lists;
 
 /**
  * Test class of {@link ProvAwsTerraformService}
@@ -47,207 +53,150 @@ import com.google.common.collect.Lists;
 @Rollback
 @Transactional
 public class ProvAwsTerraformServiceTest extends AbstractServerTest {
-
-	@Autowired
-	private ProvAwsTerraformService service;
+	private static final File MOCK_PATH = new File("target/test-classes/terraform-it").getAbsoluteFile();
+	private static final File EXPECTED_PATH = new File("target/test-classes/terraform").getAbsoluteFile();
 
 	@Autowired
 	private SubscriptionRepository subscriptionRepository;
 
 	private Subscription subscription;
 
+	@AfterEach
+	@BeforeEach
+	public void cleanupFiles() throws IOException {
+		FileUtils.deleteDirectory(MOCK_PATH);
+		FileUtils.forceMkdir(MOCK_PATH);
+	}
+
 	@BeforeEach
 	public void prepareData() throws IOException {
 		persistSystemEntities();
-		persistEntities("csv", new Class[] { Node.class, Project.class, Parameter.class, Subscription.class, ParameterValue.class },
+		persistEntities("csv",
+				new Class[] { Node.class, Project.class, Parameter.class, Subscription.class, ParameterValue.class },
 				StandardCharsets.UTF_8.name());
 		subscription = subscriptionRepository.findBy("node.id", "service:prov:aws:test");
 	}
 
-	/**
-	 * check generated terraform
-	 * 
-	 * @throws Exception
-	 *             unexpected exception
-	 */
 	@Test
-	public void testTerraformGenerationOnDemandType() throws Exception {
-		final QuoteVo quoteVo = new QuoteVo();
-		final ProvQuoteInstance instance = generateQuoteInstance("OnDemand");
-		instance.setStorages(Lists.newArrayList(generateInstanceStorage(5), generateInstanceStorage(50)));
-		quoteVo.setInstances(Lists.newArrayList(instance));
-		quoteVo.setStorages(
-				Lists.newArrayList(generateStorage(instance.getId(), "dev", 5), generateStorage(instance.getId(), "dev-1", 50)));
+	public void writeSimpleCentos() throws IOException {
+		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.CENTOS, null, 1, 1, 10, 8);
+		write(subscription, newQuoteVo(instance));
+		assertEquals("instance-centos.tf", "eu-west-3/ec2-instancea.tf");
+		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-centos.tf").exists());
+	}
 
-		testTerraformGeneration(subscription, quoteVo, "terraform/terraform.tf");
+	@Test
+	public void writeSimpleAmz() throws IOException {
+		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 1, 10, 8);
+		write(subscription, newQuoteVo(instance));
+		assertEquals("instance-amazon.tf", "eu-west-3/ec2-instancea.tf");
+		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
+		assertEquals("dashboard-ec2.tf", "eu-west-3/dashboard.tf");
+		assertEquals("dashboard-ec2-widgets.tpl.md", "eu-west-3/dashboard-widgets.tpl.md");
+		assertEquals("dashboard-ec2-widgets.tpl.json", "eu-west-3/dashboard-widgets.tpl.json");
+	}
+
+	@Test
+	public void writeSimpleAmzRootOnly() throws IOException {
+		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 1, 10);
+		write(subscription, newQuoteVo(instance));
+		assertEquals("instance-amazon-1-device.tf", "eu-west-3/ec2-instancea.tf");
+		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
+	}
+
+	@Test
+	public void writeSimpleAmz3Devices() throws IOException {
+		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 1, 10, 11, 12);
+		write(subscription, newQuoteVo(instance));
+		assertEquals("instance-amazon-3-devices.tf", "eu-west-3/ec2-instancea.tf");
+		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
+	}
+
+	@Test
+	public void writeSimpleWindows() throws IOException {
+		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.WINDOWS, null, 1, 1, 10, 8);
+		write(subscription, newQuoteVo(instance));
+		assertEquals("instance-windows.tf", "eu-west-3/ec2-instancea.tf");
+		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-windows.tf").exists());
+	}
+
+	@Test
+	public void writeSimpleRHEL() throws IOException {
+		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.RHEL, null, 1, 1, 10, 8);
+		write(subscription, newQuoteVo(instance));
+		assertEquals("instance-rhel.tf", "eu-west-3/ec2-instancea.tf");
+		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-rhel.tf").exists());
+	}
+
+	@Test
+	public void writeSpotAmz() throws IOException {
+		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, 0.1, 1, 1, 10, 8);
+		write(subscription, newQuoteVo(instance));
+		assertEquals("instance-spot.tf", "eu-west-3/spot-instancea.tf");
+		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
+		assertEquals("dashboard-spot.tf", "eu-west-3/dashboard.tf");
+		assertEquals("dashboard-spot-widgets.tpl.md", "eu-west-3/dashboard-widgets.tpl.md");
+		assertEquals("dashboard-spot-widgets.tpl.json", "eu-west-3/dashboard-widgets.tpl.json");
+	}
+
+	@Test
+	public void writeAutoScaling() throws IOException {
+		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 2, 10, 8);
+		write(subscription, newQuoteVo(instance));
+		assertEquals("instance-auto_scaling.tf", "eu-west-3/auto_scaling-instancea.tf");
+		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
+	}
+
+	@Test
+	public void writeAutoScaling1Device() throws IOException {
+		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 2, 10);
+		write(subscription, newQuoteVo(instance));
+		assertEquals("instance-auto_scaling-1-device.tf", "eu-west-3/auto_scaling-instancea.tf");
+		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
+	}
+
+	@Test
+	public void writeAutoScaling3Devices() throws IOException {
+		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 2, 10, 11, 12);
+		write(subscription, newQuoteVo(instance));
+		assertEquals("instance-auto_scaling-3-devices.tf", "eu-west-3/auto_scaling-instancea.tf");
+		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
+	}
+
+	@Test
+	public void writeAutoScalingUnbound() throws IOException {
+		final ProvQuoteInstance instanceA = newQuoteInstance("InstanceA", VmOs.LINUX, null, 2, null, 10, 8);
+		write(subscription, newQuoteVo(instanceA));
+		assertEquals("instance-auto_scaling-unbound.tf", "eu-west-3/auto_scaling-instancea.tf");
+		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
+	}
+
+	@Test
+	public void writeMutliple() throws IOException {
+		final ProvQuoteInstance instanceA = newQuoteInstance("InstanceEC21", VmOs.LINUX, null, 1, 1, 10, 8);
+		final ProvQuoteInstance instanceB = newQuoteInstance("InstanceEC22", VmOs.WINDOWS, null, 1, 1, 10, 8);
+		final ProvQuoteInstance instanceC = newQuoteInstance("InstanceSpot1", VmOs.LINUX, 0.1, 1, 1, 10, 8);
+		final ProvQuoteInstance instanceD = newQuoteInstance("InstanceSpot2", VmOs.WINDOWS, 0.1, 1, 1, 10, 8);
+		final ProvQuoteInstance instanceE = newQuoteInstance("InstanceAS1", VmOs.LINUX, null, 1, 2, 10, 8);
+		final ProvQuoteInstance instanceF = newQuoteInstance("InstanceAS2", VmOs.WINDOWS, null, 1, null, 10, 8);
+		write(subscription, newQuoteVo(instanceA, instanceB, instanceC, instanceD, instanceE, instanceF));
+		assertEquals("dashboard-multiple.tf", "eu-west-3/dashboard.tf");
+		assertEquals("dashboard-multiple-widgets.tpl.md", "eu-west-3/dashboard-widgets.tpl.md");
+		assertEquals("dashboard-multiple-widgets.tpl.json", "eu-west-3/dashboard-widgets.tpl.json");
+		assertEquals("secrets.auto.tfvars", "secrets.auto.tfvars");
+		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
 	}
 
 	/**
-	 * check generated terraform
-	 * 
-	 * @throws Exception
-	 *             unexpected exception
-	 */
-	@Test
-	public void testTerraformGenerationSpotType() throws Exception {
-		final QuoteVo quoteVo = new QuoteVo();
-		quoteVo.setInstances(Lists.newArrayList(generateQuoteInstance("Spot")));
-		quoteVo.setStorages(Lists.newArrayList());
-
-		testTerraformGeneration(subscription, quoteVo, "terraform/terraform-spot.tf");
-	}
-
-	/**
-	 * check generated terraform
-	 * 
-	 * @throws Exception
-	 *             unexpected exception
-	 */
-	@Test
-	public void testTerraformGenerationPrivateNetwork() throws Exception {
-		final QuoteVo quoteVo = new QuoteVo();
-		final ProvQuoteInstance instance = generateQuoteInstance("OnDemand");
-		instance.setInternet(InternetAccess.PRIVATE);
-		quoteVo.setInstances(Lists.newArrayList(instance));
-		quoteVo.setStorages(Lists.newArrayList());
-
-		testTerraformGeneration(subscription, quoteVo, "terraform/terraform-private.tf");
-	}
-
-	/**
-	 * check generated terraform with autoscale, min and max involved.
-	 * 
-	 * @throws Exception
-	 *             unexpected exception
-	 */
-	@Test
-	public void testTerraformGenerationWithAutoscale() throws Exception {
-		final QuoteVo quoteVo = new QuoteVo();
-		final ProvQuoteInstance instance = generateQuoteInstance("OnDemand");
-		instance.setInternet(InternetAccess.PRIVATE);
-		instance.setMinQuantity(2);
-		instance.setMaxQuantity(4);
-		quoteVo.setInstances(Lists.newArrayList(instance));
-		quoteVo.setStorages(Lists.newArrayList());
-
-		testTerraformGeneration(subscription, quoteVo, "terraform/terraform-scale.tf");
-	}
-
-	/**
-	 * check generated terraform with autoscale, min only involved.
-	 * 
-	 * @throws Exception
-	 *             unexpected exception
-	 */
-	@Test
-	public void testTerraformGenerationWithAutoscale2() throws Exception {
-		final QuoteVo quoteVo = new QuoteVo();
-		final ProvQuoteInstance instance = generateQuoteInstance("OnDemand");
-		instance.setInternet(InternetAccess.PRIVATE);
-		instance.setMinQuantity(1);
-		instance.setMaxQuantity(null);
-		quoteVo.setInstances(Lists.newArrayList(instance));
-		quoteVo.setStorages(Lists.newArrayList());
-
-		testTerraformGeneration(subscription, quoteVo, "terraform/terraform-scale-default-max.tf");
-	}
-
-	/**
-	 * check generated terraform with autoscale, hight min involved.
-	 * 
-	 * @throws Exception
-	 *             unexpected exception
-	 */
-	@Test
-	public void testTerraformGenerationWithAutoscale100() throws Exception {
-		final QuoteVo quoteVo = new QuoteVo();
-		final ProvQuoteInstance instance = generateQuoteInstance("OnDemand");
-		instance.setInternet(InternetAccess.PRIVATE);
-		instance.setMinQuantity(100);
-		instance.setMaxQuantity(null);
-		quoteVo.setInstances(Lists.newArrayList(instance));
-		quoteVo.setStorages(Lists.newArrayList());
-
-		testTerraformGeneration(subscription, quoteVo, "terraform/terraform-scale-100.tf");
-	}
-
-	/**
-	 * check generated terraform
-	 * 
-	 * @throws Exception
-	 *             unexpected exception
-	 */
-	@Test
-	public void testTerraformGenerationNatNetwork() throws Exception {
-		final QuoteVo quoteVo = new QuoteVo();
-		final ProvQuoteInstance instance = generateQuoteInstance("OnDemand");
-		instance.setInternet(InternetAccess.PRIVATE_NAT);
-		quoteVo.setInstances(Lists.newArrayList(instance));
-		quoteVo.setStorages(Lists.newArrayList());
-
-		testTerraformGeneration(subscription, quoteVo, "terraform/terraform-nat.tf");
-	}
-
-	/**
-	 * Check generated Terraform for only storages
-	 */
-	@Test
-	public void testTerraformGenerationStorage() throws Exception {
-		final QuoteVo quoteVo = new QuoteVo();
-		quoteVo.setInstances(Lists.newArrayList());
-		quoteVo.setStorages(Lists.newArrayList(generateStorage(null, "backup", 40)));
-
-		testTerraformGeneration(subscription, quoteVo, "terraform/terraform-storage.tf");
-	}
-
-	/**
-	 * Call terraform generation and check the result is same as input file content
+	 * Call Terraform generation and check the result is same as input file content
 	 * 
 	 * @param subscription
 	 *            subscription
 	 * @param quoteVo
 	 *            quote
-	 * @param expectedResultFileName
-	 *            expected result
 	 */
-	private void testTerraformGeneration(final Subscription subscription, final QuoteVo quoteVo, final String expectedResultFileName)
-			throws IOException {
-		final StringWriter writer = new StringWriter();
-		service.writeTerraform(writer, quoteVo, subscription);
-
-		final String terraform = writer.toString();
-		Assertions.assertNotNull(terraform);
-		Assertions.assertEquals(
-				IOUtils.toString(Thread.currentThread().getContextClassLoader().getResource(expectedResultFileName), Charsets.UTF_8),
-				terraform);
-	}
-
-	/**
-	 * generate a quote storage vo
-	 * 
-	 * @param name
-	 *            quote name
-	 * @param size
-	 *            storage size
-	 * @return quote storage
-	 */
-	private ProvQuoteStorage generateStorage(final Integer instanceId, final String name, final int size) {
-		final ProvQuoteStorage storageVo = new ProvQuoteStorage();
-		storageVo.setSize(size);
-		storageVo.setName(name);
-		if (instanceId != null) {
-			final ProvQuoteInstance instance = new ProvQuoteInstance();
-			instance.setId(instanceId);
-			instance.setName("instance-tag");
-			storageVo.setQuoteInstance(instance);
-		}
-		final ProvStorageType storageType = new ProvStorageType();
-		storageType.setName("gp2");
-		
-		final ProvStoragePrice storagePrice = new ProvStoragePrice();
-		storagePrice.setType(storageType);
-		storageVo.setPrice(storagePrice);
-		return storageVo;
+	private void write(final Subscription subscription, final QuoteVo quoteVo) throws IOException {
+		newProvAwsTerraformService().write(subscription, quoteVo);
 	}
 
 	/**
@@ -257,38 +206,77 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	 *            instance type (Spot or OnDemand
 	 * @return quote instance
 	 */
-	private ProvQuoteInstance generateQuoteInstance(final String type) {
+	private ProvQuoteInstance newQuoteInstance(final String name, final VmOs os, final Double maxVariableCost,
+			final int min, final Integer max, int... storages) {
 		final ProvQuoteInstance quoteInstance = new ProvQuoteInstance();
-		quoteInstance.setId(1);
-		quoteInstance.setName("dev");
 		final ProvInstanceType instance = new ProvInstanceType();
 		instance.setName("t2.micro");
 		final ProvInstancePrice instancePrice = new ProvInstancePrice();
 		instancePrice.setType(instance);
-		instancePrice.setOs(VmOs.LINUX);
+		instancePrice.setOs(os);
 		final ProvInstancePriceTerm instancePriceType = new ProvInstancePriceTerm();
-		instancePriceType.setName(type);
+		instancePriceType.setName("some");
 		instancePrice.setTerm(instancePriceType);
 		quoteInstance.setPrice(instancePrice);
-		quoteInstance.setStorages(Lists.newArrayList());
+		quoteInstance.setId(1);
+		quoteInstance.setName(name);
+		quoteInstance.setMaxVariableCost(maxVariableCost);
+		quoteInstance.setMinQuantity(min);
+		quoteInstance.setMaxQuantity(max);
+		quoteInstance.setOs(os);
+		quoteInstance.setStorages(new ArrayList<>());
+		IntStream.range(0, storages.length).forEach(idx -> {
+			final ProvQuoteStorage storage = new ProvQuoteStorage();
+			storage.setQuoteInstance(quoteInstance);
+			ProvStoragePrice price = new ProvStoragePrice();
+			ProvStorageType type = new ProvStorageType();
+			type.setName("gp2");
+			price.setType(type);
+			storage.setPrice(price);
+			storage.setName(name + "-storage-" + idx);
+			storage.setSize(storages[idx]);
+			quoteInstance.getStorages().add(storage);
+		});
+
 		return quoteInstance;
 	}
 
-	/**
-	 * generate an instance storage for test purpose
-	 * 
-	 * @param size
-	 *            storage size
-	 * @return instance storage
-	 */
-	private ProvQuoteStorage generateInstanceStorage(final int size) {
-		final ProvQuoteStorage instanceStorage = new ProvQuoteStorage();
-		instanceStorage.setSize(size);
-		final ProvStoragePrice storagePrice = new ProvStoragePrice();
-		final ProvStorageType storageType = new ProvStorageType();
-		storageType.setName("gp2");
-		storagePrice.setType(storageType);
-		instanceStorage.setPrice(storagePrice);
-		return instanceStorage;
+	private ProvAwsTerraformService newProvAwsTerraformService() {
+		final ProvAwsTerraformService resource = new ProvAwsTerraformService();
+		applicationContext.getAutowireCapableBeanFactory().autowireBean(resource);
+		resource.utils = new TerraformUtils() {
+
+			@Override
+			public File toFile(final Subscription subscription, final String... fragments) throws IOException {
+				final File file = fragments.length == 0 ? MOCK_PATH : new File(MOCK_PATH, String.join("/", fragments));
+				FileUtils.forceMkdirParent(file);
+				return file;
+			}
+		};
+		return resource;
+	}
+
+	private void assertEquals(final String expected, final String generated) throws IOException {
+		final File expected2 = new File(EXPECTED_PATH, expected).getAbsoluteFile();
+		Assertions.assertTrue(expected2.exists());
+		final File generatedFile = new File(MOCK_PATH, generated).getAbsoluteFile();
+		Assertions.assertTrue(generatedFile.exists());
+		Assertions.assertEquals(IOUtils.toString(expected2.toURI(), StandardCharsets.UTF_8),
+				IOUtils.toString(generatedFile.toURI(), StandardCharsets.UTF_8));
+	}
+
+	private QuoteVo newQuoteVo(final ProvQuoteInstance... instances) {
+		final QuoteVo quoteVo = new QuoteVo();
+		final ProvLocation location = new ProvLocation();
+		location.setName("eu-west-3");
+		quoteVo.setInstances(Arrays.asList(instances));
+		ProvQuote configuration = new ProvQuote();
+		configuration.setLocation(location);
+		Arrays.stream(instances).forEach(i -> {
+			i.setConfiguration(configuration);
+			i.getStorages().stream().forEach(s -> s.setConfiguration(configuration));
+		});
+		quoteVo.setLocation(location);
+		return quoteVo;
 	}
 }

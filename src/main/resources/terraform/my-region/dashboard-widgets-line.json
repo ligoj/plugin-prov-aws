@@ -1,0 +1,1 @@
+[ "{{service}}", "{{metric}}", "{{property}}", "{{id}}", { "stat": "Average", "label": "{{label}}", "period": ${metrics_period} } ]

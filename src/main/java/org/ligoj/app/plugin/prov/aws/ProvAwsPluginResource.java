@@ -18,15 +18,14 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
 import org.ligoj.app.api.SubscriptionStatusWithData;
-import org.ligoj.app.model.Subscription;
 import org.ligoj.app.plugin.prov.AbstractProvResource;
 import org.ligoj.app.plugin.prov.ProvResource;
-import org.ligoj.app.plugin.prov.QuoteVo;
 import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery;
 import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery.AWS4SignatureQueryBuilder;
 import org.ligoj.app.plugin.prov.aws.auth.AWS4SignerForAuthorizationHeader;
 import org.ligoj.app.plugin.prov.aws.in.ProvAwsPriceImportResource;
 import org.ligoj.app.plugin.prov.in.ImportCatalogService;
+import org.ligoj.app.plugin.prov.terraform.Context;
 import org.ligoj.app.plugin.prov.terraform.Terraforming;
 import org.ligoj.app.resource.plugin.CurlProcessor;
 import org.ligoj.app.resource.plugin.CurlRequest;
@@ -144,8 +143,8 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	}
 
 	@Override
-	public void generate(final Subscription subscription, final QuoteVo quote) throws IOException {
-		terraformService.write(subscription, quote);
+	public void generate(final Context context) throws IOException {
+		terraformService.write(context);
 	}
 
 	/**

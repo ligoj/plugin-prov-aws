@@ -36,6 +36,7 @@ import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery.AWS4SignatureQueryB
 import org.ligoj.app.plugin.prov.aws.in.ProvAwsPriceImportResource;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvQuote;
+import org.ligoj.app.plugin.prov.terraform.Context;
 import org.ligoj.app.resource.plugin.CurlRequest;
 import org.ligoj.bootstrap.core.NamedBean;
 import org.ligoj.bootstrap.core.resource.BusinessException;
@@ -109,7 +110,9 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		final ProvAwsPluginResource resource2 = new ProvAwsPluginResource();
 		super.applicationContext.getAutowireCapableBeanFactory().autowireBean(resource2);
 		resource2.terraformService = Mockito.mock(ProvAwsTerraformService.class);
-		resource2.generate(em.find(Subscription.class, subscription), null);
+		final Context context = new Context();
+		context.setSubscription(em.find(Subscription.class, subscription));
+		resource2.generate(context);
 	}
 
 	/**

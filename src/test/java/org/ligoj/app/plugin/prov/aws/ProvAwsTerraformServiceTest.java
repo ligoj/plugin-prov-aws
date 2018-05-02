@@ -39,6 +39,7 @@ import org.ligoj.app.plugin.prov.model.ProvQuoteStorage;
 import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.model.VmOs;
+import org.ligoj.app.plugin.prov.terraform.Context;
 import org.ligoj.app.plugin.prov.terraform.TerraformUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.annotation.Rollback;
@@ -196,7 +197,10 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	 *            quote
 	 */
 	private void write(final Subscription subscription, final QuoteVo quoteVo) throws IOException {
-		newProvAwsTerraformService().write(subscription, quoteVo);
+		final Context context = new Context();
+		context.setSubscription(subscription);
+		context.setQuote(quoteVo);
+		newProvAwsTerraformService().write(context);
 	}
 
 	/**

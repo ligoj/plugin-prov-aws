@@ -27,12 +27,13 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.model.Project;
 import org.ligoj.app.model.Subscription;
-import org.ligoj.app.plugin.prov.QuoteVo;
 import org.ligoj.app.plugin.prov.model.AbstractQuoteResource;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
 import org.ligoj.app.plugin.prov.model.ProvQuoteStorage;
 import org.ligoj.app.plugin.prov.model.VmOs;
+import org.ligoj.app.plugin.prov.terraform.Context;
+import org.ligoj.app.plugin.prov.terraform.InstanceMode;
 import org.ligoj.app.plugin.prov.terraform.TerraformUtils;
 import org.ligoj.app.resource.subscription.SubscriptionResource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -120,21 +121,16 @@ public class ProvAwsTerraformService {
 	 * <li><code>./$my-region/ami-$os.tf</code> for enabled OS in this region.</li>
 	 * </ul>
 	 * 
-	 * @param subscription
-	 *            The subscription.
-	 * @param quote
-	 *            The fetched configuration : instance and storage.
+	 * @param context
+	 *            The Terraform context holding the subscription, the quote and the user inputs.
 	 * @throws IOException
 	 *             When Terraform content cannot be written.
 	 */
-	public void write(final Subscription subscription, final QuoteVo quote) throws IOException {
-		final Context context = new Context();
-		context.setSubscription(subscription);
-		context.setQuote(quote);
+	public void write(final Context context) throws IOException {
 		writeStatics(context);
 		writeContext(context);
 		writeRegions(context);
-		writeSecrets(subscription);
+		writeSecrets(context.getSubscription());
 	}
 
 	/**
@@ -191,10 +187,10 @@ public class ProvAwsTerraformService {
 
 		// Single EC2 but with a price condition
 		if (ObjectUtils.defaultIfNull(instance.getMaxVariableCost(), 0d) > 0) {
-			return InstanceMode.SPOT;
+			return InstanceMode.EPHEMERAL;
 		}
 		// Single EC2
-		return InstanceMode.EC2;
+		return InstanceMode.VM;
 	}
 
 	private String toString(final String path) throws IOException {
@@ -216,9 +212,9 @@ public class ProvAwsTerraformService {
 		// Markdown
 		templateFromTo(context.add("alb", getMd(modes.get(InstanceMode.AUTO_SCALING),
 				"ALB|[${alb{{i}}_name}](/ec2/v2/home?region=${region}#LoadBalancers:search=${alb{{i}}_dns})|[http](http://${alb{{i}}_dns})"))
-				.add("ec2", getMd(modes.get(InstanceMode.EC2),
+				.add("ec2", getMd(modes.get(InstanceMode.VM),
 						"EC2|[${ec2{{i}}_name}](/ec2/v2/home?region=${region}#Instances:search=${ec2{{i}}})|[http](http://${ec2{{i}}_ip})"))
-				.add("spot", getMd(modes.get(InstanceMode.SPOT),
+				.add("spot", getMd(modes.get(InstanceMode.EPHEMERAL),
 						"EC2|[${spot{{i}}_name}](/ec2/v2/home?region=${region}#Instances:search=${spot{{i}}})|[http](http://${spot{{i}}_ip})"))
 				.add("asg", getMd(modes.get(InstanceMode.AUTO_SCALING),
 						"EC2/AS|[${asg{{i}}_name}](/ec2/autoscaling/home?region=${region}#AutoScalingGroups:id=${asg{{i}}};view=details)|")),
@@ -231,10 +227,10 @@ public class ProvAwsTerraformService {
 
 	private String getDashboardReferences(final Context context) {
 		final StringBuilder buffer = new StringBuilder();
-		appendDashboardReferences(buffer, context, context.getModes().get(InstanceMode.EC2),
+		appendDashboardReferences(buffer, context, context.getModes().get(InstanceMode.VM),
 				"ec2{{i}} = \"${aws_instance.{{key}}.instance}\"", "ec2{{i}}_name = \"{{name}}\"",
 				"ec2{{i}}_ip = \"${aws_instance.{{key}}.public_ip}\"");
-		appendDashboardReferences(buffer, context, context.getModes().get(InstanceMode.SPOT),
+		appendDashboardReferences(buffer, context, context.getModes().get(InstanceMode.EPHEMERAL),
 				"spot{{i}}    = \"${aws_instance.{{key}}.spot_instance_id}\"",
 				"spot{{i}}_ip = \"${aws_instance.{{key}}.public_ip}\"");
 		appendDashboardReferences(buffer, context, context.getModes().get(InstanceMode.AUTO_SCALING),

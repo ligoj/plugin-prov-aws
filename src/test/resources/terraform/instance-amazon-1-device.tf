@@ -23,7 +23,7 @@ resource "aws_instance" "instancea" {
 resource "aws_volume_attachment" "instancea-storage-0" {
   device_name = "/dev/xvda"
   volume_id   = "${aws_ebs_volume.instancea-storage-0.id}"
-  instance_id = "${module.instancea.instance}"
+  instance_id = "${aws_instance.instancea.id}"
 }
 
 resource "aws_ebs_volume" "instancea-storage-0" {

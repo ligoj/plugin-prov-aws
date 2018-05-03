@@ -82,7 +82,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	public void writeSimpleCentos() throws IOException {
 		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.CENTOS, null, 1, 1, 10, 8);
 		write(subscription, newQuoteVo(instance));
-		assertEquals("instance-centos.tf", "eu-west-3/ec2-instancea.tf");
+		assertEquals("instance-centos.tf", "eu-west-3/vm-instancea.tf");
 		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-centos.tf").exists());
 	}
 
@@ -90,18 +90,19 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	public void writeSimpleAmz() throws IOException {
 		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 1, 10, 8);
 		write(subscription, newQuoteVo(instance));
-		assertEquals("instance-amazon.tf", "eu-west-3/ec2-instancea.tf");
+		assertEquals("instance-amazon.tf", "eu-west-3/vm-instancea.tf");
 		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
 		assertEquals("dashboard-ec2.tf", "eu-west-3/dashboard.tf");
 		assertEquals("dashboard-ec2-widgets.tpl.md", "eu-west-3/dashboard-widgets.tpl.md");
 		assertEquals("dashboard-ec2-widgets.tpl.json", "eu-west-3/dashboard-widgets.tpl.json");
+		assertTrue(new File(MOCK_PATH, "eu-west-3.tf").exists());
 	}
 
 	@Test
 	public void writeSimpleAmzRootOnly() throws IOException {
 		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 1, 10);
 		write(subscription, newQuoteVo(instance));
-		assertEquals("instance-amazon-1-device.tf", "eu-west-3/ec2-instancea.tf");
+		assertEquals("instance-amazon-1-device.tf", "eu-west-3/vm-instancea.tf");
 		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
 	}
 
@@ -109,7 +110,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	public void writeSimpleAmz3Devices() throws IOException {
 		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 1, 10, 11, 12);
 		write(subscription, newQuoteVo(instance));
-		assertEquals("instance-amazon-3-devices.tf", "eu-west-3/ec2-instancea.tf");
+		assertEquals("instance-amazon-3-devices.tf", "eu-west-3/vm-instancea.tf");
 		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
 	}
 
@@ -117,7 +118,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	public void writeSimpleWindows() throws IOException {
 		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.WINDOWS, null, 1, 1, 10, 8);
 		write(subscription, newQuoteVo(instance));
-		assertEquals("instance-windows.tf", "eu-west-3/ec2-instancea.tf");
+		assertEquals("instance-windows.tf", "eu-west-3/vm-instancea.tf");
 		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-windows.tf").exists());
 	}
 
@@ -125,7 +126,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	public void writeSimpleRHEL() throws IOException {
 		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.RHEL, null, 1, 1, 10, 8);
 		write(subscription, newQuoteVo(instance));
-		assertEquals("instance-rhel.tf", "eu-west-3/ec2-instancea.tf");
+		assertEquals("instance-rhel.tf", "eu-west-3/vm-instancea.tf");
 		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-rhel.tf").exists());
 	}
 
@@ -133,7 +134,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	public void writeSpotAmz() throws IOException {
 		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, 0.1, 1, 1, 10, 8);
 		write(subscription, newQuoteVo(instance));
-		assertEquals("instance-spot.tf", "eu-west-3/spot-instancea.tf");
+		assertEquals("instance-spot.tf", "eu-west-3/ephemeral-instancea.tf");
 		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
 		assertEquals("dashboard-spot.tf", "eu-west-3/dashboard.tf");
 		assertEquals("dashboard-spot-widgets.tpl.md", "eu-west-3/dashboard-widgets.tpl.md");

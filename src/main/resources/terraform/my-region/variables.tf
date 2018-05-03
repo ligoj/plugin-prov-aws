@@ -13,6 +13,10 @@ variable "it" {
   default = true
 }
 
+variable period {
+  default = 0
+}
+
 variable "tags" {
   default = {}
 }

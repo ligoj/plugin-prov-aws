@@ -155,6 +155,7 @@ public class ProvAwsTerraformService {
 				.forEach(locations::add);
 		for (final String location : locations) {
 			context.setLocation(location);
+			context.add("region", location);
 			writeRegion(context);
 		}
 	}
@@ -178,27 +179,8 @@ public class ProvAwsTerraformService {
 		writeRegionInstances(context);
 	}
 
-	private InstanceMode toMode(final ProvQuoteInstance instance) {
-		// xLB
-		if (instance.getMinQuantity() != 1 || instance.getMaxQuantity() == null
-				|| instance.getMaxQuantity().doubleValue() > instance.getMinQuantity()) {
-			return InstanceMode.AUTO_SCALING;
-		}
-
-		// Single EC2 but with a price condition
-		if (ObjectUtils.defaultIfNull(instance.getMaxVariableCost(), 0d) > 0) {
-			return InstanceMode.EPHEMERAL;
-		}
-		// Single EC2
-		return InstanceMode.VM;
-	}
-
-	private String toString(final String path) throws IOException {
-		return IOUtils.toString(new ClassPathResource("terraform/" + path).getURI(), StandardCharsets.UTF_8);
-	}
-
 	/**
-	 * Write dashboard: charts and markdown
+	 * Write dashboard: charts and Markdown.
 	 */
 	private void writeRegionDashboard(final Context context) throws IOException {
 		final Map<InstanceMode, List<ProvQuoteInstance>> modes = context.getModes();
@@ -228,7 +210,7 @@ public class ProvAwsTerraformService {
 	private String getDashboardReferences(final Context context) {
 		final StringBuilder buffer = new StringBuilder();
 		appendDashboardReferences(buffer, context, context.getModes().get(InstanceMode.VM),
-				"ec2{{i}} = \"${aws_instance.{{key}}.instance}\"", "ec2{{i}}_name = \"{{name}}\"",
+				"ec2{{i}} = \"${aws_instance.{{key}}.id}\"", "ec2{{i}}_name = \"{{name}}\"",
 				"ec2{{i}}_ip = \"${aws_instance.{{key}}.public_ip}\"");
 		appendDashboardReferences(buffer, context, context.getModes().get(InstanceMode.EPHEMERAL),
 				"spot{{i}}    = \"${aws_instance.{{key}}.spot_instance_id}\"",
@@ -333,38 +315,14 @@ public class ProvAwsTerraformService {
 		copyFromTo(context, "my-region/vpc.tf", context.getLocation(), "vpc.tf");
 	}
 
-	private void copy(final Context context, final String... fragments) throws IOException {
-		Files.copy(new ClassPathResource("terraform/" + String.join("/", fragments)).getInputStream(),
-				utils.toFile(context.getSubscription(), fragments).toPath());
-	}
-
-	private void copyFromTo(final Context context, final String from, final String... toFragments) throws IOException {
-		Files.copy(new ClassPathResource("terraform/" + from).getInputStream(),
-				utils.toFile(context.getSubscription(), toFragments).toPath());
-	}
-
-	private void template(final Context context, final Function<String, String> formater, final String... fragments)
-			throws IOException {
-		try (InputStream source = new ClassPathResource("terraform/" + String.join("/", fragments)).getInputStream();
-				FileOutputStream target = new FileOutputStream(utils.toFile(context.getSubscription(), fragments));
-				Writer targetW = new OutputStreamWriter(target);) {
-			targetW.write(formater.apply(IOUtils.toString(source, StandardCharsets.UTF_8)));
-		}
-	}
-
-	private void templateFromTo(final Context context, final String from, final String... toFragments)
-			throws IOException {
-		try (InputStream source = new ClassPathResource("terraform/" + from).getInputStream();
-				FileOutputStream target = new FileOutputStream(utils.toFile(context.getSubscription(), toFragments));
-				Writer targetW = new OutputStreamWriter(target);) {
-			targetW.write(replace(IOUtils.toString(source, StandardCharsets.UTF_8), context));
-		}
-	}
-
 	/**
 	 * Write instances configuration.
 	 */
 	private void writeRegionInstances(final Context context) throws IOException {
+		// Write the the region bootstrap module
+		templateFromTo(context, "my-region.tf", context.getLocation() + ".tf");
+
+		// Write the instances, ALB,... within this instance
 		final NormalizeFormat normalizeFormat = new NormalizeFormat();
 		for (final Map.Entry<InstanceMode, List<ProvQuoteInstance>> entry : context.getModes().entrySet()) {
 			final List<ProvQuoteInstance> instances = entry.getValue();
@@ -448,6 +406,34 @@ public class ProvAwsTerraformService {
 		}
 	}
 
+	private void copy(final Context context, final String... fragments) throws IOException {
+		Files.copy(new ClassPathResource("terraform/" + String.join("/", fragments)).getInputStream(),
+				utils.toFile(context.getSubscription(), fragments).toPath());
+	}
+
+	private void copyFromTo(final Context context, final String from, final String... toFragments) throws IOException {
+		Files.copy(new ClassPathResource("terraform/" + from).getInputStream(),
+				utils.toFile(context.getSubscription(), toFragments).toPath());
+	}
+
+	private void template(final Context context, final Function<String, String> formater, final String... fragments)
+			throws IOException {
+		try (InputStream source = new ClassPathResource("terraform/" + String.join("/", fragments)).getInputStream();
+				FileOutputStream target = new FileOutputStream(utils.toFile(context.getSubscription(), fragments));
+				Writer targetW = new OutputStreamWriter(target);) {
+			targetW.write(formater.apply(IOUtils.toString(source, StandardCharsets.UTF_8)));
+		}
+	}
+
+	private void templateFromTo(final Context context, final String from, final String... toFragments)
+			throws IOException {
+		try (InputStream source = new ClassPathResource("terraform/" + from).getInputStream();
+				FileOutputStream target = new FileOutputStream(utils.toFile(context.getSubscription(), toFragments));
+				Writer targetW = new OutputStreamWriter(target);) {
+			targetW.write(replace(IOUtils.toString(source, StandardCharsets.UTF_8), context));
+		}
+	}
+
 	private String replace(String source, String... replaces) {
 		String result = source;
 		for (int index = 0; index < replaces.length; index += 2) {
@@ -462,5 +448,24 @@ public class ProvAwsTerraformService {
 			result = StringUtils.replace(result, String.format("{{%s}}", entry.getKey()), entry.getValue());
 		}
 		return result;
+	}
+
+	private InstanceMode toMode(final ProvQuoteInstance instance) {
+		// xLB
+		if (instance.getMinQuantity() != 1 || instance.getMaxQuantity() == null
+				|| instance.getMaxQuantity().doubleValue() > instance.getMinQuantity()) {
+			return InstanceMode.AUTO_SCALING;
+		}
+
+		// Single EC2 but with a price condition
+		if (ObjectUtils.defaultIfNull(instance.getMaxVariableCost(), 0d) > 0) {
+			return InstanceMode.EPHEMERAL;
+		}
+		// Single EC2
+		return InstanceMode.VM;
+	}
+
+	private String toString(final String path) throws IOException {
+		return IOUtils.toString(new ClassPathResource("terraform/" + path).getURI(), StandardCharsets.UTF_8);
 	}
 }

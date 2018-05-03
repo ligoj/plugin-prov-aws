@@ -2,7 +2,7 @@
 resource "aws_volume_attachment" "{{key}}" {
   device_name = "{{device}}"
   volume_id   = "${aws_ebs_volume.{{key}}.id}"
-  instance_id = "${module.{{instance}}.instance}"
+  instance_id = "${aws_instance.{{instance}}.id}"
 }
 
 resource "aws_ebs_volume" "{{key}}" {

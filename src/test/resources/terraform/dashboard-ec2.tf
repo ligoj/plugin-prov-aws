@@ -1,5 +1,5 @@
 locals {
-  period         = "${var.it ? 60 * 60 : (60 * 60 * 24)}"
+  period         = "${var.period == 0 ? (var.it ? 60 * 60 : (60 * 60 * 24)) : var.period}"
   metrics_period = "${var.it ? 60 : (60 * 10)}"
 }
 
@@ -17,7 +17,7 @@ data "template_file" "md" {
     region         = "${var.region}"
     vpc0           = "${module.vpc.vpc_id}"
 
-ec20 = "${aws_instance.instancea.instance}"
+ec20 = "${aws_instance.instancea.id}"
 ec20_name = "InstanceA"
 ec20_ip = "${aws_instance.instancea.public_ip}"
   }
@@ -38,7 +38,7 @@ data "template_file" "widgets" {
     md             = "${replace(data.template_file.md.rendered, "\n", "\\n")}"
     vpc0           = "${module.vpc.vpc_id}"
 
-ec20 = "${aws_instance.instancea.instance}"
+ec20 = "${aws_instance.instancea.id}"
 ec20_name = "InstanceA"
 ec20_ip = "${aws_instance.instancea.public_ip}"
 

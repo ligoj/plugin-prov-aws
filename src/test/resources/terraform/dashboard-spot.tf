@@ -1,5 +1,5 @@
 locals {
-  period         = "${var.it ? 60 * 60 : (60 * 60 * 24)}"
+  period         = "${var.period == 0 ? (var.it ? 60 * 60 : (60 * 60 * 24)) : var.period}"
   metrics_period = "${var.it ? 60 : (60 * 10)}"
 }
 

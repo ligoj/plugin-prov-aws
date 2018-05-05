@@ -1,6 +1,5 @@
 
-root_block_device [ {
-  device_name   = "{{device}}"
+root_block_device {
   volume_type   = "{{type}}"
   volume_size   = {{size}}
-}]
+}

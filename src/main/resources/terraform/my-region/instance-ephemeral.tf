@@ -11,7 +11,7 @@ resource "aws_spot_instance_request" "{{key}}" {
     type = "ssh"
     user = "ec2-user"
   }
-
+{{root-device}}
   provisioner "remote-exec" {
     inline = [
       "sudo yum -y update",

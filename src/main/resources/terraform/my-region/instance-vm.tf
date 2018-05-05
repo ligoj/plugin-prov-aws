@@ -10,7 +10,7 @@ resource "aws_instance" "{{key}}" {
     type = "ssh"
     user = "ec2-user"
   }
-
+{{root-device}}
   provisioner "remote-exec" {
     inline = [
       "sudo yum -y update",

@@ -26,7 +26,7 @@ ingress-elb = {
 
 cidr = "{{cidr}}"
 
-azs = ["a", "b"]
+azs = ["a", "b", "c"]
 
 private_subnets = [{{private_subnets}}] #, "10.0.2.0/24", "10.0.3.0/24"]
 

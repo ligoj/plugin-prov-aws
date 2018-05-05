@@ -12,7 +12,7 @@ resource "aws_launch_configuration" "{{key}}" {
   lifecycle {
     create_before_destroy = true
   }
-{{ebs-devices}}
+{{root-device}}{{ebs-devices}}
   user_data                   = <<-EOF
 #!/bin/bash
 yum -y update

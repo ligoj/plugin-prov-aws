@@ -37,7 +37,7 @@ import org.ligoj.app.plugin.prov.ProvResource;
 import org.ligoj.app.plugin.prov.QuoteInstanceEditionVo;
 import org.ligoj.app.plugin.prov.QuoteInstanceLookup;
 import org.ligoj.app.plugin.prov.QuoteStorageEditionVo;
-import org.ligoj.app.plugin.prov.QuoteStorageLoopup;
+import org.ligoj.app.plugin.prov.QuoteStorageLookup;
 import org.ligoj.app.plugin.prov.QuoteVo;
 import org.ligoj.app.plugin.prov.UpdatedCost;
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
@@ -335,7 +335,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 
 	/**
 	 * Common offline install and configuring an instance
-	 * 
+	 *
 	 * @return The new quote from the installed
 	 */
 	private QuoteVo install() throws Exception {
@@ -633,7 +633,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		em.clear();
 
 		// Add storage to this instance
-		final QuoteStorageLoopup slookup = qsResource.lookup(subscription, 5, Rate.GOOD, instance, null, null).get(0);
+		final QuoteStorageLookup slookup = qsResource.lookup(subscription, 5, Rate.GOOD, instance, null, null).get(0);
 		final QuoteStorageEditionVo svo = new QuoteStorageEditionVo();
 		svo.setQuoteInstance(instance);
 		svo.setSize(5);
@@ -645,7 +645,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		Assertions.assertTrue(createStorage.getTotalCost().getMin() > 40);
 
 		// Add storage (EFS) to this quote
-		final QuoteStorageLoopup efsLookpup = qsResource
+		final QuoteStorageLookup efsLookpup = qsResource
 				.lookup(subscription, 1, Rate.GOOD, null, ProvStorageOptimized.THROUGHPUT, null).get(0);
 		final QuoteStorageEditionVo svo2 = new QuoteStorageEditionVo();
 		svo2.setSize(1);
@@ -657,12 +657,12 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		Assertions.assertEquals(0.33, createEfs.getResourceCost().getMin(), DELTA);
 
 		// Add storage (S3) to this quote
-		final QuoteStorageLoopup s3Lookpup = qsResource
+		final QuoteStorageLookup s3Lookpup = qsResource
 				.lookup(subscription, 1, Rate.MEDIUM, null, ProvStorageOptimized.DURABILITY, null).get(0);
 		final ProvStorageType type = s3Lookpup.getPrice().getType();
 		Assertions.assertEquals(99.5d, type.getAvailability(), 0.000000001d);
 		Assertions.assertEquals(11, type.getDurability9().intValue());
-		
+
 		final QuoteStorageEditionVo svo3 = new QuoteStorageEditionVo();
 		svo3.setSize(1);
 		svo3.setOptimized(ProvStorageOptimized.DURABILITY);

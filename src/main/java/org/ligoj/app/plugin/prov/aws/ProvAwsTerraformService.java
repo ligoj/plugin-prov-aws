@@ -10,6 +10,7 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
@@ -64,12 +65,12 @@ public class ProvAwsTerraformService {
 	 * <li>Format <code>/dev/xvda</code> gives <code>/dev/xvdj</code></li>
 	 * </ul>
 	 * Note that the root device does not use this format. The first non root EBS device has index <code>0</code>.
-	 * 
+	 *
 	 * @see <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html">device_naming.html</a> for
 	 *      recommendations.
 	 * @see <a href="https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/device_naming.html">device_naming.html</a>
 	 *      for recommendations.
-	 * 
+	 *
 	 */
 	private final Map<VmOs, String> mappingOsEbsDevice = new EnumMap<>(VmOs.class);
 
@@ -120,7 +121,7 @@ public class ProvAwsTerraformService {
 	 * <li><code>./$my-region/vpc.tf</code> for VPC configuration.</li>
 	 * <li><code>./$my-region/ami-$os.tf</code> for enabled OS in this region.</li>
 	 * </ul>
-	 * 
+	 *
 	 * @param context
 	 *            The Terraform context holding the subscription, the quote and the user inputs.
 	 * @throws IOException
@@ -310,8 +311,8 @@ public class ProvAwsTerraformService {
 	}
 
 	private void writeRegionStatics(final Context context) throws IOException {
-		copyFromTo(context, "my-region/provider.tf", context.getLocation(), "provider.tf");
-		copyFromTo(context, "my-region/variables.tf", context.getLocation(), "variables.tf");
+		copyFromTo(context, "my-region/provider.tf", context.getLocation(), "provider.keep.tf");
+		copyFromTo(context, "my-region/variables.tf", context.getLocation(), "variables.keep.tf");
 		copyFromTo(context, "my-region/vpc.tf", context.getLocation(), "vpc.tf");
 	}
 
@@ -319,8 +320,8 @@ public class ProvAwsTerraformService {
 	 * Write instances configuration.
 	 */
 	private void writeRegionInstances(final Context context) throws IOException {
-		// Write the the region bootstrap module
-		templateFromTo(context, "my-region.tf", context.getLocation() + ".tf");
+		// Write the the region bootstrap module : will be persistent to handle emptied region
+		templateFromTo(context, "my-region.tf", context.getLocation() + ".keep.tf");
 
 		// Write the instances, ALB,... within this instance
 		final NormalizeFormat normalizeFormat = new NormalizeFormat();
@@ -334,26 +335,28 @@ public class ProvAwsTerraformService {
 						.add("spot-price", String.valueOf(instance.getMaxVariableCost()))
 						.add("min", String.valueOf(instance.getMinQuantity()))
 						.add("max", String.valueOf(ObjectUtils.defaultIfNull(instance.getMaxQuantity(), 10)))
-						.add("ebs-devices", getEbsDevices(instance, entry.getKey() == InstanceMode.AUTO_SCALING));
+						.add("root-device", getEbsDevices(instance, true, 0, 1))
+						.add("ebs-devices", getEbsDevices(instance, entry.getKey() == InstanceMode.AUTO_SCALING, 1,
+								instance.getStorages().size()));
 				templateFromTo(context, template, context.getLocation(), mode + "-" + context.get("key") + ".tf");
 			}
 		}
 	}
 
-	private String getEbsDevices(final ProvQuoteInstance instance, final boolean intern) throws IOException {
+	private String getEbsDevices(final ProvQuoteInstance instance, final boolean intern, final int startIndex,
+			final int endIndex) throws IOException {
 		final StringBuilder builder = new StringBuilder();
 		int idx = 0;
 		final NormalizeFormat normalizeFormat = new NormalizeFormat();
 		for (final ProvQuoteStorage storage : instance.getStorages()) {
-			final String format = getDeviceFormat(intern, builder, idx);
-			builder.append(replace(format, "{{key}}", normalizeFormat.format(storage.getName()), "{{type}}",
-					storage.getPrice().getType().getName(), "{{device}}", toDeviceName(instance.getOs(), idx),
-					"{{instance}}", normalizeFormat.format(instance.getName()), "{{size}}",
-					String.valueOf(storage.getSize())));
+			if (idx >= startIndex && idx < endIndex) {
+				final String format = getDeviceFormat(intern, builder, idx);
+				builder.append('\n').append(replace(format, "{{key}}", normalizeFormat.format(storage.getName()),
+						"{{type}}", storage.getPrice().getType().getName(), "{{device}}",
+						toDeviceName(instance.getOs(), idx), "{{instance}}", normalizeFormat.format(instance.getName()),
+						"{{size}}", String.valueOf(storage.getSize())));
+			}
 			idx++;
-		}
-		if (intern && idx > 1) {
-			builder.append("]");
 		}
 		return builder.toString();
 	}
@@ -361,11 +364,7 @@ public class ProvAwsTerraformService {
 	private String getDeviceFormat(final boolean intern, final StringBuilder builder, int idx) throws IOException {
 		final String deviceSuffix;
 		if (intern) {
-			if (idx == 1) {
-				builder.append("\nebs_block_device = [ ");
-				deviceSuffix = "-1";
-			} else if (idx > 1) {
-				builder.append(",\n");
+			if (idx >= 1) {
 				deviceSuffix = "-1";
 			} else {
 				deviceSuffix = "-0";
@@ -388,7 +387,7 @@ public class ProvAwsTerraformService {
 
 	/**
 	 * Write the secrets required by the provider.
-	 * 
+	 *
 	 * @param subscription
 	 *            The subscription identifier.
 	 * @throws IOException
@@ -408,12 +407,12 @@ public class ProvAwsTerraformService {
 
 	private void copy(final Context context, final String... fragments) throws IOException {
 		Files.copy(new ClassPathResource("terraform/" + String.join("/", fragments)).getInputStream(),
-				utils.toFile(context.getSubscription(), fragments).toPath());
+				utils.toFile(context.getSubscription(), fragments).toPath(), StandardCopyOption.REPLACE_EXISTING);
 	}
 
 	private void copyFromTo(final Context context, final String from, final String... toFragments) throws IOException {
 		Files.copy(new ClassPathResource("terraform/" + from).getInputStream(),
-				utils.toFile(context.getSubscription(), toFragments).toPath());
+				utils.toFile(context.getSubscription(), toFragments).toPath(), StandardCopyOption.REPLACE_EXISTING);
 	}
 
 	private void template(final Context context, final Function<String, String> formater, final String... fragments)

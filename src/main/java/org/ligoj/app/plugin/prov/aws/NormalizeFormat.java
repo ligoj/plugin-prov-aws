@@ -18,7 +18,8 @@ public class NormalizeFormat extends org.ligoj.app.resource.NormalizeFormat {
 
 	@Override
 	public StringBuffer format(final Object obj, final StringBuffer toAppendTo, final FieldPosition pos) {
-		toAppendTo.append(org.ligoj.app.api.Normalizer.normalize(obj.toString()).toLowerCase(Locale.ENGLISH));
+		toAppendTo.append(
+				org.ligoj.app.api.Normalizer.normalize(obj.toString()).toLowerCase(Locale.ENGLISH).replace(' ', '_'));
 		return toAppendTo;
 	}
 

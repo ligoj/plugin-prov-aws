@@ -12,14 +12,7 @@ resource "aws_launch_configuration" "{{key}}" {
   lifecycle {
     create_before_destroy = true
   }
-{{root-device}}{{ebs-devices}}
-  user_data                   = <<-EOF
-#!/bin/bash
-yum -y update
-yum -y install initscripts nginx
-service nginx start
-  EOF
-
+{{root-device}}{{ebs-devices}}{{user-data}}
 }
 
 resource "aws_autoscaling_group" "{{key}}" {

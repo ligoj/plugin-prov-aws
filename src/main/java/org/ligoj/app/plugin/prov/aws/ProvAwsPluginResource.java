@@ -97,7 +97,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 
 	/**
 	 * Check AWS connection and account.
-	 * 
+	 *
 	 * @param node
 	 *            The node identifier. May be <code>null</code>.
 	 * @param parameters
@@ -149,7 +149,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 
 	/**
 	 * Return EC2 key names.
-	 * 
+	 *
 	 * @param subscription
 	 *            The related subscription.
 	 * @return EC2 keys related to given subscription.
@@ -176,7 +176,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	/**
 	 * Create Curl request for AWS service. Initialize default values for awsAccessKey, awsSecretKey and regionName and
 	 * compute signature.
-	 * 
+	 *
 	 * @param builder
 	 *            {@link AWS4SignatureQueryBuilder} initialized with values used for this call (headers, parameters,
 	 *            host, ...)
@@ -191,7 +191,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	/**
 	 * Create Curl request for AWS service. Initialize default values for awsAccessKey, awsSecretKey and regionName and
 	 * compute signature.
-	 * 
+	 *
 	 * @param builder
 	 *            {@link AWS4SignatureQueryBuilder} initialized with values used for this call (headers, parameters,
 	 *            host, ...)
@@ -212,7 +212,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 
 	/**
 	 * Return the URL from a query.
-	 * 
+	 *
 	 * @param query
 	 *            Source {@link AWS4SignatureQuery}
 	 * @return The base host URL from a query.
@@ -223,7 +223,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 
 	/**
 	 * Check AWS connection and account.
-	 * 
+	 *
 	 * @param parameters
 	 *            Subscription parameters.
 	 * @return <code>true</code> if AWS connection is up
@@ -238,7 +238,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 
 	/**
 	 * Return the default region for this plug-in.
-	 * 
+	 *
 	 * @return the default region.
 	 */
 	protected String getRegion() {
@@ -247,7 +247,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 
 	/**
 	 * Check AWS connection and account.
-	 * 
+	 *
 	 * @param subscription
 	 *            Subscription identifier.
 	 * @return <code>true</code> if AWS connection is up
@@ -258,5 +258,10 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 		final AWS4SignatureQueryBuilder builder = AWS4SignatureQuery.builder().method("GET").service("s3")
 				.region(getRegion()).path("/");
 		return new CurlProcessor().process(newRequest(builder, subscription));
+	}
+
+	@Override
+	public void generateSecrets(Context context) throws IOException {
+		terraformService.writeSecrets(context.getSubscription());
 	}
 }

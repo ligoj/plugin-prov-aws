@@ -40,6 +40,7 @@ import org.ligoj.app.resource.subscription.SubscriptionResource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ClassUtils;
 
 /**
  * Service in charge of Terraform generation for AWS.
@@ -335,12 +336,25 @@ public class ProvAwsTerraformService {
 						.add("spot-price", String.valueOf(instance.getMaxVariableCost()))
 						.add("min", String.valueOf(instance.getMinQuantity()))
 						.add("max", String.valueOf(ObjectUtils.defaultIfNull(instance.getMaxQuantity(), 10)))
-						.add("root-device", getEbsDevices(instance, true, 0, 1))
+						.add("root-device", getEbsDevices(instance, true, 0, 1)).add("user-data", getUserData(instance))
 						.add("ebs-devices", getEbsDevices(instance, entry.getKey() == InstanceMode.AUTO_SCALING, 1,
 								instance.getStorages().size()));
 				templateFromTo(context, template, context.getLocation(), mode + "-" + context.get("key") + ".tf");
 			}
 		}
+	}
+
+	/**
+	 * Return user-data related to given instance.
+	 */
+	private String getUserData(ProvQuoteInstance instance) throws IOException {
+		final String sh = "terraform/user-data/nginx/" + instance.getOs().name().toLowerCase() + ".sh";
+		try (InputStream shInput = ClassUtils.getDefaultClassLoader().getResourceAsStream(sh)) {
+			if (shInput != null) {
+				return "  user_data = <<-EOF\n" + IOUtils.toString(shInput, StandardCharsets.UTF_8) + "\n  EOF";
+			}
+		}
+		return "";
 	}
 
 	private String getEbsDevices(final ProvQuoteInstance instance, final boolean intern, final int startIndex,
@@ -393,7 +407,7 @@ public class ProvAwsTerraformService {
 	 * @throws IOException
 	 *             When secret cannot be written.
 	 */
-	private void writeSecrets(Subscription subscription) throws IOException {
+	public void writeSecrets(final Subscription subscription) throws IOException {
 		try (final Writer out = new FileWriterWithEncoding(utils.toFile(subscription, "secrets.auto.tfvars"),
 				StandardCharsets.UTF_8)) {
 			final Map<String, String> parameters = subscriptionResource.getParametersNoCheck(subscription.getId());

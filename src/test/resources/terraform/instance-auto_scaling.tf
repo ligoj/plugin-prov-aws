@@ -13,24 +13,23 @@ resource "aws_launch_configuration" "instancea" {
     create_before_destroy = true
   }
 
-root_block_device [ {
-  device_name   = "/dev/xvda"
+
+root_block_device {
   volume_type   = "gp2"
   volume_size   = 10
-}]
-ebs_block_device = [ 
-{
+}
+
+ebs_block_device {
   device_name   = "/dev/sdf"
   volume_type   = "gp2"
   volume_size   = 8
-}]
-  user_data                   = <<-EOF
+}  user_data = <<-EOF
 #!/bin/bash
 yum -y update
 yum -y install initscripts nginx
 service nginx start
-  EOF
 
+  EOF
 }
 
 resource "aws_autoscaling_group" "instancea" {

@@ -11,26 +11,19 @@ resource "aws_instance" "instancea" {
     user = "ec2-user"
   }
 
-  provisioner "remote-exec" {
-    inline = [
-      "sudo yum -y update",
-      "sudo yum -y install initscripts nginx",
-      "sudo service nginx start",
-    ]
-  }
+
+root_block_device {
+  volume_type   = "gp2"
+  volume_size   = 10
+}  user_data = <<-EOF
+#!/bin/bash
+yum -y update
+yum -y install initscripts nginx
+service nginx start
+
+  EOF
 }
 
-resource "aws_volume_attachment" "instancea-storage-0" {
-  device_name = "/dev/xvda"
-  volume_id   = "${aws_ebs_volume.instancea-storage-0.id}"
-  instance_id = "${aws_instance.instancea.id}"
-}
-
-resource "aws_ebs_volume" "instancea-storage-0" {
-  availability_zone = "${element(local.azs, 0)}"
-  size              = 10
-  tags              = "${merge(var.tags, "Name", "instancea-instancea-storage-0")}"
-}
 
 resource "aws_volume_attachment" "instancea-storage-1" {
   device_name = "/dev/sdf"
@@ -41,8 +34,9 @@ resource "aws_volume_attachment" "instancea-storage-1" {
 resource "aws_ebs_volume" "instancea-storage-1" {
   availability_zone = "${element(local.azs, 0)}"
   size              = 11
-  tags              = "${merge(var.tags, "Name", "instancea-instancea-storage-1")}"
+  tags              = "${merge(var.tags, map("Name", "instancea-instancea-storage-1"))}"
 }
+
 
 resource "aws_volume_attachment" "instancea-storage-2" {
   device_name = "/dev/sdg"
@@ -53,5 +47,5 @@ resource "aws_volume_attachment" "instancea-storage-2" {
 resource "aws_ebs_volume" "instancea-storage-2" {
   availability_zone = "${element(local.azs, 0)}"
   size              = 12
-  tags              = "${merge(var.tags, "Name", "instancea-instancea-storage-2")}"
+  tags              = "${merge(var.tags, map("Name", "instancea-instancea-storage-2"))}"
 }

@@ -199,7 +199,7 @@ public class ProvAwsTerraformService {
 				.add("ec2", getMd(modes.get(InstanceMode.VM),
 						"EC2|[${ec2{{i}}_name}](/ec2/v2/home?region=${region}#Instances:search=${ec2{{i}}})|[http](http://${ec2{{i}}_ip})"))
 				.add("spot", getMd(modes.get(InstanceMode.EPHEMERAL),
-						"EC2|[${spot{{i}}_name}](/ec2/v2/home?region=${region}#Instances:search=${spot{{i}}})|[http](http://${spot{{i}}_ip})"))
+						"EC2|[${spot{{i}}_name}](/ec2sp/v1/spot/home?region=${region}#)|[http](http://${spot{{i}}_ip})"))
 				.add("asg", getMd(modes.get(InstanceMode.AUTO_SCALING),
 						"EC2/AS|[${asg{{i}}_name}](/ec2/autoscaling/home?region=${region}#AutoScalingGroups:id=${asg{{i}}};view=details)|")),
 				"my-region/dashboard-widgets.tpl.md", context.getLocation(), "dashboard-widgets.tpl.md");
@@ -215,8 +215,8 @@ public class ProvAwsTerraformService {
 				"ec2{{i}} = \"${aws_instance.{{key}}.id}\"", "ec2{{i}}_name = \"{{name}}\"",
 				"ec2{{i}}_ip = \"${aws_instance.{{key}}.public_ip}\"");
 		appendDashboardReferences(buffer, context, context.getModes().get(InstanceMode.EPHEMERAL),
-				"spot{{i}}    = \"${aws_instance.{{key}}.spot_instance_id}\"",
-				"spot{{i}}_ip = \"${aws_instance.{{key}}.public_ip}\"");
+				"spot{{i}}    = \"${aws_spot_instance_request.{{key}}.id}\"", "spot{{i}}_name = \"{{name}}\"",
+				"spot{{i}}_ip = \"${aws_spot_instance_request.{{key}}.public_ip}\"");
 		appendDashboardReferences(buffer, context, context.getModes().get(InstanceMode.AUTO_SCALING),
 				"asg{{i}}     = \"${aws_autoscaling_group.{{key}}.name}\"", "asg{{i}}_name = \"{{name}}\"");
 		appendDashboardReferences(buffer, context, context.getModes().get(InstanceMode.AUTO_SCALING),

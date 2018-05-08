@@ -95,7 +95,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 		assertEquals("dashboard-ec2.tf", "eu-west-3/dashboard.tf");
 		assertEquals("dashboard-ec2-widgets.tpl.md", "eu-west-3/dashboard-widgets.tpl.md");
 		assertEquals("dashboard-ec2-widgets.tpl.json", "eu-west-3/dashboard-widgets.tpl.json");
-		assertTrue(new File(MOCK_PATH, "eu-west-3.tf").exists());
+		assertTrue(new File(MOCK_PATH, "eu-west-3.keep.tf").exists());
 	}
 
 	@Test
@@ -191,7 +191,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 
 	/**
 	 * Call Terraform generation and check the result is same as input file content
-	 * 
+	 *
 	 * @param subscription
 	 *            subscription
 	 * @param quoteVo
@@ -206,7 +206,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 
 	/**
 	 * generate a quote instance for test purpose
-	 * 
+	 *
 	 * @param type
 	 *            instance type (Spot or OnDemand
 	 * @return quote instance

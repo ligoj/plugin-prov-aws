@@ -200,7 +200,7 @@ public class ProvAwsTerraformService {
 						"EC2|[${ec2{{i}}_name}](/ec2/v2/home?region=${region}#Instances:search=${ec2{{i}}})|[http](http://${ec2{{i}}_ip})"))
 				.add("spot",
 						getMd(modes.get(InstanceMode.EPHEMERAL),
-								"EC2|[${spot{{i}}_name}](/ec2sp/v1/spot/home?region=${region}#)|${spot{{i}}_price})"))
+								"EC2|[${spot{{i}}_name}](/ec2sp/v1/spot/home?region=${region}#)|${spot{{i}}_price}"))
 				.add("asg", getMd(modes.get(InstanceMode.AUTO_SCALING),
 						"EC2/AS|[${asg{{i}}_name}](/ec2/autoscaling/home?region=${region}#AutoScalingGroups:id=${asg{{i}}};view=details)|")),
 				"my-region/dashboard-widgets.tpl.md", context.getLocation(), "dashboard-widgets.tpl.md");

@@ -143,12 +143,11 @@ public class ProvAwsTerraformService {
 		context.add("project.id", project.getId().toString()).add("project.pkey", project.getPkey())
 				.add("project.name", project.getName())
 				.add("subscription.id", context.getSubscription().getId().toString());
-		template(context, s -> replace(s, context), "terraform.tfvars");
+		template(context, s -> replace(s, context), "terraform.keep.auto.tfvars");
 	}
 
 	private void writeStatics(final Context context) throws IOException {
 		copy(context, "main.tf");
-		copy(context, "variables.tf");
 		copy(context, "variables.keep.tf");
 	}
 
@@ -314,7 +313,6 @@ public class ProvAwsTerraformService {
 
 	private void writeRegionStatics(final Context context) throws IOException {
 		copyFromTo(context, "my-region/provider.tf", context.getLocation(), "provider.keep.tf");
-		copyFromTo(context, "my-region/variables.tf", context.getLocation(), "variables.tf");
 		copyFromTo(context, "my-region/variables.keep.tf", context.getLocation(), "variables.keep.tf");
 		copyFromTo(context, "my-region/vpc.tf", context.getLocation(), "vpc.tf");
 	}

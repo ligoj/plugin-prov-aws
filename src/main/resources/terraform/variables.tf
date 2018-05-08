@@ -1,5 +1,3 @@
-variable "access_key" {}
-variable "secret_key" {}
 variable "subscription" {}
 variable "project" {}
 variable "project_key" {}

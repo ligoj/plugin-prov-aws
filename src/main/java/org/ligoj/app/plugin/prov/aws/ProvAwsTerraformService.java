@@ -149,6 +149,7 @@ public class ProvAwsTerraformService {
 	private void writeStatics(final Context context) throws IOException {
 		copy(context, "main.tf");
 		copy(context, "variables.tf");
+		copy(context, "variables.keep.tf");
 	}
 
 	private void writeRegions(final Context context) throws IOException {
@@ -313,7 +314,8 @@ public class ProvAwsTerraformService {
 
 	private void writeRegionStatics(final Context context) throws IOException {
 		copyFromTo(context, "my-region/provider.tf", context.getLocation(), "provider.keep.tf");
-		copyFromTo(context, "my-region/variables.tf", context.getLocation(), "variables.keep.tf");
+		copyFromTo(context, "my-region/variables.tf", context.getLocation(), "variables.tf");
+		copyFromTo(context, "my-region/variables.keep.tf", context.getLocation(), "variables.keep.tf");
 		copyFromTo(context, "my-region/vpc.tf", context.getLocation(), "vpc.tf");
 	}
 

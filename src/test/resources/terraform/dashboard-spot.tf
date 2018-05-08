@@ -17,8 +17,9 @@ data "template_file" "md" {
     region         = "${var.region}"
     vpc0           = "${module.vpc.vpc_id}"
 
-spot0    = "${aws_instance.instancea.spot_instance_id}"
-spot0_ip = "${aws_instance.instancea.public_ip}"
+spot0       = "${aws_spot_instance_request.instancea.id}"
+spot0_name = "InstanceA"
+spot0_price = "0.1"
   }
 }
 
@@ -37,8 +38,9 @@ data "template_file" "widgets" {
     md             = "${replace(data.template_file.md.rendered, "\n", "\\n")}"
     vpc0           = "${module.vpc.vpc_id}"
 
-spot0    = "${aws_instance.instancea.spot_instance_id}"
-spot0_ip = "${aws_instance.instancea.public_ip}"
+spot0       = "${aws_spot_instance_request.instancea.id}"
+spot0_name = "InstanceA"
+spot0_price = "0.1"
 
   }
 }

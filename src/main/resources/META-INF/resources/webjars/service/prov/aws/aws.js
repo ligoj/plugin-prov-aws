@@ -32,6 +32,10 @@ define(function () {
 					'service:prov:aws:account', current.renderKey(subscription)
 				]
 			], 0, 1);
+		},
+		
+		dashboardLink: function(model) {
+			return 'https://console.aws.amazon.com/cloudwatch/home#dashboards:';
 		}
 	};
 	return current;

@@ -196,15 +196,15 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		// Now, change a price within the remote catalog
 
 		// Point to another catalog with different prices
-		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES,
+		configuration.put(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES,
 				"http://localhost:" + MOCK_PORT + "/v2/index.csv");
-		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES_SPOT,
+		configuration.put(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES_SPOT,
 				"http://localhost:" + MOCK_PORT + "/v2/spot.js");
-		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EBS_PRICES,
+		configuration.put(ProvAwsPriceImportResource.CONF_URL_EBS_PRICES,
 				"http://localhost:" + MOCK_PORT + "/v2/pricing-ebs.js");
-		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EFS_PRICES,
+		configuration.put(ProvAwsPriceImportResource.CONF_URL_EFS_PRICES,
 				"http://localhost:" + MOCK_PORT + "/v2/pricing-efs.csv");
-		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_S3_PRICES,
+		configuration.put(ProvAwsPriceImportResource.CONF_URL_S3_PRICES,
 				"http://localhost:" + MOCK_PORT + "/v2/pricing-s3.csv");
 
 		// Install the new catalog, update occurs
@@ -349,7 +349,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 	public void installOnLine() throws Exception {
 		configuration.delete(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES);
 		configuration.delete(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES_SPOT); // Only one region for UTs
-		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_REGIONS, "eu-west-1");
+		configuration.put(ProvAwsPriceImportResource.CONF_REGIONS, "eu-west-1");
 
 		// Aligned to :
 		// https://aws.amazon.com/ec2/pricing/reserved-instances/pricing/
@@ -376,8 +376,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 	@Test
 	public void installEc2CsvNotFound() throws Exception {
 		patchConfigurationUrl();
-		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES,
-				"http://localhost:" + MOCK_PORT + "/any.csv");
+		configuration.put(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES, "http://localhost:" + MOCK_PORT + "/any.csv");
 		mockServerNoEc2();
 		resource.install();
 		em.flush();
@@ -412,7 +411,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 	@Test
 	public void installEfsCsvInvalidHeader() throws Exception {
 		patchConfigurationUrl();
-		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EFS_PRICES,
+		configuration.put(ProvAwsPriceImportResource.CONF_URL_EFS_PRICES,
 				"http://localhost:" + MOCK_PORT + "/pricing-efs-error.csv");
 		httpServer.stubFor(get(urlEqualTo("/pricing-efs-error.csv"))
 				.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(IOUtils.toString(
@@ -434,9 +433,9 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 	@Test
 	public void installS3CsvInvalidHeader() throws Exception {
 		patchConfigurationUrl();
-		httpServer.stubFor(
-				get(urlEqualTo("/pricing-s3.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(IOUtils
-						.toString(new ClassPathResource("mock-server/aws/pricing-error.csv").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/pricing-s3.csv"))
+				.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(IOUtils.toString(
+						new ClassPathResource("mock-server/aws/pricing-error.csv").getInputStream(), "UTF-8"))));
 		httpServer.start();
 
 		Assertions.assertEquals("Premature end of CSV file, headers were not found",
@@ -486,14 +485,13 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 	 */
 	@Test
 	public void installSpotEmpty() throws Exception {
-		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES,
+		configuration.put(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES,
 				"http://localhost:" + MOCK_PORT + "/index.csv");
-		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES_SPOT,
+		configuration.put(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES_SPOT,
 				"http://localhost:" + MOCK_PORT + "/any.js");
-		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_S3_PRICES,
+		configuration.put(ProvAwsPriceImportResource.CONF_URL_S3_PRICES,
 				"http://localhost:" + MOCK_PORT + "/index.csv");
-		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EBS_PRICES,
-				"http://localhost:" + MOCK_PORT + "/any.js");
+		configuration.put(ProvAwsPriceImportResource.CONF_URL_EBS_PRICES, "http://localhost:" + MOCK_PORT + "/any.js");
 		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
 				IOUtils.toString(new ClassPathResource("mock-server/aws/index-empty.csv").getInputStream(), "UTF-8"))));
 		httpServer.start();
@@ -531,15 +529,15 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 	}
 
 	private void patchConfigurationUrl() {
-		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES,
+		configuration.put(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES,
 				"http://localhost:" + MOCK_PORT + "/index.csv");
-		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES_SPOT,
+		configuration.put(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES_SPOT,
 				"http://localhost:" + MOCK_PORT + "/spot.js");
-		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EBS_PRICES,
+		configuration.put(ProvAwsPriceImportResource.CONF_URL_EBS_PRICES,
 				"http://localhost:" + MOCK_PORT + "/pricing-ebs.js");
-		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_EFS_PRICES,
+		configuration.put(ProvAwsPriceImportResource.CONF_URL_EFS_PRICES,
 				"http://localhost:" + MOCK_PORT + "/pricing-efs.csv");
-		configuration.saveOrUpdate(ProvAwsPriceImportResource.CONF_URL_S3_PRICES,
+		configuration.put(ProvAwsPriceImportResource.CONF_URL_S3_PRICES,
 				"http://localhost:" + MOCK_PORT + "/pricing-s3.csv");
 	}
 
@@ -552,9 +550,9 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		httpServer.stubFor(get(urlEqualTo("/pricing-efs.csv"))
 				.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(IOUtils.toString(
 						new ClassPathResource("mock-server/aws/pricing-efs.csv").getInputStream(), "UTF-8"))));
-		httpServer.stubFor(get(urlEqualTo("/pricing-s3.csv"))
-				.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(IOUtils.toString(
-						new ClassPathResource("mock-server/aws/pricing-s3.csv").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(
+				get(urlEqualTo("/pricing-s3.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(IOUtils
+						.toString(new ClassPathResource("mock-server/aws/pricing-s3.csv").getInputStream(), "UTF-8"))));
 		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
 				IOUtils.toString(new ClassPathResource("mock-server/aws/index.csv").getInputStream(), "UTF-8"))));
 		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
@@ -581,9 +579,9 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 						new ClassPathResource("mock-server/aws/pricing-efs.csv").getInputStream(), "UTF-8"))));
 		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
 				IOUtils.toString(new ClassPathResource("mock-server/aws/index-empty.csv").getInputStream(), "UTF-8"))));
-		httpServer.stubFor(get(urlEqualTo("/pricing-s3.csv"))
-				.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(IOUtils.toString(
-						new ClassPathResource("mock-server/aws/pricing-s3.csv").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(
+				get(urlEqualTo("/pricing-s3.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(IOUtils
+						.toString(new ClassPathResource("mock-server/aws/pricing-s3.csv").getInputStream(), "UTF-8"))));
 		httpServer.stubFor(get(urlEqualTo("/spot.js")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
 				IOUtils.toString(new ClassPathResource("mock-server/aws/spot-empty.js").getInputStream(), "UTF-8"))));
 		httpServer.start();

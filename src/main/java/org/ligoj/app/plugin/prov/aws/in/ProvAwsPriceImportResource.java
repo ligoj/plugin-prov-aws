@@ -155,7 +155,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 	/**
 	 * Install or update prices.
-	 * 
+	 *
 	 * @throws IOException
 	 *             When CSV or XML files cannot be read.
 	 * @throws URISyntaxException
@@ -183,7 +183,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 	/**
 	 * Install storage prices from the JSON file provided by AWS.
-	 * 
+	 *
 	 * @param context
 	 *            The update context.
 	 */
@@ -231,7 +231,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 	/**
 	 * Convert the JSON name to the API name and check this storage is exists
-	 * 
+	 *
 	 * @param context
 	 *            The update context.
 	 * @param storage
@@ -245,7 +245,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 	/**
 	 * Install compute prices from the JSON file provided by AWS.
-	 * 
+	 *
 	 * @param context
 	 *            The update context.
 	 */
@@ -285,7 +285,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 	/**
 	 * Install AWS prices from the JSON file.
-	 * 
+	 *
 	 * @param context
 	 *            The update context.
 	 * @param api
@@ -306,9 +306,9 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		int priceCounter = 0;
 		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase(api));
 
-		try {
+		try (CurlProcessor curl = new CurlProcessor()) {
 			// Get the remote prices stream
-			final String rawJson = StringUtils.defaultString(new CurlProcessor().get(endpoint),
+			final String rawJson = StringUtils.defaultString(curl.get(endpoint),
 					"callback({\"config\":{\"regions\":[]}});");
 
 			// All regions are considered
@@ -335,7 +335,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 	/**
 	 * Install S3 AWS prices from the CSV file. Note only the first 50TB storage tiers is considered
-	 * 
+	 *
 	 * @param context
 	 *            The update context.
 	 * @param api
@@ -362,11 +362,9 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		context.setStorageTypesMerged(new HashMap<>());
 
 		int priceCounter = 0;
-		BufferedReader reader = null;
-		try {
-			// Get the remote prices stream
-			reader = new BufferedReader(new InputStreamReader(
-					new URI(configuration.get(CONF_URL_S3_PRICES, S3_PRICES)).toURL().openStream()));
+		// Get the remote prices stream
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+				new URI(configuration.get(CONF_URL_S3_PRICES, S3_PRICES)).toURL().openStream()))) {
 			// Pipe to the CSV reader
 			final CsvForBeanS3 csvReader = new CsvForBeanS3(reader);
 
@@ -389,7 +387,6 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		} finally {
 			// Report
 			log.info("AWS S3 finished : {} prices", priceCounter);
-			IOUtils.closeQuietly(reader);
 			nextStep(context, null, 1);
 		}
 	}
@@ -442,7 +439,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 	/**
 	 * Install AWS prices from the CSV file.
-	 * 
+	 *
 	 * @param context
 	 *            The update context.
 	 * @param api
@@ -465,11 +462,9 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 				.collect(Collectors.toMap(ProvStoragePrice::getLocation, Function.identity()));
 
 		int priceCounter = 0;
-		BufferedReader reader = null;
-		try {
-			// Get the remote prices stream
-			reader = new BufferedReader(new InputStreamReader(
-					new URI(configuration.get(CONF_URL_EFS_PRICES, EFS_PRICES)).toURL().openStream()));
+		// Get the remote prices stream
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+				new URI(configuration.get(CONF_URL_EFS_PRICES, EFS_PRICES)).toURL().openStream()))) {
 			// Pipe to the CSV reader
 			final CsvForBeanEfs csvReader = new CsvForBeanEfs(reader);
 
@@ -492,7 +487,6 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		} finally {
 			// Report
 			log.info("AWS EFS finished : {} prices", priceCounter);
-			IOUtils.closeQuietly(reader);
 			nextStep(context, null, 1);
 		}
 	}
@@ -511,7 +505,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 	/**
 	 * Return the {@link ProvLocation} matching the human name.
-	 * 
+	 *
 	 * @param context
 	 *            The update context.
 	 * @param humanName
@@ -588,7 +582,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 	/**
 	 * EC2 spot installer. Install the instance type (if needed), the instance price type (if needed) and the price.
-	 * 
+	 *
 	 * @param context
 	 *            The update context.
 	 * @param json
@@ -631,7 +625,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 	/**
 	 * Install the install the instance type (if needed), the instance price type (if needed) and the price.
-	 * 
+	 *
 	 * @param context
 	 *            The update context.
 	 * @param csv
@@ -692,7 +686,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 	/**
 	 * Install the EBS/S3 price using the related storage type.
-	 * 
+	 *
 	 * @param json
 	 *            The current JSON entry.
 	 * @param storage
@@ -718,7 +712,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 	/**
 	 * Download and install EC2 prices from AWS server.
-	 * 
+	 *
 	 * @param context
 	 *            The update context.
 	 * @param region
@@ -733,10 +727,9 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		final String endpoint = configuration.get(CONF_URL_EC2_PRICES, EC2_PRICES).replace("%s", region.getName());
 		int priceCounter = 0;
 
-		BufferedReader reader = null;
-		try {
-			// Get the remote prices stream
-			reader = new BufferedReader(new InputStreamReader(new URI(endpoint).toURL().openStream()));
+		// Get the remote prices stream
+		try (BufferedReader reader = new BufferedReader(
+				new InputStreamReader(new URI(endpoint).toURL().openStream()))) {
 			// Pipe to the CSV reader
 			final CsvForBeanEc2 csvReader = new CsvForBeanEc2(reader);
 
@@ -762,7 +755,6 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			// Report
 			log.info("AWS EC2 OnDemand/Reserved import finished for region {} : {} instance, {} price types, {} prices",
 					region.getName(), context.getInstanceTypes().size(), context.getPriceTypes().size(), priceCounter);
-			IOUtils.closeQuietly(reader);
 		}
 
 		// Return the available instances types
@@ -868,7 +860,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 	/**
 	 * Return the most precise rate from the AWS instance type definition.
-	 * 
+	 *
 	 * @param type
 	 *            The rating mapping name.
 	 * @param csv
@@ -882,7 +874,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 	/**
 	 * Return the most precise rate from a name.
-	 * 
+	 *
 	 * @param type
 	 *            The rating mapping name.
 	 * @param name
@@ -939,7 +931,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 	/**
 	 * Indicate the given region is enabled.
-	 * 
+	 *
 	 * @param region
 	 *            The region API name to test.
 	 * @return <code>true</code> when the configuration enable the given region.
@@ -950,7 +942,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 	/**
 	 * Indicate the given region is enabled.
-	 * 
+	 *
 	 * @param region
 	 *            The region API name to test.
 	 * @return <code>true</code> when the configuration enable the given region.
@@ -961,7 +953,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 	/**
 	 * Indicate the given region is enabled.
-	 * 
+	 *
 	 * @param region
 	 *            The region API name to test.
 	 * @return <code>true</code> when the configuration enable the given region.
@@ -971,11 +963,11 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	}
 
 	/**
-	 * 
+	 *
 	 * Read the spot region to the new format from an external JSON file. File containing the mapping from the spot
 	 * region name to the new format one. This mapping is required because of the old naming format used for the first
 	 * region's name. Non mapped regions use the new name in spot JSON file.
-	 * 
+	 *
 	 * @throws IOException
 	 *             When the JSON mapping file cannot be read.
 	 */
@@ -990,7 +982,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 	/**
 	 * Read the EBS/S3 mapping to API name from an external JSON file.
-	 * 
+	 *
 	 * @throws IOException
 	 *             When the JSON mapping file cannot be read.
 	 */
@@ -1004,10 +996,10 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	/**
 	 * Read the network rate mapping. File containing the mapping from the AWS network rate to the normalized
 	 * application rating.
-	 * 
+	 *
 	 * @see <a href="https://calculator.s3.amazonaws.com/index.html">calculator</a>
 	 * @see <a href="https://aws.amazon.com/ec2/instance-types/">instance-types</a>
-	 * 
+	 *
 	 * @throws IOException
 	 *             When the JSON mapping file cannot be read.
 	 */

@@ -164,10 +164,12 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 		final CurlRequest request = newRequest(signatureQueryBuilder, subscription);
 		// extract key pairs from response
 		final List<NamedBean<String>> keys = new ArrayList<>();
-		if (new CurlProcessor().process(request)) {
-			final Matcher keyNames = Pattern.compile("<keyName>(.*)</keyName>").matcher(request.getResponse());
-			while (keyNames.find()) {
-				keys.add(new NamedBean<>(keyNames.group(1), null));
+		try (CurlProcessor curlProcessor = new CurlProcessor()) {
+			if (curlProcessor.process(request)) {
+				final Matcher keyNames = Pattern.compile("<keyName>(.*)</keyName>").matcher(request.getResponse());
+				while (keyNames.find()) {
+					keys.add(new NamedBean<>(keyNames.group(1), null));
+				}
 			}
 		}
 		return keys;
@@ -233,7 +235,9 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 		// TODO Use EC2 instead of S3
 		final AWS4SignatureQueryBuilder builder = AWS4SignatureQuery.builder().method("GET").service("s3")
 				.region(getRegion()).path("/");
-		return new CurlProcessor().process(newRequest(builder, parameters));
+		try (CurlProcessor curlProcessor = new CurlProcessor()) {
+			return curlProcessor.process(newRequest(builder, parameters));
+		}
 	}
 
 	/**
@@ -257,7 +261,9 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 		// TODO Use EC2 instead of S3
 		final AWS4SignatureQueryBuilder builder = AWS4SignatureQuery.builder().method("GET").service("s3")
 				.region(getRegion()).path("/");
-		return new CurlProcessor().process(newRequest(builder, subscription));
+		try (CurlProcessor curlProcessor = new CurlProcessor()) {
+			return curlProcessor.process(newRequest(builder, subscription));
+		}
 	}
 
 	@Override

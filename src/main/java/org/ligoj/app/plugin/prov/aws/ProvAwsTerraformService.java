@@ -279,7 +279,7 @@ public class ProvAwsTerraformService {
 	}
 
 	private String newMetric(final Context context, final String format, final String service, final String idProperty,
-			final String id, String[]... variants) throws IOException {
+			final String id, String[]... variants) {
 		final List<ProvQuoteInstance> instances = context.getInstances();
 		final StringBuilder buffer = new StringBuilder();
 		final String serviceFmt = replace(format, "{{service}}", service);

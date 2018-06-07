@@ -40,13 +40,16 @@ import org.ligoj.app.resource.subscription.SubscriptionResource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
-import org.springframework.util.ClassUtils;
 
 /**
  * Service in charge of Terraform generation for AWS.
  */
 @Service
 public class ProvAwsTerraformService {
+
+	private static final String CLOUD_WATCH_ELB = "AWS/ApplicationELB";
+
+	private static final String INDEX = "{{i}}";
 
 	/**
 	 * Mapping between OS name and AMI base name handled by Terraform.
@@ -245,20 +248,20 @@ public class ProvAwsTerraformService {
 	private String getMd(final List<ProvQuoteInstance> instances, final String format) {
 		final StringBuilder buffer = new StringBuilder();
 		for (int index = 0; index < instances.size(); index++) {
-			buffer.append('\n').append(replace(format, "{{i}}", String.valueOf(index)));
+			buffer.append('\n').append(replace(format, INDEX, String.valueOf(index)));
 		}
 		return buffer.toString();
 	}
 
 	private String getDashboardNetwork(final Context context) throws IOException {
 		final String format = toString("my-region/dashboard-widgets-line.json");
-		return newMetric(context, format, "AWS/ApplicationELB", "LoadBalancer", "${alb{{i}}}",
+		return newMetric(context, format, CLOUD_WATCH_ELB, "LoadBalancer", "${alb{{i}}}",
 				new String[] { "ProcessedBytes", "-", "-", "${alb{{i}}_name}" });
 	}
 
 	private String getDashboardLatency(final Context context) throws IOException {
 		final String format = toString("my-region/dashboard-widgets-line.json");
-		return newMetric(context, format, "AWS/ApplicationELB", "LoadBalancer", "${alb{{i}}}",
+		return newMetric(context, format, CLOUD_WATCH_ELB, "LoadBalancer", "${alb{{i}}}",
 				new String[] { "TargetResponseTime", "-", "-", "${alb{{i}}_name}" });
 	}
 
@@ -272,7 +275,7 @@ public class ProvAwsTerraformService {
 
 	private String getDashboardBalancing(final Context context) throws IOException {
 		final String format = toString("my-region/dashboard-widgets-area.json");
-		return newMetric(context, format, "AWS/ApplicationELB", "TargetGroup",
+		return newMetric(context, format, CLOUD_WATCH_ELB, "TargetGroup",
 				"${alb{{i}}_tg}\", \"LoadBalancer\", \"${alb{{i}}}\"",
 				new String[] { "HealthyHostCount", "2ca02c", "left", "OK ${alb{{i}}_name}" },
 				new String[] { "UnHealthyHostCount", "d62728", "right", "KO ${alb{{i}}_name}" });
@@ -289,10 +292,10 @@ public class ProvAwsTerraformService {
 					buffer.append(',');
 				}
 				buffer.append('\n');
-				buffer.append(replace(serviceFmt, "{{property}}", replace(idProperty, "{{i}}", String.valueOf(index)),
-						"{{metric}}", variant[0], "{{id}}", id.replace("{{i}}", String.valueOf(index)), "{{color}}",
+				buffer.append(replace(serviceFmt, "{{property}}", replace(idProperty, INDEX, String.valueOf(index)),
+						"{{metric}}", variant[0], "{{id}}", id.replace(INDEX, String.valueOf(index)), "{{color}}",
 						variant[1], "{{position}}", variant[2], "{{label}}",
-						replace(variant[3], "{{i}}", String.valueOf(index))));
+						replace(variant[3], INDEX, String.valueOf(index))));
 			}
 		});
 		return buffer.toString();
@@ -351,8 +354,7 @@ public class ProvAwsTerraformService {
 	 * Return user-data related to given instance.
 	 */
 	private String getUserData(ProvQuoteInstance instance) throws IOException {
-		final String sh = "terraform/user-data/nginx/" + instance.getOs().name().toLowerCase() + ".sh";
-		try (InputStream shInput = ClassUtils.getDefaultClassLoader().getResourceAsStream(sh)) {
+		try (InputStream shInput = toInput("user-data/nginx/" + instance.getOs().name().toLowerCase() + ".sh")) {
 			if (shInput != null) {
 				return "  user_data = <<-EOF\n" + IOUtils.toString(shInput, StandardCharsets.UTF_8) + "\n  EOF";
 			}
@@ -367,7 +369,7 @@ public class ProvAwsTerraformService {
 		final NormalizeFormat normalizeFormat = new NormalizeFormat();
 		for (final ProvQuoteStorage storage : instance.getStorages()) {
 			if (idx >= startIndex && idx < endIndex) {
-				final String format = getDeviceFormat(intern, builder, idx);
+				final String format = getDeviceFormat(intern, idx);
 				builder.append('\n').append(replace(format, "{{key}}", normalizeFormat.format(storage.getName()),
 						"{{type}}", storage.getPrice().getType().getName(), "{{device}}",
 						toDeviceName(instance.getOs(), idx), "{{instance}}", normalizeFormat.format(instance.getName()),
@@ -378,7 +380,7 @@ public class ProvAwsTerraformService {
 		return builder.toString();
 	}
 
-	private String getDeviceFormat(final boolean intern, final StringBuilder builder, int idx) throws IOException {
+	private String getDeviceFormat(final boolean intern, int idx) throws IOException {
 		final String deviceSuffix;
 		if (intern) {
 			if (idx >= 1) {
@@ -423,18 +425,18 @@ public class ProvAwsTerraformService {
 	}
 
 	private void copy(final Context context, final String... fragments) throws IOException {
-		Files.copy(new ClassPathResource("terraform/" + String.join("/", fragments)).getInputStream(),
-				utils.toFile(context.getSubscription(), fragments).toPath(), StandardCopyOption.REPLACE_EXISTING);
+		Files.copy(toInput(String.join("/", fragments)), utils.toFile(context.getSubscription(), fragments).toPath(),
+				StandardCopyOption.REPLACE_EXISTING);
 	}
 
 	private void copyFromTo(final Context context, final String from, final String... toFragments) throws IOException {
-		Files.copy(new ClassPathResource("terraform/" + from).getInputStream(),
-				utils.toFile(context.getSubscription(), toFragments).toPath(), StandardCopyOption.REPLACE_EXISTING);
+		Files.copy(toInput(from), utils.toFile(context.getSubscription(), toFragments).toPath(),
+				StandardCopyOption.REPLACE_EXISTING);
 	}
 
 	private void template(final Context context, final Function<String, String> formater, final String... fragments)
 			throws IOException {
-		try (InputStream source = new ClassPathResource("terraform/" + String.join("/", fragments)).getInputStream();
+		try (InputStream source = toInput(String.join("/", fragments));
 				FileOutputStream target = new FileOutputStream(utils.toFile(context.getSubscription(), fragments));
 				Writer targetW = new OutputStreamWriter(target);) {
 			targetW.write(formater.apply(IOUtils.toString(source, StandardCharsets.UTF_8)));
@@ -443,7 +445,7 @@ public class ProvAwsTerraformService {
 
 	private void templateFromTo(final Context context, final String from, final String... toFragments)
 			throws IOException {
-		try (InputStream source = new ClassPathResource("terraform/" + from).getInputStream();
+		try (InputStream source = toInput(from);
 				FileOutputStream target = new FileOutputStream(utils.toFile(context.getSubscription(), toFragments));
 				Writer targetW = new OutputStreamWriter(target);) {
 			targetW.write(replace(IOUtils.toString(source, StandardCharsets.UTF_8), context));
@@ -483,5 +485,9 @@ public class ProvAwsTerraformService {
 
 	private String toString(final String path) throws IOException {
 		return IOUtils.toString(new ClassPathResource("terraform/" + path).getURI(), StandardCharsets.UTF_8);
+	}
+
+	private InputStream toInput(final String path) throws IOException {
+		return new ClassPathResource("terraform/" + path).getInputStream();
 	}
 }

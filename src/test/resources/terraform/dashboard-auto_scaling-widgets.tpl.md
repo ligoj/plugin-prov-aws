@@ -6,9 +6,9 @@ This environment is in integration test mode (low cooldown, high refresh rate an
 
 All resources, including this dashboard have been generated with Terraform. You can change the resources and apply again the Terraform updates from the Ligoj subscription
 
-[button:primary:Subscription](${ligoj_url}#/project/${project}/${subscription})
-[button:Project](${ligoj_url}#/project/${project})
-[button:Terraform files](${ligoj_url}#/project/${project}/${subscription}/terraform.zip)
+[button:primary:Subscription](${ligoj_url}/#/home/project/${project}/${subscription})
+[button:Project](${ligoj_url}/#/home/project/${project})
+[button:Terraform files](${ligoj_url}/#/home/project/${project}/${subscription}/terraform.zip)
 
 ## Inventory
 

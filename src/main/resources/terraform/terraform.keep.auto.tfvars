@@ -9,7 +9,7 @@ project_name = "{{project.name}}"
 
 subscription = "{{subscription.id}}"
 
-ligoj_url = "http://localhost/ligoj"
+ligoj_url = "http://localhost:8080/ligoj"
 
 it = true
 

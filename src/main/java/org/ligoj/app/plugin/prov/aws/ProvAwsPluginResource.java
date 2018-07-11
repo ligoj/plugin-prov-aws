@@ -27,9 +27,9 @@ import org.ligoj.app.plugin.prov.aws.in.ProvAwsPriceImportResource;
 import org.ligoj.app.plugin.prov.in.ImportCatalogService;
 import org.ligoj.app.plugin.prov.terraform.Context;
 import org.ligoj.app.plugin.prov.terraform.Terraforming;
-import org.ligoj.app.resource.plugin.CurlProcessor;
-import org.ligoj.app.resource.plugin.CurlRequest;
 import org.ligoj.bootstrap.core.NamedBean;
+import org.ligoj.bootstrap.core.curl.CurlProcessor;
+import org.ligoj.bootstrap.core.curl.CurlRequest;
 import org.ligoj.bootstrap.core.resource.BusinessException;
 import org.ligoj.bootstrap.resource.system.configuration.ConfigurationResource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -267,7 +267,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	}
 
 	@Override
-	public void generateSecrets(Context context) throws IOException {
+	public void generateSecrets(final Context context) throws IOException {
 		terraformService.writeSecrets(context.getSubscription());
 	}
 }

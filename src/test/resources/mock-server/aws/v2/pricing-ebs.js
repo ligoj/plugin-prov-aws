@@ -18,4 +18,8 @@ callback({"vers":0.01,"config":{"currencies":["USD"],"rate":"perGB","regions":[
                                  {"prices":{"USD":"0.075"}, "rate":"perPIOPSreq"}]},
 {"name":"ebsTOHDD","values":    [{"prices":{"USD":"0.052"}, "rate":"perGBmoProvStorage"}]},
 {"name":"ebsColdHDD","values":  [{"prices":{"USD":"0.028"}, "rate":"perGBmoProvStorage"}]},
-{"name":"ebsSnapsToS3","values":[{"prices":{"USD":"0.052"}, "rate":"perGBmoDataStored"}]}]}]}});
+{"name":"ebsSnapsToS3","values":[{"prices":{"USD":"0.052"}, "rate":"perGBmoDataStored"}]}]},
+
+{"region":"eu-central-1","types":[]},
+{"region":"us-east-1","types":[]}
+]}});

@@ -13,6 +13,7 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.util.Properties;
 
 import javax.transaction.Transactional;
 
@@ -61,6 +62,7 @@ import org.ligoj.app.plugin.prov.model.ProvUsage;
 import org.ligoj.app.plugin.prov.model.Rate;
 import org.ligoj.app.plugin.prov.model.VmOs;
 import org.ligoj.bootstrap.core.resource.TechnicalException;
+import org.ligoj.bootstrap.dao.system.SystemConfigurationRepository;
 import org.ligoj.bootstrap.resource.system.configuration.ConfigurationResource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
@@ -107,6 +109,8 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 
 	protected int subscription;
 
+	private static Properties initialProperties = (Properties)System.getProperties().clone();
+
 	@BeforeEach
 	public void prepareData() throws IOException {
 		persistSystemEntities();
@@ -124,9 +128,10 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		this.resource.initEbsToApi();
 		this.resource.initRate();
 		this.resource.setImportCatalogResource(new ImportCatalogResource());
+		clearAllCache();
+		System.setProperties(initialProperties);
 		applicationContext.getAutowireCapableBeanFactory().autowireBean(this.resource.getImportCatalogResource());
 		initSpringSecurityContext(DEFAULT_USER);
-		clearAllCache();
 		resetImportTask();
 	}
 
@@ -166,7 +171,26 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 	@Test
 	public void installOffLine() throws Exception {
 		// Install a new configuration
-		final QuoteVo quote = install();
+		mockServer();
+		applicationContext.getBean(SystemConfigurationRepository.class).findAll();
+		initSpringSecurityContext(DEFAULT_USER);
+		clearAllCache();
+
+		configuration.put(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES,
+				"http://localhost:" + MOCK_PORT + "/%s/index.csv");
+
+		httpServer.stubFor(get(urlEqualTo("/eu-west-1/index.csv"))
+				.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(IOUtils
+						.toString(new ClassPathResource("mock-server/aws/index.csv").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/us-east-1/index.csv"))
+				.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(IOUtils.toString(
+						new ClassPathResource("mock-server/aws/index-empty.csv").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/eu-central-1/index.csv"))
+				.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(IOUtils.toString(
+						new ClassPathResource("mock-server/aws/index-empty.csv").getInputStream(), "UTF-8"))));
+
+		// Check the basic quote
+		final QuoteVo quote = installAndConfigure();
 
 		// Check the whole quote
 		final ProvQuoteInstance instance = check(quote, 47.557d, 46.667d);
@@ -197,7 +221,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 
 		// Point to another catalog with different prices
 		configuration.put(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES,
-				"http://localhost:" + MOCK_PORT + "/v2/index.csv");
+				"http://localhost:" + MOCK_PORT + "/v2/%s/index.csv");
 		configuration.put(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES_SPOT,
 				"http://localhost:" + MOCK_PORT + "/v2/spot.js");
 		configuration.put(ProvAwsPriceImportResource.CONF_URL_EBS_PRICES,
@@ -206,6 +230,15 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 				"http://localhost:" + MOCK_PORT + "/v2/pricing-efs.csv");
 		configuration.put(ProvAwsPriceImportResource.CONF_URL_S3_PRICES,
 				"http://localhost:" + MOCK_PORT + "/v2/pricing-s3.csv");
+		httpServer.stubFor(get(urlEqualTo("/v2/eu-west-1/index.csv"))
+				.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(IOUtils
+						.toString(new ClassPathResource("mock-server/aws/v2/index.csv").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/v2/us-east-1/index.csv"))
+				.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(IOUtils.toString(
+						new ClassPathResource("mock-server/aws/index-empty.csv").getInputStream(), "UTF-8"))));
+		httpServer.stubFor(get(urlEqualTo("/v2/eu-central-1/index.csv"))
+				.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(IOUtils.toString(
+						new ClassPathResource("mock-server/aws/index-empty.csv").getInputStream(), "UTF-8"))));
 
 		// Install the new catalog, update occurs
 		resetImportTask();
@@ -258,12 +291,12 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 
 	private void checkImportStatus() {
 		final ImportCatalogStatus status = this.resource.getImportCatalogResource().getTask("service:prov:aws");
-		Assertions.assertEquals(7, status.getDone());
-		Assertions.assertEquals(8, status.getWorkload());
+		Assertions.assertTrue(status.getDone() >= 9);
+		Assertions.assertEquals(12, status.getWorkload());
 		Assertions.assertEquals("efs", status.getPhase());
 		Assertions.assertEquals(DEFAULT_USER, status.getAuthor());
-		Assertions.assertEquals(258, status.getNbInstancePrices().intValue());
 		Assertions.assertEquals(74, status.getNbInstanceTypes().intValue());
+		Assertions.assertEquals(90, status.getNbInstancePrices().intValue()); // 74 + 6 spot prices
 		Assertions.assertEquals(4, status.getNbLocations().intValue());
 		Assertions.assertEquals(11, status.getNbStorageTypes().intValue());
 	}
@@ -333,23 +366,11 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		return storage;
 	}
 
-	/**
-	 * Common offline install and configuring an instance
-	 *
-	 * @return The new quote from the installed
-	 */
-	private QuoteVo install() throws Exception {
-		mockServer();
-
-		// Check the basic quote
-		return installAndConfigure();
-	}
-
 	@Test
 	public void installOnLine() throws Exception {
 		configuration.delete(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES);
-		configuration.delete(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES_SPOT); // Only one region for UTs
-		configuration.put(ProvAwsPriceImportResource.CONF_REGIONS, "eu-west-1");
+		configuration.delete(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES_SPOT);
+		configuration.put(ProvAwsPriceImportResource.CONF_REGIONS, "eu-west-1"); // Only one region for UTs
 
 		// Aligned to :
 		// https://aws.amazon.com/ec2/pricing/reserved-instances/pricing/
@@ -442,27 +463,6 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 				Assertions.assertThrows(TechnicalException.class, () -> {
 					resource.install();
 				}).getMessage());
-	}
-
-	/**
-	 * Duplicate prices into the EC2 CSV file is accepted, but only the last one is considered
-	 */
-	@Test
-	public void installDuplicateEc2PriceCsv() throws Exception {
-		patchConfigurationUrl();
-		httpServer.stubFor(get(urlEqualTo("/index.csv")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-				.withBody(IOUtils.toString(
-						new ClassPathResource("mock-server/aws/index-duplicate-price.csv").getInputStream(),
-						"UTF-8"))));
-		mockServerNoEc2();
-
-		resource.install();
-		em.flush();
-		em.clear();
-		Assertions.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), DELTA);
-
-		// Only one price has been imported
-		Assertions.assertEquals(1, itRepository.count());
 	}
 
 	private void mockServerNoEc2() throws IOException {

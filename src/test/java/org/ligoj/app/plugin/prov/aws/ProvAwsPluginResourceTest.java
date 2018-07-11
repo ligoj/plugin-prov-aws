@@ -37,8 +37,8 @@ import org.ligoj.app.plugin.prov.aws.in.ProvAwsPriceImportResource;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvQuote;
 import org.ligoj.app.plugin.prov.terraform.Context;
-import org.ligoj.app.resource.plugin.CurlRequest;
 import org.ligoj.bootstrap.core.NamedBean;
+import org.ligoj.bootstrap.core.curl.CurlRequest;
 import org.ligoj.bootstrap.core.resource.BusinessException;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
@@ -115,9 +115,16 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		resource2.generate(context);
 	}
 
+	@Test
+	public void generateSecrets() throws IOException {
+		final ProvAwsPluginResource resource2 = new ProvAwsPluginResource();
+		resource2.terraformService = Mockito.mock(ProvAwsTerraformService.class);
+		resource2.generateSecrets(new Context());
+	}
+
 	/**
 	 * retrieve keys from AWS
-	 * 
+	 *
 	 * @throws Exception
 	 *             exception
 	 */
@@ -140,7 +147,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 
 	/**
 	 * error when we retrieve keys from AWS
-	 * 
+	 *
 	 * @throws Exception
 	 *             exception
 	 */
@@ -151,7 +158,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 
 	/**
 	 * prepare call to AWS
-	 * 
+	 *
 	 * @throws Exception
 	 *             exception
 	 */

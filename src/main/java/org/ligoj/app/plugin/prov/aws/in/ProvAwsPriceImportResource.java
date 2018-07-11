@@ -45,8 +45,8 @@ import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.model.ProvTenancy;
 import org.ligoj.app.plugin.prov.model.Rate;
 import org.ligoj.app.plugin.prov.model.VmOs;
-import org.ligoj.app.resource.plugin.CurlProcessor;
 import org.ligoj.bootstrap.core.INamableBean;
+import org.ligoj.bootstrap.core.curl.CurlProcessor;
 import org.ligoj.bootstrap.core.dao.csv.CsvForJpa;
 import org.ligoj.bootstrap.core.model.AbstractNamedEntity;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -173,7 +173,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		nextStep(node, null, 0);
 
 		// Proceed to the install
-		installStoragePrices(context);
+		installEbsPrices(context);
 		installComputePrices(context);
 
 		// S3 and NFS need to be processed after EC2 for region mapping
@@ -182,18 +182,18 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	}
 
 	/**
-	 * Install storage prices from the JSON file provided by AWS.
+	 * Install EBS prices from the JSON file provided by AWS.
 	 *
 	 * @param context
 	 *            The update context.
 	 */
-	private void installStoragePrices(final UpdateContext context) throws IOException {
+	private void installEbsPrices(final UpdateContext context) throws IOException {
 		// The previously installed storage types cache. Key is the storage name
 		final Node node = context.getNode();
 		context.setStorageTypes(installStorageTypes(context));
 
 		// Install EBS prices
-		installPrices(context, "ebs", configuration.get(CONF_URL_EBS_PRICES, EBS_PRICES), EbsPrices.class,
+		installJsonPrices(context, "ebs", configuration.get(CONF_URL_EBS_PRICES, EBS_PRICES), EbsPrices.class,
 				(r, region) -> {
 					// Get previous prices for this location
 					final Map<Integer, ProvStoragePrice> previous = spRepository.findAll(node.getId(), region.getName())
@@ -253,6 +253,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		// Create the Spot instance price type
 		final Node node = context.getNode();
 		final ProvInstancePriceTerm spotPriceType = newSpotInstanceType(node);
+
 		context.setPriceTypes(iptRepository.findAllBy(BY_NODE, node.getId()).stream()
 				.collect(Collectors.toMap(ProvInstancePriceTerm::getCode, Function.identity())));
 
@@ -260,31 +261,36 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		context.setInstanceTypes(itRepository.findAllBy(BY_NODE, node.getId()).stream()
 				.collect(Collectors.toMap(ProvInstanceType::getName, Function.identity())));
 
-		installPrices(context, "ec2", configuration.get(CONF_URL_EC2_PRICES_SPOT, EC2_PRICES_SPOT), SpotPrices.class,
-				(r, region) -> {
+		// Install the EC2 (non spot) prices
+		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("ec2"));
+		context.getRegions().values().forEach(region -> {
+			nextStep(node, region.getName(), 1);
+			// Get previous prices for this location
+			context.setPrevious(ipRepository.findAll(node.getId(), region.getName()).stream()
+					.collect(Collectors.toMap(ProvInstancePrice::getCode, Function.identity())));
+			installEC2Prices(context, region);
+		});
+
+		// Install the SPOT EC2 prices
+		installJsonPrices(context, "ec2-spot", configuration.get(CONF_URL_EC2_PRICES_SPOT, EC2_PRICES_SPOT),
+				SpotPrices.class, (r, region) -> {
+					nextStep(node, region.getName(), 1);
 					// Get previous prices for this location
 					context.setPrevious(ipRepository.findAll(node.getId(), region.getName()).stream()
 							.collect(Collectors.toMap(ProvInstancePrice::getCode, Function.identity())));
-
-					// Install the EC2 prices and related instance details used later
-					final int ec2Prices = installEC2Prices(context, region);
-					nextStep(node, region.getName(), 1);
-
-					// Install the SPOT EC2 prices
-					return ec2Prices + r.getInstanceTypes().stream().flatMap(t -> t.getSizes().stream()).filter(j -> {
+					return r.getInstanceTypes().stream().flatMap(t -> t.getSizes().stream()).filter(j -> {
 						final boolean availability = context.getInstanceTypes().containsKey(j.getName());
 						if (!availability) {
 							// Unavailable instances type of spot are ignored
 							log.warn("Instance {} is referenced from spot but not available", j.getName());
 						}
 						return availability;
-					}).mapToInt(j -> install(context, j, spotPriceType, region)).sum();
-
+					}).mapToInt(j -> installSpotPrices(context, j, spotPriceType, region)).sum();
 				});
 	}
 
 	/**
-	 * Install AWS prices from the JSON file.
+	 * Install AWS prices from a JSON file.
 	 *
 	 * @param context
 	 *            The update context.
@@ -297,7 +303,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 * @param mapper
 	 *            The mapping function from JSON at region level to JPA entity.
 	 */
-	private <R extends AwsRegionPrices, T extends AwsPrices<R>> void installPrices(final UpdateContext context,
+	private <R extends AwsRegionPrices, T extends AwsPrices<R>> void installJsonPrices(final UpdateContext context,
 			final String api, final String endpoint, final Class<T> apiClass,
 			final BiFunction<R, ProvLocation, Integer> mapper) throws IOException {
 		log.info("AWS {} prices...", api);
@@ -323,7 +329,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			eRegions.forEach(r -> installRegion(context, r.getRegion()));
 			nextStep(context, null, 0);
 
-			// Install the (EC2 + Spot) prices for each region
+			// Install the prices for each region
 			priceCounter = eRegions.stream().mapToInt(r -> mapper.apply(r, context.getRegions().get(r.getRegion())))
 					.sum();
 		} finally {
@@ -423,7 +429,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			t.setOptimized(ProvStorageOptimized.DURABILITY);
 			t.setLatency(name.equals("glacier") ? Rate.WORST : Rate.MEDIUM);
 			t.setDescription("{\"class\":\"" + csv.getStorageClass() + "\",\"type\":\"" + csv.getVolumeType() + "\"}");
-			stRepository.saveAndFlush(t);
+			stRepository.save(t);
 			return t;
 		});
 
@@ -434,7 +440,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			p.setType(type);
 			p.setCode(csv.getSku());
 			return p;
-		}), csv.getPricePerUnit(), p -> spRepository.save(p));
+		}), csv.getPricePerUnit(), spRepository::save);
 	}
 
 	/**
@@ -500,7 +506,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			p.setType(efs);
 			p.setCode(csv.getSku());
 			return p;
-		}), csv.getPricePerUnit(), p -> spRepository.save(p));
+		}), csv.getPricePerUnit(), spRepository::save);
 	}
 
 	/**
@@ -523,7 +529,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	private void nextStep(final Node node, final String location, final int step) {
 		importCatalogResource.nextStep(node.getId(), t -> {
 			importCatalogResource.updateStats(t);
-			t.setWorkload(t.getNbLocations() + 4); // NB region (for EC2) + 4 (Spot+S3+EBS+EFS)
+			t.setWorkload(t.getNbLocations() * 2 + 4); // NB region (for EC2 + Spot) + 3 (S3+EBS+EFS)
 			t.setDone(t.getDone() + step);
 			t.setLocation(location);
 		});
@@ -593,7 +599,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 *            The target region.
 	 * @return The amount of installed prices. Only for the report.
 	 */
-	private int install(final UpdateContext context, final AwsEc2SpotPrice json,
+	private int installSpotPrices(final UpdateContext context, final AwsEc2SpotPrice json,
 			final ProvInstancePriceTerm spotPriceType, final ProvLocation region) {
 		return (int) json.getOsPrices().stream()
 				.filter(op -> !StringUtils.startsWithIgnoreCase(op.getPrices().get("USD"), "N/A")).map(op -> {
@@ -601,24 +607,23 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 					final ProvInstanceType type = context.getInstanceTypes().get(json.getName());
 
 					// Build the key for this spot
-					final String code = "spot-" + region.getName() + "-" + type.getName() + "-" + os.name();
-					final ProvInstancePrice price = Optional.ofNullable(context.getPrevious().get(code))
-							.orElseGet(() -> {
-								final ProvInstancePrice p = new ProvInstancePrice();
-								p.setCode(code);
-								p.setType(type);
-								p.setTerm(spotPriceType);
-								p.setTenancy(ProvTenancy.SHARED);
-								p.setOs(os);
-								p.setLocation(region);
-								return p;
-							});
+					final String code = "spot-" + region.getName() + "-" + type.getName() + "-" + os;
+					final ProvInstancePrice price = context.getPrevious().computeIfAbsent(code, c -> {
+						final ProvInstancePrice p = new ProvInstancePrice();
+						p.setCode(c);
+						p.setType(type);
+						p.setTerm(spotPriceType);
+						p.setTenancy(ProvTenancy.SHARED);
+						p.setOs(os);
+						p.setLocation(region);
+						return p;
+					});
 
 					// Update the price as needed
 					final double cost = Double.parseDouble(op.getPrices().get("USD"));
 					return saveAsNeeded(price, round3Decimals(cost * 24 * 30.5), p -> {
 						p.setCostPeriod(cost);
-						ipRepository.save(price);
+						ipRepository.save(p);
 					});
 				}).count();
 	}
@@ -640,7 +645,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		if (UPFRONT_MODE.matcher(StringUtils.defaultString(csv.getPurchaseOption())).find()) {
 			// Up-front ALL/PARTIAL
 			final Map<String, AwsEc2Price> partialCost = context.getPartialCost();
-			final String code = csv.getSku() + csv.getOfferTermCode();
+			final String code = csv.getSku() + csv.getOfferTermCode() + region.getName();
 			if (partialCost.containsKey(code)) {
 				handleUpfront(newInstancePrice(context, csv, region), csv, partialCost.get(code));
 
@@ -658,7 +663,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			final double cost = csv.getPricePerUnit() * 24 * 30.5;
 			saveAsNeeded(price, round3Decimals(cost), p -> {
 				p.setCostPeriod(round3Decimals(cost * p.getTerm().getPeriod()));
-				ipRepository.save(price);
+				ipRepository.save(p);
 			});
 		}
 		return priceCounter;
@@ -706,7 +711,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			});
 
 			// Update the price as needed
-			return saveAsNeeded(price, Double.valueOf(usd), p -> spRepository.save(price));
+			return saveAsNeeded(price, Double.valueOf(usd), spRepository::save);
 		}).isPresent();
 	}
 
@@ -844,7 +849,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			type.setStorageRate(toStorage(csv));
 
 			// Need this update
-			itRepository.saveAndFlush(type);
+			itRepository.save(type);
 		}
 		return type;
 	}
@@ -925,7 +930,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			// Convert years to months
 			term.setPeriod(Integer.parseInt(matcher.group(1)) * 12);
 		}
-		iptRepository.saveAndFlush(term);
+		iptRepository.save(term);
 		return term;
 	}
 
@@ -959,7 +964,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 * @return <code>true</code> when the configuration enable the given region.
 	 */
 	private boolean isEnabledRegion(final String region) {
-		return region.matches(StringUtils.defaultIfBlank(configuration.get(CONF_REGIONS), ".*"));
+		return region.matches(configuration.get(CONF_REGIONS, ".*"));
 	}
 
 	/**

@@ -5,6 +5,10 @@ package org.ligoj.app.plugin.prov.aws.in;
 
 import java.util.Map;
 
+import javax.persistence.Transient;
+
+import org.ligoj.app.plugin.prov.model.VmOs;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -19,7 +23,13 @@ public class AwsEc2SpotOsPrice {
 	 * OS identifier.
 	 */
 	private String name;
-	
+
+	/**
+	 * Resolved OS identifier.
+	 */
+	@Transient
+	private VmOs os;
+
 	/**
 	 * Prices where key is the currency
 	 */

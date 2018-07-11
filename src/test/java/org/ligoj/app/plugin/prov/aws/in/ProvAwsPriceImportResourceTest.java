@@ -371,6 +371,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		configuration.delete(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES);
 		configuration.delete(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES_SPOT);
 		configuration.put(ProvAwsPriceImportResource.CONF_REGIONS, "eu-west-1"); // Only one region for UTs
+		configuration.put(ProvAwsPriceImportResource.CONF_OS, "LINUX"); // Only one OS for UTs
 
 		// Aligned to :
 		// https://aws.amazon.com/ec2/pricing/reserved-instances/pricing/

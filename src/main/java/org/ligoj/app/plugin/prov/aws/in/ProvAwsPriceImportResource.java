@@ -137,6 +137,11 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	public static final String CONF_REGIONS = ProvAwsPluginResource.KEY + ":regions";
 
 	/**
+	 * Configuration key used for enabled OS pattern names. When value is <code>null</code>, no restriction.
+	 */
+	public static final String CONF_OS = ProvAwsPluginResource.KEY + ":os";
+
+	/**
 	 * Mapping from Spot region name to API name.
 	 */
 	private Map<String, String> mapSpotToNewRegion = new HashMap<>();
@@ -602,19 +607,20 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	private int installSpotPrices(final UpdateContext context, final AwsEc2SpotPrice json,
 			final ProvInstancePriceTerm spotPriceType, final ProvLocation region) {
 		return (int) json.getOsPrices().stream()
-				.filter(op -> !StringUtils.startsWithIgnoreCase(op.getPrices().get("USD"), "N/A")).map(op -> {
-					final VmOs os = op.getName().equals("mswin") ? VmOs.WINDOWS : VmOs.LINUX;
+				.filter(op -> !StringUtils.startsWithIgnoreCase(op.getPrices().get("USD"), "N/A"))
+				.peek(op -> op.setOs(op.getName().equals("mswin") ? VmOs.WINDOWS : VmOs.LINUX))
+				.filter(op -> isEnabledOs(op.getOs())).map(op -> {
 					final ProvInstanceType type = context.getInstanceTypes().get(json.getName());
 
 					// Build the key for this spot
-					final String code = "spot-" + region.getName() + "-" + type.getName() + "-" + os;
+					final String code = "spot-" + region.getName() + "-" + type.getName() + "-" + op.getOs();
 					final ProvInstancePrice price = context.getPrevious().computeIfAbsent(code, c -> {
 						final ProvInstancePrice p = new ProvInstancePrice();
 						p.setCode(c);
 						p.setType(type);
 						p.setTerm(spotPriceType);
 						p.setTenancy(ProvTenancy.SHARED);
-						p.setOs(os);
+						p.setOs(op.getOs());
 						p.setLocation(region);
 						return p;
 					});
@@ -965,6 +971,17 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 */
 	private boolean isEnabledRegion(final String region) {
 		return region.matches(configuration.get(CONF_REGIONS, ".*"));
+	}
+
+	/**
+	 * Indicate the given OS is enabled.
+	 *
+	 * @param os
+	 *            The OS to test.
+	 * @return <code>true</code> when the configuration enable the given region.
+	 */
+	private boolean isEnabledOs(final VmOs os) {
+		return os.name().matches(configuration.get(CONF_OS, ".*"));
 	}
 
 	/**

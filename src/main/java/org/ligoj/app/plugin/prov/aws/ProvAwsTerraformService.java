@@ -3,6 +3,7 @@
  */
 package org.ligoj.app.plugin.prov.aws;
 
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -355,9 +356,9 @@ public class ProvAwsTerraformService {
 	 */
 	private String getUserData(ProvQuoteInstance instance) throws IOException {
 		try (InputStream shInput = toInput("user-data/nginx/" + instance.getOs().name().toLowerCase() + ".sh")) {
-			if (shInput != null) {
-				return "  user_data = <<-EOF\n" + IOUtils.toString(shInput, StandardCharsets.UTF_8) + "\n  EOF";
-			}
+			return "  user_data = <<-EOF\n" + IOUtils.toString(shInput, StandardCharsets.UTF_8) + "\n  EOF";
+		} catch (final FileNotFoundException fnfe) {
+			// Ignore this, no user data for this AMI
 		}
 		return "";
 	}

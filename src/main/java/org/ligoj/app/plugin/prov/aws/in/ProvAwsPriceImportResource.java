@@ -29,11 +29,12 @@ import javax.annotation.PostConstruct;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.RegExUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.ligoj.app.model.Node;
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
-import org.ligoj.app.plugin.prov.in.AbstractImportCatalogResource;
+import org.ligoj.app.plugin.prov.catalog.AbstractImportCatalogResource;
 import org.ligoj.app.plugin.prov.model.AbstractPrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
@@ -731,11 +732,10 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 * @return The amount installed EC2 instances.
 	 */
 	protected int installEC2Prices(final UpdateContext context, final ProvLocation region) {
-		log.info("AWS EC2 OnDemand/Reserved import started for region {} ...", region);
-
 		// Track the created instance to cache partial costs
 		context.setPartialCost(new HashMap<>());
 		final String endpoint = configuration.get(CONF_URL_EC2_PRICES, EC2_PRICES).replace("%s", region.getName());
+		log.info("AWS EC2 OnDemand/Reserved import started for region {}@{} ...", region, endpoint);
 		int priceCounter = 0;
 
 		// Get the remote prices stream
@@ -922,8 +922,8 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		term.setCode(csvPrice.getOfferTermCode());
 
 		// Build the name from the leasing, purchase option and offering class
-		final String name = StringUtils.trimToNull(StringUtils.removeAll(
-				StringUtils.replaceAll(csvPrice.getPurchaseOption(), "([a-z])Upfront", "$1 Upfront"), "No\\s*Upfront"));
+		final String name = StringUtils.trimToNull(RegExUtils.removeAll(
+				RegExUtils.replaceAll(csvPrice.getPurchaseOption(), "([a-z])Upfront", "$1 Upfront"), "No\\s*Upfront"));
 		term.setName(Arrays
 				.stream(new String[] { csvPrice.getTermType(),
 						StringUtils.replace(csvPrice.getLeaseContractLength(), " ", ""), name,

@@ -24,7 +24,7 @@ import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery;
 import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery.AWS4SignatureQueryBuilder;
 import org.ligoj.app.plugin.prov.aws.auth.AWS4SignerForAuthorizationHeader;
 import org.ligoj.app.plugin.prov.aws.in.ProvAwsPriceImportResource;
-import org.ligoj.app.plugin.prov.in.ImportCatalogService;
+import org.ligoj.app.plugin.prov.catalog.ImportCatalogService;
 import org.ligoj.app.plugin.prov.terraform.Context;
 import org.ligoj.app.plugin.prov.terraform.Terraforming;
 import org.ligoj.bootstrap.core.NamedBean;

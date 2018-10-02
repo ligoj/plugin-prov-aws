@@ -7,6 +7,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.ligoj.bootstrap.core.csv.CsvBeanReader;
@@ -24,7 +25,7 @@ public class CsvForBeanEfs extends AbstractAwsCsvForBean<AwsCsvPrice> {
 	/**
 	 * Build the reader parsing the CSV file from AWS to build {@link AwsPrice}
 	 * instances. Non AWS instances data are skipped, and headers are ignored.
-	 * 
+	 *
 	 * @param reader
 	 *            The original AWS CSV input.
 	 * @throws IOException
@@ -36,7 +37,15 @@ public class CsvForBeanEfs extends AbstractAwsCsvForBean<AwsCsvPrice> {
 
 	@Override
 	protected CsvBeanReader<AwsCsvPrice> newCsvReader(final Reader reader, final String[] headers, final Class<AwsCsvPrice> beanType) {
-		return new AwsCsvReader<>(reader, headers, beanType);
+		return new AwsCsvReader<>(reader, headers, beanType) {
+
+			@Override
+			protected boolean isValidRaw(final List<String> rawValues) {
+				// Only "Storage" pricing, no Provisioned Throughput for now
+				return "Storage".equals(rawValues.get(11));
+			}
+
+		};
 	}
 
 }

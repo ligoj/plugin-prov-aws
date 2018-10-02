@@ -45,7 +45,7 @@ public class CsvForBeanEc2 extends AbstractAwsCsvForBean<AwsEc2Price> {
 	/**
 	 * Build the reader parsing the CSV file from AWS to build {@link AwsEc2Price} instances. Non AWS instances data are
 	 * skipped, and headers are ignored.
-	 * 
+	 *
 	 * @param reader
 	 *            The original AWS CSV input.
 	 * @throws IOException
@@ -65,10 +65,11 @@ public class CsvForBeanEc2 extends AbstractAwsCsvForBean<AwsEc2Price> {
 				// Only Compute Instance with a valid OS
 				// Only compute instance for now
 				// Only OS compliant
+				// Only Tenancy compliant : no "host"/"NA"
 				// No dedicated host for now
 				return rawValues.size() > 38 && "Compute Instance".equals(rawValues.get(14))
 						&& StringUtils.isNotEmpty(rawValues.get(37)) && !"NA".equals(rawValues.get(37))
-						&& !"Host".equals(rawValues.get(35));
+						&& !"NA".equals(rawValues.get(35)) && !"Host".equals(rawValues.get(35));
 			}
 
 		};

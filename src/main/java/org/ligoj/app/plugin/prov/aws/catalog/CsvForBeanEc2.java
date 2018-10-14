@@ -1,7 +1,7 @@
 /*
  * Licensed under MIT (https://github.com/ligoj/ligoj/blob/master/LICENSE)
  */
-package org.ligoj.app.plugin.prov.aws.in;
+package org.ligoj.app.plugin.prov.aws.catalog;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -63,7 +63,7 @@ public class CsvForBeanEc2 extends AbstractAwsCsvForBean<AwsEc2Price> {
 			@Override
 			protected boolean isValidRaw(final List<String> rawValues) {
 				// Only Compute Instance with a valid OS
-				// Only compute instance for now
+				// Only Compute instance for now
 				// Only OS compliant
 				// Only Tenancy compliant : no "host"/"NA"
 				// No dedicated host for now

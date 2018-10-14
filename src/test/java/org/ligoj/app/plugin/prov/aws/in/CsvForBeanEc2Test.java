@@ -9,6 +9,7 @@ import java.io.InputStreamReader;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.ligoj.app.plugin.prov.aws.catalog.CsvForBeanEc2;
 import org.springframework.core.io.ClassPathResource;
 
 /**

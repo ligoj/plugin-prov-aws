@@ -42,6 +42,9 @@ import org.ligoj.app.plugin.prov.QuoteStorageLookup;
 import org.ligoj.app.plugin.prov.QuoteVo;
 import org.ligoj.app.plugin.prov.UpdatedCost;
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
+import org.ligoj.app.plugin.prov.aws.catalog.AwsEc2Price;
+import org.ligoj.app.plugin.prov.aws.catalog.CsvForBeanEc2;
+import org.ligoj.app.plugin.prov.aws.catalog.ProvAwsPriceImportResource;
 import org.ligoj.app.plugin.prov.catalog.ImportCatalogResource;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceRepository;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceTermRepository;
@@ -109,7 +112,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 
 	protected int subscription;
 
-	private static Properties initialProperties = (Properties)System.getProperties().clone();
+	private static Properties initialProperties = (Properties) System.getProperties().clone();
 
 	@BeforeEach
 	public void prepareData() throws IOException {
@@ -197,7 +200,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 
 		// Check the spot
 		final QuoteInstanceLookup spotPrice = qiResource.lookup(instance.getConfiguration().getSubscription().getId(),
-				2, 1741, true, VmOs.LINUX, null, true, null, null);
+				2, 1741, true, VmOs.LINUX, null, true, null, null, null, null);
 		Assertions.assertEquals(12.664, spotPrice.getCost(), DELTA);
 		Assertions.assertEquals(12.664d, spotPrice.getPrice().getCost(), 0.0001);
 		Assertions.assertEquals(0.0173d, spotPrice.getPrice().getCostPeriod(), 0.0001);
@@ -381,7 +384,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 
 		// Check the spot
 		final QuoteInstanceLookup price = qiResource.lookup(instance.getConfiguration().getSubscription().getId(), 2,
-				1741, null, VmOs.LINUX, "r4.large", true, null, null);
+				1741, null, VmOs.LINUX, "r4.large", true, null, null, null, null);
 		Assertions.assertTrue(price.getCost() > 5d);
 		Assertions.assertTrue(price.getCost() < 100d);
 		final ProvInstancePrice instance2 = price.getPrice();
@@ -507,7 +510,8 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		Assertions.assertNull(iptRepository.findByName("Reserved, 3yr, All Upfront"));
 
 		// Check the spot
-		Assertions.assertNull(qiResource.lookup(subscription, 1, 1, false, VmOs.LINUX, null, true, null, null));
+		Assertions.assertNull(
+				qiResource.lookup(subscription, 1, 1, false, VmOs.LINUX, null, true, null, null, null, null));
 	}
 
 	/**
@@ -594,7 +598,8 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		Assertions.assertEquals(0, ipRepository.findAllBy("type.name", "Spot").size());
 
 		// Check no instance can be found
-		Assertions.assertNull(qiResource.lookup(subscription, 1, 1, false, VmOs.LINUX, null, true, null, null));
+		Assertions.assertNull(
+				qiResource.lookup(subscription, 1, 1, false, VmOs.LINUX, null, true, null, null, null, null));
 	}
 
 	/**
@@ -617,7 +622,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 
 		// Request an instance that would not be a Spot
 		final QuoteInstanceLookup lookup = qiResource.lookup(subscription, 2, 1741, true, VmOs.LINUX, "c1.medium",
-				false, null, "36month");
+				false, null, "36month", null, null);
 
 		final QuoteInstanceEditionVo ivo = new QuoteInstanceEditionVo();
 		ivo.setCpu(1d);

@@ -1,7 +1,7 @@
 /*
  * Licensed under MIT (https://github.com/ligoj/ligoj/blob/master/LICENSE)
  */
-package org.ligoj.app.plugin.prov.aws.in;
+package org.ligoj.app.plugin.prov.aws.catalog;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -801,10 +801,9 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			final ProvLocation region) {
 		final VmOs os = VmOs.valueOf(csv.getOs().toUpperCase(Locale.ENGLISH));
 		final ProvInstanceType instance = installInstanceType(context, csv);
-		final String license = StringUtils.trimToNull(StringUtils.remove(
-				csv.getLicenseModel().replace("License Included", StringUtils.defaultString(csv.getSoftware(), ""))
-						.replace("NA", "License Included"),
-				"No License required"));
+		final String license = StringUtils.trimToNull(csv.getLicenseModel().replace("No License required", "")
+				.replace("Bring your own license", ProvInstancePrice.LICENSE_BYOL));
+		final String software = StringUtils.trimToNull(csv.getSoftware().replace("NA", ""));
 		final ProvTenancy tenancy = ProvTenancy.valueOf(StringUtils.upperCase(csv.getTenancy()));
 		final ProvInstancePriceTerm term = context.getPriceTypes().computeIfAbsent(csv.getOfferTermCode(),
 				k -> newInstancePriceTerm(context, csv));
@@ -816,6 +815,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			p.setOs(os);
 			p.setTenancy(tenancy);
 			p.setLicense(license);
+			p.setSoftware(software);
 			p.setType(instance);
 			p.setTerm(term);
 			return p;

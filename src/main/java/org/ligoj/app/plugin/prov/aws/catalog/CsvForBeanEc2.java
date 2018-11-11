@@ -40,6 +40,7 @@ public class CsvForBeanEc2 extends AbstractAwsCsvForBean<AwsEc2Price> {
 		HEADERS_MAPPING.put("Network Performance", "networkPerformance");
 		HEADERS_MAPPING.put("EBS Optimized", "ebsOptimized");
 		HEADERS_MAPPING.put("Current Generation", "currentGeneration");
+		HEADERS_MAPPING.put("CapacityStatus", "capacityStatus");
 	}
 
 	/**
@@ -67,9 +68,11 @@ public class CsvForBeanEc2 extends AbstractAwsCsvForBean<AwsEc2Price> {
 				// Only OS compliant
 				// Only Tenancy compliant : no "host"/"NA"
 				// No dedicated host for now
-				return rawValues.size() > 38 && "Compute Instance".equals(rawValues.get(14))
-						&& StringUtils.isNotEmpty(rawValues.get(37)) && !"NA".equals(rawValues.get(37))
-						&& !"NA".equals(rawValues.get(35)) && !"Host".equals(rawValues.get(35));
+				// CapacityStatus = 'Used'
+				return rawValues.size() > 48 && "Compute Instance".equals(rawValues.get(14))
+						&& !"NA".equals(StringUtils.defaultIfEmpty(rawValues.get(37), "NA"))
+						&& !"NA".equals(rawValues.get(35)) && !"Host".equals(rawValues.get(35))
+						&& "Used".equals(StringUtils.defaultIfBlank(rawValues.get(48), "Used"));
 			}
 
 		};

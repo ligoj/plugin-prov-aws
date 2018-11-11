@@ -631,22 +631,22 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		ivo.setName("server1");
 		ivo.setSubscription(subscription);
 		final UpdatedCost createInstance = qiResource.create(ivo);
-		Assertions.assertTrue(createInstance.getTotalCost().getMin() > 1);
-		final int instance = createInstance.getId();
+		Assertions.assertTrue(createInstance.getTotal().getMin() > 1);
+		Assertions.assertTrue(createInstance.getId() > 0);
 		em.flush();
 		em.clear();
 
 		// Add storage to this instance
-		final QuoteStorageLookup slookup = qsResource.lookup(subscription, 5, Rate.GOOD, instance, null, null).get(0);
+		final QuoteStorageLookup slookup = qsResource.lookup(subscription, 5, Rate.GOOD, "server1", null, null).get(0);
 		final QuoteStorageEditionVo svo = new QuoteStorageEditionVo();
-		svo.setQuoteInstance(instance);
+		svo.setQuoteInstance("server1");
 		svo.setSize(5);
 		svo.setType(slookup.getPrice().getType().getName());
 		svo.setName("sda1");
 		svo.setSubscription(subscription);
 		final UpdatedCost createStorage = qsResource.create(svo);
-		Assertions.assertTrue(createStorage.getResourceCost().getMin() >= 0.5);
-		Assertions.assertTrue(createStorage.getTotalCost().getMin() > 40);
+		Assertions.assertTrue(createStorage.getCost().getMin() >= 0.5);
+		Assertions.assertTrue(createStorage.getTotal().getMin() > 40);
 
 		// Add storage (EFS) to this quote
 		final QuoteStorageLookup efsLookpup = qsResource
@@ -658,7 +658,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		svo2.setName("nfs1");
 		svo2.setSubscription(subscription);
 		final UpdatedCost createEfs = qsResource.create(svo2);
-		Assertions.assertEquals(0.33, createEfs.getResourceCost().getMin(), DELTA);
+		Assertions.assertEquals(0.33, createEfs.getCost().getMin(), DELTA);
 
 		// Add storage (S3) to this quote
 		final QuoteStorageLookup s3Lookpup = qsResource
@@ -674,7 +674,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		svo3.setName("my-bucket");
 		svo3.setSubscription(subscription);
 		final UpdatedCost createS3 = qsResource.create(svo3);
-		Assertions.assertEquals(0.01, createS3.getResourceCost().getMin(), DELTA);
+		Assertions.assertEquals(0.01, createS3.getCost().getMin(), DELTA);
 
 		return provResource.getConfiguration(subscription);
 	}

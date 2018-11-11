@@ -1,0 +1,4 @@
+code;type.name;min;rate;limit
+aws-developer;Developer;29;3;
+aws-business;Business;100;10,7,5,3;10000,80000,250000
+aws-enterprise;Enterprise;15000;10,7,5,3;150000,500000,1000000

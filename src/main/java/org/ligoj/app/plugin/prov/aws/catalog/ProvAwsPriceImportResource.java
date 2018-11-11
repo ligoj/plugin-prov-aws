@@ -43,6 +43,8 @@ import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvStorageOptimized;
 import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
+import org.ligoj.app.plugin.prov.model.ProvSupportPrice;
+import org.ligoj.app.plugin.prov.model.ProvSupportType;
 import org.ligoj.app.plugin.prov.model.ProvTenancy;
 import org.ligoj.app.plugin.prov.model.Rate;
 import org.ligoj.app.plugin.prov.model.VmOs;
@@ -73,7 +75,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		// Nothing to extend
 	};
 
-	private static final String BY_NODE = "node.id";
+	private static final String BY_NODE = "node";
 
 	/**
 	 * The EC2 reserved and on-demand price end-point, a CSV file, accepting the region code with {@link Formatter}
@@ -173,8 +175,11 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		final Node node = nodeRepository.findOneExpected(ProvAwsPluginResource.KEY);
 		context.setNode(node);
 
+		// Install support prices
+		installSupportPrices(context);
+
 		// The previously installed location cache. Key is the location AWS name
-		context.setRegions(locationRepository.findAllBy(BY_NODE, node.getId()).stream().filter(this::isEnabledRegion)
+		context.setRegions(locationRepository.findAllBy(BY_NODE, node).stream().filter(this::isEnabledRegion)
 				.collect(Collectors.toMap(INamableBean::getName, Function.identity())));
 		nextStep(node, null, 0);
 
@@ -211,9 +216,9 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 				});
 	}
 
-	private Map<String, ProvStorageType> installStorageTypes(UpdateContext context) throws IOException {
-		final Map<String, ProvStorageType> previous = stRepository.findAllBy(BY_NODE, context.getNode().getId())
-				.stream().collect(Collectors.toMap(INamableBean::getName, Function.identity()));
+	private Map<String, ProvStorageType> installStorageTypes(final UpdateContext context) throws IOException {
+		final Map<String, ProvStorageType> previous = stRepository.findAllBy(BY_NODE, context.getNode()).stream()
+				.collect(Collectors.toMap(INamableBean::getName, Function.identity()));
 		csvForBean.toBean(ProvStorageType.class, "csv/aws-prov-storage-type.csv").forEach(t -> {
 			final ProvStorageType entity = previous.computeIfAbsent(t.getName(), n -> {
 				t.setNode(context.getNode());
@@ -233,6 +238,65 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 		});
 		return previous;
+	}
+
+	/**
+	 * Install previous support prices.
+	 */
+	private Map<String, ProvSupportPrice> installSupportPrices(final UpdateContext context) throws IOException {
+		// Install previous types
+		installSupportTypes(context);
+
+		// Fetch previous prices
+		final Map<String, ProvSupportPrice> previous = sp2Repository.findAllBy("type.node", context.getNode()).stream()
+				.collect(Collectors.toMap(AbstractPrice::getCode, Function.identity()));
+
+		// Complete the set
+		csvForBean.toBean(ProvSupportPrice.class, "csv/aws-prov-support-price.csv").forEach(t -> {
+			final ProvSupportPrice entity = previous.computeIfAbsent(t.getCode(), n -> t);
+
+			// Merge the support type details
+			entity.setCost(t.getCost());
+			entity.setLimit(t.getLimit());
+			entity.setMin(t.getMin());
+			entity.setRate(t.getRate());
+
+			sp2Repository.save(entity);
+
+		});
+		return previous;
+	}
+
+	private void installSupportTypes(final UpdateContext context) throws IOException {
+		// Fetch previous prices
+		final Map<String, ProvSupportType> previous = st2Repository.findAllBy(BY_NODE, context.getNode()).stream()
+				.collect(Collectors.toMap(INamableBean::getName, Function.identity()));
+
+		// Complete the set
+		csvForBean.toBean(ProvSupportType.class, "csv/aws-prov-support-type.csv").forEach(t -> {
+			final ProvSupportType entity = previous.computeIfAbsent(t.getName(), n -> t);
+
+			// Merge the support type details
+			entity.setDescription(t.getDescription());
+			entity.setAccessApi(t.getAccessApi());
+			entity.setAccessChat(t.getAccessChat());
+			entity.setAccessEmail(t.getAccessEmail());
+			entity.setAccessPhone(t.getAccessPhone());
+			entity.setSlaStartTime(t.getSlaStartTime());
+			entity.setSlaEndTime(t.getSlaEndTime());
+
+			entity.setSlaBusinessCriticalSystemDown(t.getSlaBusinessCriticalSystemDown());
+			entity.setSlaGeneralGuidance(t.getSlaGeneralGuidance());
+			entity.setSlaProductionSystemDown(t.getSlaProductionSystemDown());
+			entity.setSlaProductionSystemImpaired(t.getSlaProductionSystemImpaired());
+			entity.setSlaSystemImpaired(t.getSlaSystemImpaired());
+			entity.setSlaWeekEnd(t.isSlaWeekEnd());
+
+			entity.setCommitment(t.getCommitment());
+			entity.setSeats(t.getSeats());
+			entity.setLevel(t.getLevel());
+			st2Repository.save(entity);
+		});
 	}
 
 	/**
@@ -260,11 +324,11 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		final Node node = context.getNode();
 		final ProvInstancePriceTerm spotPriceType = newSpotInstanceType(node);
 
-		context.setPriceTypes(iptRepository.findAllBy(BY_NODE, node.getId()).stream()
+		context.setPriceTypes(iptRepository.findAllBy(BY_NODE, node).stream()
 				.collect(Collectors.toMap(ProvInstancePriceTerm::getCode, Function.identity())));
 
 		// The previously installed instance types cache. Key is the instance name
-		context.setInstanceTypes(itRepository.findAllBy(BY_NODE, node.getId()).stream()
+		context.setInstanceTypes(itRepository.findAllBy(BY_NODE, node).stream()
 				.collect(Collectors.toMap(ProvInstanceType::getName, Function.identity())));
 
 		// Install the EC2 (non spot) prices
@@ -364,8 +428,8 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("s3"));
 
 		// Track the created instance to cache partial costs
-		final Map<String, ProvStoragePrice> previous = spRepository.findAllBy("type.node.id", context.getNode().getId())
-				.stream().filter(p -> p.getType().getName().startsWith("s3") || "glacier".equals(p.getType().getName()))
+		final Map<String, ProvStoragePrice> previous = spRepository.findAllBy("type.node", context.getNode()).stream()
+				.filter(p -> p.getType().getName().startsWith("s3") || "glacier".equals(p.getType().getName()))
 				.collect(Collectors.toMap(p2 -> p2.getLocation().getName() + p2.getType().getName(),
 						Function.identity()));
 		context.setPreviousStorage(previous);
@@ -468,8 +532,8 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("efs"));
 
 		// Track the created instance to cache partial costs
-		final ProvStorageType efs = stRepository
-				.findAllBy(BY_NODE, context.getNode().getId(), new String[] { "name" }, "efs").get(0);
+		final ProvStorageType efs = stRepository.findAllBy(BY_NODE, context.getNode(), new String[] { "name" }, "efs")
+				.get(0);
 		final Map<ProvLocation, ProvStoragePrice> previous = spRepository.findAllBy("type", efs).stream()
 				.collect(Collectors.toMap(ProvStoragePrice::getLocation, Function.identity()));
 

@@ -30,4 +30,5 @@ public class AwsEc2Price extends AwsCsvPrice {
 	private String networkPerformance;
 	private String ebsOptimized;
 	private String currentGeneration;
+	private String capacityStatus;
 }

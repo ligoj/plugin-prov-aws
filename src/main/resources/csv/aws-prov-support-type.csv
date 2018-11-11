@@ -1,0 +1,4 @@
+node.id;name;slaStartTime;slaEndTime;slaWeekEnd;commitment;accessApi;accessEmail;accessChat;accessPhone;seats;slaGeneralGuidance;slaSystemImpaired;slaProductionSystemImpaired;slaProductionSystemDown;slaBusinessCriticalSystemDown;level
+service:prov:aws;Developer;28800000;64800000;FALSE;1;;ALL;;;1;86400000;43200000;;;;LOW
+service:prov:aws;Business;0;86400000;TRUE;1;ALL;ALL;ALL;ALL;;86400000;43200000;14400000;3600000;;MEDIUM
+service:prov:aws;Enterprise;0;86400000;TRUE;1;ALL;ALL;ALL;ALL;;86400000;43200000;14400000;3600000;900000;GOOD

@@ -166,7 +166,7 @@ public class ProvAwsTerraformService {
 		}
 	}
 
-	private ProvLocation getLocation(final AbstractQuoteResource resource) {
+	private ProvLocation getLocation(final AbstractQuoteResource<?> resource) {
 		return Objects.requireNonNullElse(resource.getLocation(), resource.getConfiguration().getLocation());
 	}
 

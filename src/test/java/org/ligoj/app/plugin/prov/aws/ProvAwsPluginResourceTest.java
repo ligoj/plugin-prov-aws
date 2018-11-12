@@ -128,13 +128,14 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	 * @throws Exception
 	 *             exception
 	 */
+	@SuppressWarnings("unchecked")
 	@Test
 	public void getEC2Keys() {
-		final ProvAwsPluginResource resource = Mockito.spy(this.resource);
+		final ProvAwsPluginResource resource = newSpyResource();
 		final CurlRequest mockRequest = new CurlRequest("GET", MOCK_URL, null);
 		mockRequest.setSaveResponse(true);
 		Mockito.doReturn(mockRequest).when(resource).newRequest(ArgumentMatchers.any(AWS4SignatureQueryBuilder.class),
-				ArgumentMatchers.eq(subscription));
+				ArgumentMatchers.any(Map.class));
 		httpServer.stubFor(get(urlEqualTo("/mock"))
 				.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody("<keyName>my-key</keyName>")));
 		httpServer.start();
@@ -143,6 +144,13 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		Assertions.assertFalse(keys.isEmpty());
 		Assertions.assertEquals(1, keys.size());
 		Assertions.assertEquals("my-key", keys.get(0).getId());
+	}
+
+	private ProvAwsPluginResource newSpyResource() {
+		final ProvAwsPluginResource resource0 = new ProvAwsPluginResource();
+		applicationContext.getAutowireCapableBeanFactory().autowireBean(resource0);
+		final ProvAwsPluginResource resource = Mockito.spy(resource0);
+		return resource;
 	}
 
 	/**
@@ -174,14 +182,14 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 
 	@Test
 	public void create() {
-		final ProvAwsPluginResource resource = Mockito.spy(ProvAwsPluginResource.class);
+		final ProvAwsPluginResource resource = newSpyResource();
 		Mockito.doReturn(true).when(resource).validateAccess(ArgumentMatchers.anyInt());
 		resource.create(subscription);
 	}
 
 	@Test
 	public void createFailed() {
-		final ProvAwsPluginResource resource = Mockito.spy(ProvAwsPluginResource.class);
+		final ProvAwsPluginResource resource = newSpyResource();
 		Mockito.doReturn(false).when(resource).validateAccess(ArgumentMatchers.anyInt());
 		Assertions.assertEquals("Cannot access to AWS services with these parameters",
 				Assertions.assertThrows(BusinessException.class, () -> {
@@ -198,7 +206,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 
 	@Test
 	public void checkSubscriptionStatusDown() {
-		final ProvAwsPluginResource resource = Mockito.spy(ProvAwsPluginResource.class);
+		final ProvAwsPluginResource resource = newSpyResource();
 		Mockito.doReturn(false).when(resource).validateAccess(ArgumentMatchers.anyInt());
 		final SubscriptionStatusWithData status = resource.checkSubscriptionStatus(subscription, null,
 				new HashMap<String, String>());
@@ -218,7 +226,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	@Test
 	public void checkStatus() {
 		Assertions.assertTrue(validateAccess(HttpStatus.SC_OK));
-		final ProvAwsPluginResource resource = Mockito.spy(this.resource);
+		final ProvAwsPluginResource resource = newSpyResource();
 		Mockito.doReturn(MOCK_URL).when(resource).toUrl(ArgumentMatchers.any());
 		final Map<String, String> parameters = new HashMap<>();
 		parameters.put("service:prov:aws:access-key-id", "12345678901234567890");
@@ -227,13 +235,14 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		Assertions.assertTrue(resource.checkStatus(null, parameters));
 	}
 
+	@SuppressWarnings("unchecked")
 	private boolean validateAccess(int status) {
-		final ProvAwsPluginResource resource = Mockito.spy(new ProvAwsPluginResource());
+		final ProvAwsPluginResource resource = newSpyResource();
 		final CurlRequest mockRequest = new CurlRequest("GET", MOCK_URL, null);
 		mockRequest.setSaveResponse(true);
 		Mockito.doReturn("any").when(resource).getRegion();
 		Mockito.doReturn(mockRequest).when(resource).newRequest(ArgumentMatchers.any(AWS4SignatureQueryBuilder.class),
-				ArgumentMatchers.eq(subscription));
+				ArgumentMatchers.any(Map.class));
 
 		httpServer.stubFor(get(urlEqualTo("/mock")).willReturn(aResponse().withStatus(status)));
 		httpServer.start();

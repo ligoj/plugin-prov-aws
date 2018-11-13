@@ -49,6 +49,7 @@ import org.ligoj.app.plugin.prov.catalog.ImportCatalogResource;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceRepository;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceTermRepository;
 import org.ligoj.app.plugin.prov.dao.ProvInstanceTypeRepository;
+import org.ligoj.app.plugin.prov.dao.ProvQuoteInstanceRepository;
 import org.ligoj.app.plugin.prov.dao.ProvQuoteRepository;
 import org.ligoj.app.plugin.prov.model.ImportCatalogStatus;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
@@ -100,6 +101,9 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 
 	@Autowired
 	private ProvInstancePriceRepository ipRepository;
+
+	@Autowired
+	private ProvQuoteInstanceRepository qiRepository;
 
 	@Autowired
 	private ProvQuoteRepository repository;
@@ -602,6 +606,10 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 				qiResource.lookup(subscription, 1, 1, false, VmOs.LINUX, null, true, null, null, null, null));
 	}
 
+	private int server1() {
+		return qiRepository.findByName("server1").getId();
+	}
+
 	/**
 	 * Install and check
 	 */
@@ -637,9 +645,9 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		em.clear();
 
 		// Add storage to this instance
-		final QuoteStorageLookup slookup = qsResource.lookup(subscription, 5, Rate.GOOD, "server1", null, null).get(0);
+		final QuoteStorageLookup slookup = qsResource.lookup(subscription, 5, Rate.GOOD, server1(), null, null).get(0);
 		final QuoteStorageEditionVo svo = new QuoteStorageEditionVo();
-		svo.setQuoteInstance("server1");
+		svo.setQuoteInstance(server1());
 		svo.setSize(5);
 		svo.setType(slookup.getPrice().getType().getName());
 		svo.setName("sda1");

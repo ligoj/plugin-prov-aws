@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.util.List;
 
+import org.ligoj.app.plugin.prov.aws.catalog.ec2.AwsEc2Price;
 import org.ligoj.bootstrap.core.csv.CsvBeanReader;
 import org.ligoj.bootstrap.core.csv.CsvReader;
 

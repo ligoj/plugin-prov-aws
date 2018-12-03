@@ -1,7 +1,7 @@
 /*
  * Licensed under MIT (https://github.com/ligoj/ligoj/blob/master/LICENSE)
  */
-package org.ligoj.app.plugin.prov.aws.in;
+package org.ligoj.app.plugin.prov.aws.catalog;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -9,7 +9,7 @@ import java.io.InputStreamReader;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.ligoj.app.plugin.prov.aws.catalog.CsvForBeanEc2;
+import org.ligoj.app.plugin.prov.aws.catalog.ec2.CsvForBeanEc2;
 import org.springframework.core.io.ClassPathResource;
 
 /**

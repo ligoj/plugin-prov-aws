@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.ligoj.app.plugin.prov.aws.catalog.ec2.AwsEc2Price;
 import org.ligoj.bootstrap.core.csv.AbstractCsvManager;
 import org.ligoj.bootstrap.core.csv.CsvBeanReader;
 import org.ligoj.bootstrap.core.csv.CsvReader;
@@ -19,7 +20,7 @@ import org.ligoj.bootstrap.core.resource.TechnicalException;
 /**
  * Read AWS CSV input, skipping the AWS headers and non instance type rows.
  */
-abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
+public abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 
 	private final CsvBeanReader<T> beanReader;
 
@@ -38,7 +39,7 @@ abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 	/**
 	 * Build the reader parsing the CSV file from AWS to build {@link AwsEc2Price}
 	 * instances. Non AWS instances data are skipped, and headers are ignored.
-	 * 
+	 *
 	 * @param reader
 	 *            The original AWS CSV input.
 	 */
@@ -71,7 +72,7 @@ abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 
 	/**
 	 * Do not use this, method.
-	 * 
+	 *
 	 * @see #read() instead
 	 */
 	@Override
@@ -83,7 +84,7 @@ abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 	/**
 	 * Return a list of JPA bean re ad from the given CSV input. Headers are
 	 * expected.
-	 * 
+	 *
 	 * @return The bean read from the next CSV record.
 	 * @throws IOException
 	 *             When the CSV record cannot be read.

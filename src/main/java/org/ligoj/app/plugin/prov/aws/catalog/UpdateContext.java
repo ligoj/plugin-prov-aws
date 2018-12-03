@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.ligoj.app.model.Node;
+import org.ligoj.app.plugin.prov.aws.catalog.ec2.AwsEc2Price;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
 import org.ligoj.app.plugin.prov.model.ProvInstanceType;

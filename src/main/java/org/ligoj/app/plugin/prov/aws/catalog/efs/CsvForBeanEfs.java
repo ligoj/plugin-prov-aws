@@ -1,7 +1,7 @@
 /*
  * Licensed under MIT (https://github.com/ligoj/ligoj/blob/master/LICENSE)
  */
-package org.ligoj.app.plugin.prov.aws.catalog;
+package org.ligoj.app.plugin.prov.aws.catalog.efs;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -10,6 +10,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsCsvForBean;
+import org.ligoj.app.plugin.prov.aws.catalog.AwsCsvPrice;
+import org.ligoj.app.plugin.prov.aws.catalog.AwsCsvReader;
+import org.ligoj.app.plugin.prov.aws.catalog.AwsPrice;
 import org.ligoj.bootstrap.core.csv.CsvBeanReader;
 
 /**

@@ -1,7 +1,7 @@
 /*
  * Licensed under MIT (https://github.com/ligoj/ligoj/blob/master/LICENSE)
  */
-package org.ligoj.app.plugin.prov.aws.in;
+package org.ligoj.app.plugin.prov.aws.catalog;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
@@ -42,9 +42,9 @@ import org.ligoj.app.plugin.prov.QuoteStorageLookup;
 import org.ligoj.app.plugin.prov.QuoteVo;
 import org.ligoj.app.plugin.prov.UpdatedCost;
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
-import org.ligoj.app.plugin.prov.aws.catalog.AwsEc2Price;
-import org.ligoj.app.plugin.prov.aws.catalog.CsvForBeanEc2;
 import org.ligoj.app.plugin.prov.aws.catalog.ProvAwsPriceImportResource;
+import org.ligoj.app.plugin.prov.aws.catalog.ec2.AwsEc2Price;
+import org.ligoj.app.plugin.prov.aws.catalog.ec2.CsvForBeanEc2;
 import org.ligoj.app.plugin.prov.catalog.ImportCatalogResource;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceRepository;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceTermRepository;

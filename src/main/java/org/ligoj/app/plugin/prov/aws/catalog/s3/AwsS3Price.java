@@ -1,7 +1,9 @@
 /*
  * Licensed under MIT (https://github.com/ligoj/ligoj/blob/master/LICENSE)
  */
-package org.ligoj.app.plugin.prov.aws.catalog;
+package org.ligoj.app.plugin.prov.aws.catalog.s3;
+
+import org.ligoj.app.plugin.prov.aws.catalog.AwsCsvPrice;
 
 import lombok.Getter;
 import lombok.Setter;

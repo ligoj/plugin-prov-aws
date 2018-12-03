@@ -1,10 +1,12 @@
 /*
  * Licensed under MIT (https://github.com/ligoj/ligoj/blob/master/LICENSE)
  */
-package org.ligoj.app.plugin.prov.aws.catalog;
+package org.ligoj.app.plugin.prov.aws.catalog.ebs;
 
 import java.util.Collection;
 
+import org.ligoj.app.plugin.prov.aws.catalog.AwsPrice;
+import org.ligoj.app.plugin.prov.aws.catalog.AwsRegionPrices;
 import org.ligoj.bootstrap.core.NamedBean;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;

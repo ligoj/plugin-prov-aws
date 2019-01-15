@@ -1,4 +1,4 @@
-name;optimized;latency;minimal;maximal;instanceCompatible;iops;throughput;availability;durability9;description
+name;optimized;latency;minimal;maximal;instanceCompatible;iops;throughput;availability;durability9;description;engine
 gp2;IOPS;BEST;1;16384;true;10000;160
 io1;IOPS;BEST;4;16384;true;32000;500
 st1;THROUGHPUT;GOOD;500;16384;true;500;500

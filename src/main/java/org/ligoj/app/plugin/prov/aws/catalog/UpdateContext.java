@@ -9,6 +9,9 @@ import java.util.Set;
 
 import org.ligoj.app.model.Node;
 import org.ligoj.app.plugin.prov.aws.catalog.ec2.AwsEc2Price;
+import org.ligoj.app.plugin.prov.aws.catalog.rds.AwsRdsPrice;
+import org.ligoj.app.plugin.prov.model.ProvDatabasePrice;
+import org.ligoj.app.plugin.prov.model.ProvDatabaseType;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
 import org.ligoj.app.plugin.prov.model.ProvInstanceType;
@@ -38,24 +41,38 @@ public class UpdateContext {
 	private Map<String, ProvInstanceType> instanceTypes;
 
 	/**
+	 * The previously installed database types. Key is the instance name.
+	 */
+	@Getter
+	@Setter
+	private Map<String, ProvDatabaseType> databaseTypes;
+
+	/**
 	 * The already merge instance types.
 	 */
 	@Getter
 	private Set<String> instanceTypesMerged = new HashSet<>();
 
 	/**
-	 * The previously installed price types.
+	 * The previously installed price terms.
 	 */
 	@Getter
 	@Setter
-	private Map<String, ProvInstancePriceTerm> priceTypes;
+	private Map<String, ProvInstancePriceTerm> priceTerms;
 
 	/**
-	 * The previous installed prices.
+	 * The previous installed EC2 prices.
 	 */
 	@Getter
 	@Setter
 	private Map<String, ProvInstancePrice> previous;
+
+	/**
+	 * The previous installed Database prices.
+	 */
+	@Getter
+	@Setter
+	private Map<String, ProvDatabasePrice> previousDatabase;
 
 	/**
 	 * The previous installed storage prices.
@@ -71,6 +88,9 @@ public class UpdateContext {
 	@Setter
 	private Map<String, AwsEc2Price> partialCost;
 
+	@Getter
+	@Setter
+	private Map<String, AwsRdsPrice> partialCostRds;
 	/**
 	 * The available regions.
 	 */

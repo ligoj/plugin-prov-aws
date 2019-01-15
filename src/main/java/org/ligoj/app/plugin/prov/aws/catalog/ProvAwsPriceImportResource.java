@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -35,15 +36,24 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.ligoj.app.model.Node;
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
 import org.ligoj.app.plugin.prov.aws.catalog.ebs.EbsPrices;
+import org.ligoj.app.plugin.prov.aws.catalog.ec2.AbstractAwsEc2Price;
 import org.ligoj.app.plugin.prov.aws.catalog.ec2.AwsEc2Price;
 import org.ligoj.app.plugin.prov.aws.catalog.ec2.AwsEc2SpotPrice;
 import org.ligoj.app.plugin.prov.aws.catalog.ec2.CsvForBeanEc2;
 import org.ligoj.app.plugin.prov.aws.catalog.ec2.SpotPrices;
 import org.ligoj.app.plugin.prov.aws.catalog.efs.CsvForBeanEfs;
+import org.ligoj.app.plugin.prov.aws.catalog.rds.AwsRdsPrice;
+import org.ligoj.app.plugin.prov.aws.catalog.rds.CsvForBeanRds;
 import org.ligoj.app.plugin.prov.aws.catalog.s3.AwsS3Price;
 import org.ligoj.app.plugin.prov.aws.catalog.s3.CsvForBeanS3;
 import org.ligoj.app.plugin.prov.catalog.AbstractImportCatalogResource;
+import org.ligoj.app.plugin.prov.dao.BaseProvInstanceTypeRepository;
+import org.ligoj.app.plugin.prov.dao.BaseProvTermPriceRepository;
+import org.ligoj.app.plugin.prov.model.AbstractInstanceType;
 import org.ligoj.app.plugin.prov.model.AbstractPrice;
+import org.ligoj.app.plugin.prov.model.AbstractTermPrice;
+import org.ligoj.app.plugin.prov.model.ProvDatabasePrice;
+import org.ligoj.app.plugin.prov.model.ProvDatabaseType;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
 import org.ligoj.app.plugin.prov.model.ProvInstanceType;
@@ -91,6 +101,11 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	private static final String EC2_PRICES = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/%s/index.csv";
 
 	/**
+	 * The RDS reserved and on-demand price end-point, a CSV file, accepting the region code with {@link Formatter}
+	 */
+	private static final String RDS_PRICES = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonRDS/current/%s/index.csv";
+
+	/**
 	 * The EC2 spot price end-point, a JSON file. Contains the prices for all regions.
 	 */
 	private static final String EC2_PRICES_SPOT = "https://spot-price.s3.amazonaws.com/spot.js";
@@ -121,6 +136,11 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 * Configuration key used for {@link #EC2_PRICES}
 	 */
 	public static final String CONF_URL_EC2_PRICES = String.format(CONF_URL_API_PRICES, "ec2");
+
+	/**
+	 * Configuration key used for {@link #RDS_PRICES}
+	 */
+	public static final String CONF_URL_RDS_PRICES = String.format(CONF_URL_API_PRICES, "rds");
 
 	/**
 	 * Configuration key used for {@link #EC2_PRICES_SPOT}
@@ -331,10 +351,14 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		// Create the Spot instance price type
 		final Node node = context.getNode();
 		final ProvInstancePriceTerm spotPriceType = newSpotInstanceType(node);
-
-		context.setPriceTypes(iptRepository.findAllBy(BY_NODE, node).stream()
+		context.setPriceTerms(iptRepository.findAllBy(BY_NODE, node).stream()
 				.collect(Collectors.toMap(ProvInstancePriceTerm::getCode, Function.identity())));
+		installEc2(context, node, spotPriceType);
+		installRds(context, node);
+	}
 
+	private void installEc2(final UpdateContext context, final Node node, final ProvInstancePriceTerm spotPriceType)
+			throws IOException {
 		// The previously installed instance types cache. Key is the instance name
 		context.setInstanceTypes(itRepository.findAllBy(BY_NODE, node).stream()
 				.collect(Collectors.toMap(ProvInstanceType::getName, Function.identity())));
@@ -348,6 +372,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 					.collect(Collectors.toMap(ProvInstancePrice::getCode, Function.identity())));
 			installEC2Prices(context, region);
 		});
+		context.getPrevious().clear();
 
 		// Install the SPOT EC2 prices
 		installJsonPrices(context, "ec2-spot", configuration.get(CONF_URL_EC2_PRICES_SPOT, EC2_PRICES_SPOT),
@@ -365,6 +390,27 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 						return availability;
 					}).mapToInt(j -> installSpotPrices(context, j, spotPriceType, region)).sum();
 				});
+		context.getInstanceTypes().clear();
+	}
+
+	/**
+	 * Install the RDS prices
+	 */
+	private void installRds(final UpdateContext context, final Node node) {
+		context.setDatabaseTypes(dtRepository.findAllBy(BY_NODE, node).stream()
+				.collect(Collectors.toMap(ProvDatabaseType::getName, Function.identity())));
+		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("rds"));
+		context.getRegions().values().forEach(region -> {
+			nextStep(node, region.getName(), 1);
+			// Get previous RDS storage and instance prices for this location
+			context.setPreviousDatabase(dpRepository.findAll(node.getId(), region.getName()).stream()
+					.collect(Collectors.toMap(ProvDatabasePrice::getCode, Function.identity())));
+			context.setPreviousStorage(spRepository.findAll(context.getNode().getId(), region.getName()).stream()
+					.collect(Collectors.toMap(ProvStoragePrice::getCode, Function.identity())));
+			installRDSPrices(context, region);
+		});
+		context.getDatabaseTypes().clear();
+		context.getPreviousDatabase().clear();
 	}
 
 	/**
@@ -453,21 +499,18 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			final CsvForBeanS3 csvReader = new CsvForBeanS3(reader);
 
 			// Build the AWS storage prices from the CSV
-			AwsS3Price csv = null;
-			do {
-				// Read the next one
-				csv = csvReader.read();
-				if (csv == null) {
-					// EOF
-					break;
-				}
+			AwsS3Price csv = csvReader.read();
+			while (csv != null) {
 				final ProvLocation location = getRegionByHumanName(context, csv.getLocation());
 				if (location != null) {
 					// Supported location
 					instalS3Price(context, csv, location);
 					priceCounter++;
 				}
-			} while (true);
+
+				// Read the next one
+				csv = csvReader.read();
+			}
 		} finally {
 			// Report
 			log.info("AWS S3 finished : {} prices", priceCounter);
@@ -512,13 +555,15 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		});
 
 		// Update the price as needed
-		saveAsNeeded(context.getPreviousStorage().computeIfAbsent(location.getName() + name, r -> {
+		final ProvStoragePrice price = context.getPreviousStorage().computeIfAbsent(location.getName() + name, r -> {
 			final ProvStoragePrice p = new ProvStoragePrice();
 			p.setLocation(location);
 			p.setType(type);
 			p.setCode(csv.getSku());
 			return p;
-		}), csv.getPricePerUnit(), spRepository::save);
+		});
+		price.setCode(csv.getSku());
+		saveAsNeeded(price, csv.getPricePerUnit(), spRepository::save);
 	}
 
 	/**
@@ -553,21 +598,17 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			final CsvForBeanEfs csvReader = new CsvForBeanEfs(reader);
 
 			// Build the AWS instance prices from the CSV
-			AwsCsvPrice csv = null;
-			do {
-				// Read the next one
-				csv = csvReader.read();
-				if (csv == null) {
-					// EOF
-					break;
-				}
+			AwsCsvPrice csv = csvReader.read();
+			while (csv != null) {
 				final ProvLocation location = getRegionByHumanName(context, csv.getLocation());
 				if (location != null) {
 					// Supported location
 					instalEfsPrice(efs, previous, csv, location);
 					priceCounter++;
 				}
-			} while (true);
+				// Read the next one
+				csv = csvReader.read();
+			}
 		} finally {
 			// Report
 			log.info("AWS EFS finished : {} prices", priceCounter);
@@ -578,13 +619,15 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	private void instalEfsPrice(final ProvStorageType efs, final Map<ProvLocation, ProvStoragePrice> previous,
 			AwsCsvPrice csv, final ProvLocation location) {
 		// Update the price as needed
-		saveAsNeeded(previous.computeIfAbsent(location, r -> {
+		final ProvStoragePrice price = previous.computeIfAbsent(location, r -> {
 			final ProvStoragePrice p = new ProvStoragePrice();
 			p.setLocation(r);
 			p.setType(efs);
 			p.setCode(csv.getSku());
 			return p;
-		}), csv.getPricePerUnit(), spRepository::save);
+		});
+		price.setCode(csv.getSku());
+		saveAsNeeded(price, csv.getPricePerUnit(), spRepository::save);
 	}
 
 	/**
@@ -607,7 +650,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	private void nextStep(final Node node, final String location, final int step) {
 		importCatalogResource.nextStep(node.getId(), t -> {
 			importCatalogResource.updateStats(t);
-			t.setWorkload(t.getNbLocations() * 2 + 4); // NB region (for EC2 + Spot) + 3 (S3+EBS+EFS)
+			t.setWorkload(t.getNbLocations() * 3 + 4); // NB region (for EC2 + Spot + RDS) + 3 (S3+EBS+EFS)
 			t.setDone(t.getDone() + step);
 			t.setLocation(location);
 		});
@@ -700,98 +743,11 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 					// Update the price as needed
 					final double cost = Double.parseDouble(op.getPrices().get("USD"));
-					return saveAsNeeded(price, round3Decimals(cost * 24 * 30.5), p -> {
+					return saveAsNeeded(price, round3Decimals(cost * HOUR_TO_MONTH), p -> {
 						p.setCostPeriod(cost);
 						ipRepository.save(p);
 					});
 				}).count();
-	}
-
-	/**
-	 * Install the install the instance type (if needed), the instance price type (if needed) and the price.
-	 *
-	 * @param context
-	 *            The update context.
-	 * @param csv
-	 *            The current CSV entry.
-	 * @param region
-	 *            The current region.
-	 * @return The amount of installed prices. Only for the report.
-	 */
-	private int install(final UpdateContext context, final AwsEc2Price csv, final ProvLocation region) {
-		// Up-front, partial or not
-		int priceCounter = 0;
-		if (UPFRONT_MODE.matcher(StringUtils.defaultString(csv.getPurchaseOption())).find()) {
-			// Up-front ALL/PARTIAL
-			final Map<String, AwsEc2Price> partialCost = context.getPartialCost();
-			final String code = csv.getSku() + csv.getOfferTermCode() + region.getName();
-			if (partialCost.containsKey(code)) {
-				handleUpfront(newInstancePrice(context, csv, region), csv, partialCost.get(code));
-
-				// The price is completed, cleanup
-				partialCost.remove(code);
-				priceCounter++;
-			} else {
-				// First time, save this entry for a future completion
-				partialCost.put(code, csv);
-			}
-		} else {
-			// No up-front, cost is fixed
-			priceCounter++;
-			final ProvInstancePrice price = newInstancePrice(context, csv, region);
-			final double cost = csv.getPricePerUnit() * 24 * 30.5;
-			saveAsNeeded(price, round3Decimals(cost), p -> {
-				p.setCostPeriod(round3Decimals(cost * p.getTerm().getPeriod()));
-				ipRepository.save(p);
-			});
-		}
-		return priceCounter;
-	}
-
-	private ProvInstancePrice saveAsNeeded(final ProvInstancePrice entity, final double newCost,
-			final Consumer<ProvInstancePrice> c) {
-		return saveAsNeeded(entity, entity.getCost(), newCost, entity::setCost, c);
-	}
-
-	private ProvStoragePrice saveAsNeeded(final ProvStoragePrice entity, final double newCostGb,
-			final Consumer<ProvStoragePrice> c) {
-		return saveAsNeeded(entity, entity.getCostGb(), newCostGb, entity::setCostGb, c);
-	}
-
-	private <A extends Serializable, N extends AbstractNamedEntity<A>, T extends AbstractPrice<N>> T saveAsNeeded(
-			final T entity, final double oldCost, final double newCost, final Consumer<Double> updateCost,
-			final Consumer<T> c) {
-		if (oldCost != newCost) {
-			updateCost.accept(newCost);
-			c.accept(entity);
-		}
-		return entity;
-	}
-
-	/**
-	 * Install the EBS/S3 price using the related storage type.
-	 *
-	 * @param json
-	 *            The current JSON entry.
-	 * @param storage
-	 *            The related storage specification.
-	 * @param region
-	 *            The target region.
-	 * @return The amount of installed prices. Only for the report.
-	 */
-	private <T extends AwsPrice> boolean install(final T json, final ProvStorageType storage, final ProvLocation region,
-			final Map<Integer, ProvStoragePrice> previous) {
-		return Optional.ofNullable(json.getPrices().get("USD")).filter(NumberUtils::isParsable).map(usd -> {
-			final ProvStoragePrice price = previous.computeIfAbsent(storage.getId(), s -> {
-				final ProvStoragePrice p = new ProvStoragePrice();
-				p.setType(storage);
-				p.setLocation(region);
-				return p;
-			});
-
-			// Update the price as needed
-			return saveAsNeeded(price, Double.valueOf(usd), spRepository::save);
-		}).isPresent();
 	}
 
 	/**
@@ -817,36 +773,278 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			final CsvForBeanEc2 csvReader = new CsvForBeanEc2(reader);
 
 			// Build the AWS instance prices from the CSV
-			AwsEc2Price csv = null;
-			do {
-				// Read the next one
-				csv = csvReader.read();
-				if (csv == null) {
-					break;
-				}
-
+			AwsEc2Price csv = csvReader.read();
+			while (csv != null) {
 				// Complete the region human name associated to the API one
 				region.setDescription(csv.getLocation());
 
 				// Persist this price
-				priceCounter += install(context, csv, region);
-			} while (true);
+				priceCounter += installEc2(context, csv, region);
+
+				// Read the next one
+				csv = csvReader.read();
+			}
 		} catch (final IOException | URISyntaxException use) {
 			// Something goes wrong for this region, stop for this region
 			log.info("AWS EC2 OnDemand/Reserved import failed for region {}", region.getName(), use);
 		} finally {
 			// Report
 			log.info("AWS EC2 OnDemand/Reserved import finished for region {} : {} instance, {} price types, {} prices",
-					region.getName(), context.getInstanceTypes().size(), context.getPriceTypes().size(), priceCounter);
+					region.getName(), context.getInstanceTypes().size(), context.getPriceTerms().size(), priceCounter);
 		}
 
 		// Return the available instances types
 		return priceCounter;
 	}
 
-	private void handleUpfront(final ProvInstancePrice price, final AwsEc2Price csv, final AwsEc2Price other) {
-		final AwsEc2Price quantity;
-		final AwsEc2Price hourly;
+	/**
+	 * Download and install EC2 prices from AWS server.
+	 *
+	 * @param context
+	 *            The update context.
+	 * @param region
+	 *            The region to fetch.
+	 * @return The amount installed EC2 instances.
+	 */
+	protected int installRDSPrices(final UpdateContext context, final ProvLocation region) {
+		// Track the created instance to cache partial costs
+		context.setPartialCostRds(new HashMap<>());
+		final String endpoint = configuration.get(CONF_URL_RDS_PRICES, RDS_PRICES).replace("%s", region.getName());
+		log.info("AWS RDS OnDemand/Reserved import started for region {}@{} ...", region, endpoint);
+		int priceCounter = 0;
+
+		// Get the remote prices stream
+		try (BufferedReader reader = new BufferedReader(
+				new InputStreamReader(new URI(endpoint).toURL().openStream()))) {
+			// Pipe to the CSV reader
+			final CsvForBeanRds csvReader = new CsvForBeanRds(reader);
+
+			// Build the AWS instance prices from the CSV
+			AwsRdsPrice csv = csvReader.read();
+			while (csv != null) {
+				// Complete the region human name associated to the API one
+				region.setDescription(csv.getLocation());
+
+				// Persist this price
+				priceCounter += installRds(context, csv, region);
+
+				// Read the next one
+				csv = csvReader.read();
+			}
+		} catch (final IOException | URISyntaxException use) {
+			// Something goes wrong for this region, stop for this region
+			log.info("AWS RDS OnDemand/Reserved import failed for region {}", region.getName(), use);
+		} finally {
+			// Report
+			log.info("AWS RDS OnDemand/Reserved import finished for region {} : {} instance, {} price types, {} prices",
+					region.getName(), context.getInstanceTypes().size(), context.getPriceTerms().size(), priceCounter);
+		}
+
+		// Return the available instances types
+		return priceCounter;
+	}
+
+	/**
+	 * Install the install the instance type (if needed), the instance price type (if needed) and the price.
+	 *
+	 * @param context
+	 *            The update context.
+	 * @param csv
+	 *            The current CSV entry.
+	 * @param region
+	 *            The current region.
+	 * @return The amount of installed prices. Only for the report.
+	 */
+	private int installEc2(final UpdateContext context, final AwsEc2Price csv, final ProvLocation region) {
+		// Up-front, partial or not
+		int priceCounter = 0;
+		if (UPFRONT_MODE.matcher(StringUtils.defaultString(csv.getPurchaseOption())).find()) {
+			// Up-front ALL/PARTIAL
+			final Map<String, AwsEc2Price> partialCost = context.getPartialCost();
+			final String code = csv.getSku() + csv.getOfferTermCode() + region.getName();
+			if (partialCost.containsKey(code)) {
+				handleUpfront(newEc2Price(context, csv, region), csv, partialCost.get(code), ipRepository);
+
+				// The price is completed, cleanup
+				partialCost.remove(code);
+				priceCounter++;
+			} else {
+				// First time, save this entry for a future completion
+				partialCost.put(code, csv);
+			}
+		} else {
+			// No up-front, cost is fixed
+			priceCounter++;
+			final ProvInstancePrice price = newEc2Price(context, csv, region);
+			final double cost = csv.getPricePerUnit() * HOUR_TO_MONTH;
+			saveAsNeeded(price, round3Decimals(cost), p -> {
+				p.setCostPeriod(round3Decimals(cost * p.getTerm().getPeriod()));
+				ipRepository.save(p);
+			});
+		}
+		return priceCounter;
+	}
+
+	/**
+	 * Install the install the instance type (if needed), the instance price type (if needed) and the price.
+	 *
+	 * @param context
+	 *            The update context.
+	 * @param csv
+	 *            The current CSV entry.
+	 * @param region
+	 *            The current region.
+	 * @return The amount of installed prices. Only for the report.
+	 */
+	private int installRds(final UpdateContext context, final AwsRdsPrice csv, final ProvLocation region) {
+		// Up-front, partial or not
+		int priceCounter = 0;
+		if (UPFRONT_MODE.matcher(StringUtils.defaultString(csv.getPurchaseOption())).find()) {
+			// Up-front ALL/PARTIAL
+			final Map<String, AwsRdsPrice> partialCost = context.getPartialCostRds();
+			final String code = csv.getSku() + csv.getOfferTermCode() + region.getName();
+			if (partialCost.containsKey(code)) {
+				handleUpfront(newRdsPrice(context, csv, region), csv, partialCost.get(code), dpRepository);
+
+				// The price is completed, cleanup
+				partialCost.remove(code);
+				priceCounter++;
+			} else {
+				// First time, save this entry for a future completion
+				partialCost.put(code, csv);
+			}
+		} else if ("Database Instance".equals(csv.getFamily())) {
+			// No up-front, cost is fixed
+			priceCounter++;
+			final ProvDatabasePrice price = newRdsPrice(context, csv, region);
+			final double cost = csv.getPricePerUnit() * HOUR_TO_MONTH;
+			saveAsNeeded(price, round3Decimals(cost), p -> {
+				p.setCostPeriod(round3Decimals(cost * p.getTerm().getPeriod()));
+				dpRepository.save(p);
+			});
+		} else {
+			// Database storage
+			priceCounter++;
+			final ProvStorageType type = installRdsStorageTypeAsNeeded(context, csv);
+			final ProvStoragePrice price = context.getPreviousStorage().computeIfAbsent(csv.getSku(), s -> {
+				final ProvStoragePrice p = new ProvStoragePrice();
+				p.setType(type);
+				p.setCode(csv.getSku());
+				p.setLocation(region);
+				return p;
+			});
+
+			// Update the price as needed
+			saveAsNeeded(price, Double.valueOf(csv.getPricePerUnit()), spRepository::save);
+		}
+		return priceCounter;
+	}
+
+	/**
+	 * Install the RDS storage type as needed, and return it.
+	 */
+	private final ProvStorageType installRdsStorageTypeAsNeeded(final UpdateContext context, final AwsRdsPrice csv) {
+		// RDS Storage type is composition of
+		final String name;
+		final String engine;
+		if ("General Purpose-Aurora".equals(csv.getVolume())) {
+			if ("Aurora PostgreSQL".equals(csv.getEngine())) {
+				name = "gp-aurora-postgresql";
+				engine = "Aurora PostgreSQL";
+			} else {
+				name = "gp-aurora-mysql";
+				engine = "Aurora MySQL";
+			}
+		} else {
+			engine = null;
+			if ("General Purpose".equals(csv.getVolume())) {
+				name = "gp-rds";
+			} else if ("Provisioned IOPS".equals(csv.getVolume())) {
+				name = "io-rds";
+			} else {
+				name = "magnetic-rds";
+			}
+		}
+
+		return context.getStorageTypes().computeIfAbsent(name, n -> {
+			final ProvStorageType entity = new ProvStorageType();
+			final boolean ssd = "SSD".equals(csv.getStorage());
+			entity.setNode(context.getNode());
+			entity.setName(n);
+			entity.setDescription(csv.getVolume());
+			entity.setMinimal(toInteger(csv.getSizeMin()));
+			entity.setMaximal(toInteger(csv.getSizeMax()));
+			entity.setEngine(engine);
+			entity.setDatabaseCompatible(true);
+			entity.setOptimized(ssd ? ProvStorageOptimized.IOPS : null);
+			entity.setLatency(ssd ? Rate.BEST : Rate.MEDIUM);
+			stRepository.save(entity);
+			return entity;
+		});
+	}
+
+	private Integer toInteger(final String value) {
+		return Optional.ofNullable(StringUtils.trimToNull(value))
+				.map(v -> StringUtils.replaceEach(v, new String[] { "GB", "TB", " " }, new String[] { "", "", "" }))
+				.map(Integer::valueOf).map(v -> value.contains("TB") ? v * 1024 : v).orElse(null);
+	}
+
+	private <T extends AbstractInstanceType, P extends AbstractTermPrice<T>> P saveAsNeeded(final P entity,
+			final double newCost, final Consumer<P> c) {
+		return saveAsNeeded(entity, entity.getCost(), newCost, entity::setCost, c);
+	}
+
+	private ProvStoragePrice saveAsNeeded(final ProvStoragePrice entity, final double newCostGb,
+			final Consumer<ProvStoragePrice> c) {
+		return saveAsNeeded(entity, entity.getCostGb(), newCostGb, entity::setCostGb, c);
+	}
+
+	private <A extends Serializable, N extends AbstractNamedEntity<A>, T extends AbstractPrice<N>> T saveAsNeeded(
+			final T entity, final double oldCost, final double newCost, final Consumer<Double> updateCost,
+			final Consumer<T> c) {
+		if (oldCost != newCost) {
+			updateCost.accept(newCost);
+			c.accept(entity);
+		}
+		return entity;
+	}
+
+	/**
+	 * Install the EBS/S3 price using the related storage type.
+	 *
+	 * @param json
+	 *            The current JSON entry.
+	 * @param type
+	 *            The related storage type.
+	 * @param region
+	 *            The target region.
+	 * @return The amount of installed prices. Only for the report.
+	 */
+	private <T extends AwsPrice> boolean install(final T json, final ProvStorageType type, final ProvLocation region,
+			final Map<Integer, ProvStoragePrice> previous) {
+		return Optional.ofNullable(json.getPrices().get("USD")).filter(NumberUtils::isParsable)
+				.map(usd -> install(type, region, previous, usd)).isPresent();
+	}
+
+	private ProvStoragePrice install(final ProvStorageType type, final ProvLocation region,
+			final Map<Integer, ProvStoragePrice> previous, String usd) {
+		final ProvStoragePrice price = previous.computeIfAbsent(type.getId(), s -> {
+			final ProvStoragePrice p = new ProvStoragePrice();
+			p.setType(type);
+			p.setCode(region.getName() + "-" + type.getName());
+			p.setLocation(region);
+			return p;
+		});
+		price.setCode(region.getName() + "-" + type.getName());
+
+		// Update the price as needed
+		return saveAsNeeded(price, Double.valueOf(usd), spRepository::save);
+	}
+
+	private <T extends AbstractInstanceType, P extends AbstractTermPrice<T>, C extends AbstractAwsEc2Price> void handleUpfront(
+			final P price, final C csv, final C other, final BaseProvTermPriceRepository<T, P> repository) {
+		final AbstractAwsEc2Price quantity;
+		final AbstractAwsEc2Price hourly;
 		if (csv.getPriceUnit().equals("Quantity")) {
 			quantity = csv;
 			hourly = other;
@@ -857,53 +1055,71 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 
 		// Round the computed hourly cost and save as needed
 		final double initCost = quantity.getPricePerUnit() / price.getTerm().getPeriod();
-		final double cost = hourly.getPricePerUnit() * 24 * 30.5 + initCost;
+		final double cost = hourly.getPricePerUnit() * HOUR_TO_MONTH + initCost;
 		saveAsNeeded(price, round3Decimals(cost), p -> {
 			p.setInitialCost(quantity.getPricePerUnit());
 			p.setCostPeriod(round3Decimals(
-					p.getInitialCost() + hourly.getPricePerUnit() * p.getTerm().getPeriod() * 24 * 30.5));
-			ipRepository.save(p);
+					p.getInitialCost() + hourly.getPricePerUnit() * p.getTerm().getPeriod() * HOUR_TO_MONTH));
+			repository.save(p);
 		});
 	}
+
+	static final double HOUR_TO_MONTH = 24 * 30.5;
 
 	/**
 	 * Install or update a EC2 price
 	 */
-	private ProvInstancePrice newInstancePrice(final UpdateContext context, final AwsEc2Price csv,
+	private ProvInstancePrice newEc2Price(final UpdateContext context, final AwsEc2Price csv,
 			final ProvLocation region) {
-		final VmOs os = VmOs.valueOf(csv.getOs().toUpperCase(Locale.ENGLISH));
-		final ProvInstanceType instance = installInstanceType(context, csv);
-		final String license = StringUtils.trimToNull(csv.getLicenseModel().replace("No License required", "")
-				.replace("Bring your own license", ProvInstancePrice.LICENSE_BYOL));
-		final String software = StringUtils.trimToNull(csv.getSoftware().replace("NA", ""));
-		final ProvTenancy tenancy = ProvTenancy.valueOf(StringUtils.upperCase(csv.getTenancy()));
-		final ProvInstancePriceTerm term = context.getPriceTypes().computeIfAbsent(csv.getOfferTermCode(),
-				k -> newInstancePriceTerm(context, csv));
-		final String code = toCode(csv);
-		return context.getPrevious().computeIfAbsent(code, c -> {
+		return context.getPrevious().computeIfAbsent(toCode(csv), c -> {
 			final ProvInstancePrice p = new ProvInstancePrice();
-			p.setLocation(region);
-			p.setCode(code);
-			p.setOs(os);
-			p.setTenancy(tenancy);
-			p.setLicense(license);
-			p.setSoftware(software);
-			p.setType(instance);
-			p.setTerm(term);
+			copy(context, csv, region, c, p,
+					installInstanceType(context, csv, context.getInstanceTypes(), ProvInstanceType::new, itRepository));
+			p.setOs(VmOs.valueOf(csv.getOs().toUpperCase(Locale.ENGLISH)));
+			p.setTenancy(ProvTenancy.valueOf(StringUtils.upperCase(csv.getTenancy())));
+			p.setSoftware(StringUtils.trimToNull(StringUtils.replace(csv.getSoftware(), "NA", "")));
 			return p;
 		});
 	}
 
-	private String toCode(final AwsEc2Price csv) {
+	/**
+	 * Install or update a RDS price
+	 */
+	private ProvDatabasePrice newRdsPrice(final UpdateContext context, final AwsRdsPrice csv,
+			final ProvLocation region) {
+		return context.getPreviousDatabase().computeIfAbsent(toCode(csv), c -> {
+			final ProvDatabasePrice p = new ProvDatabasePrice();
+			copy(context, csv, region, c, p,
+					installInstanceType(context, csv, context.getDatabaseTypes(), ProvDatabaseType::new, dtRepository));
+			p.setEngine(StringUtils.trimToNull(csv.getEngine()));
+			p.setEdition(StringUtils.trimToNull(csv.getEdition()));
+			return p;
+		});
+	}
+
+	private <T extends AbstractInstanceType> void copy(final UpdateContext context, final AbstractAwsEc2Price csv,
+			final ProvLocation region, final String code, final AbstractTermPrice<T> p, final T instance) {
+		p.setLocation(region);
+		p.setCode(code);
+		p.setLicense(StringUtils.trimToNull(csv.getLicenseModel().replace("No License required", "")
+				.replace("Bring your own license", ProvInstancePrice.LICENSE_BYOL)));
+		p.setType(instance);
+		p.setTerm(context.getPriceTerms().computeIfAbsent(csv.getOfferTermCode(),
+				k -> newInstancePriceTerm(context, csv)));
+	}
+
+	private String toCode(final AbstractAwsEc2Price csv) {
 		return csv.getSku() + csv.getOfferTermCode();
 	}
 
 	/**
-	 * Install a new EC2 instance type
+	 * Install a new EC2/RDS instance type
 	 */
-	private ProvInstanceType installInstanceType(final UpdateContext context, final AwsEc2Price csv) {
-		final ProvInstanceType type = context.getInstanceTypes().computeIfAbsent(csv.getInstanceType(), k -> {
-			final ProvInstanceType t = new ProvInstanceType();
+	private <T extends AbstractInstanceType> T installInstanceType(final UpdateContext context,
+			final AbstractAwsEc2Price csv, Map<String, T> previous, Supplier<T> newType,
+			final BaseProvInstanceTypeRepository<T> repository) {
+		final T type = previous.computeIfAbsent(csv.getInstanceType(), k -> {
+			final T t = newType.get();
 			t.setNode(context.getNode());
 			t.setCpu(csv.getCpu());
 			t.setName(csv.getInstanceType());
@@ -927,16 +1143,16 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			type.setStorageRate(toStorage(csv));
 
 			// Need this update
-			itRepository.save(type);
+			repository.save(type);
 		}
 		return type;
 	}
 
-	private Rate toStorage(final AwsEc2Price csv) {
+	private Rate toStorage(final AbstractAwsEc2Price csv) {
 		Rate rate = getRate("storage", csv);
-		if ("Yes".equals(csv.getEbsOptimized())) {
-			// Up to "GOOD" for not "BEST" rate
-			rate = Rate.values()[Math.min(rate.ordinal(), Math.min(Rate.values().length - 2, rate.ordinal() + 1))];
+		if (!"EBS only".equals(csv.getStorage())) {
+			// Upgrade for non EBS
+			rate = Rate.values()[Math.min(rate.ordinal(), rate.ordinal() + 1)];
 		}
 		return rate;
 	}
@@ -951,7 +1167,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 * @return The direct [class, generation, size] rate association, or the [class, generation] rate association, or
 	 *         the [class] association, of the explicit "default association or {@link Rate#MEDIUM} value.
 	 */
-	private Rate getRate(final String type, final AwsEc2Price csv) {
+	private Rate getRate(final String type, final AbstractAwsEc2Price csv) {
 		return getRate(type, csv, csv.getInstanceType());
 	}
 
@@ -968,7 +1184,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 *         the [class] association, of the explicit "default association or {@link Rate#MEDIUM} value. Previous
 	 *         generations types are downgraded.
 	 */
-	protected Rate getRate(final String type, final AwsEc2Price csv, final String name) {
+	protected Rate getRate(final String type, final AbstractAwsEc2Price csv, final String name) {
 		Rate rate = getRate(type, name);
 
 		// Downgrade the rate for a previous generation
@@ -988,22 +1204,21 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	/**
 	 * Build a new instance price type from the CSV line.
 	 */
-	private ProvInstancePriceTerm newInstancePriceTerm(final UpdateContext context, final AwsEc2Price csvPrice) {
+	private ProvInstancePriceTerm newInstancePriceTerm(final UpdateContext context, final AbstractAwsEc2Price csv) {
 		final ProvInstancePriceTerm term = new ProvInstancePriceTerm();
 		term.setNode(context.getNode());
-		term.setCode(csvPrice.getOfferTermCode());
+		term.setCode(csv.getOfferTermCode());
 
 		// Build the name from the leasing, purchase option and offering class
 		final String name = StringUtils.trimToNull(RegExUtils.removeAll(
-				RegExUtils.replaceAll(csvPrice.getPurchaseOption(), "([a-z])Upfront", "$1 Upfront"), "No\\s*Upfront"));
+				RegExUtils.replaceAll(csv.getPurchaseOption(), "([a-z])Upfront", "$1 Upfront"), "No\\s*Upfront"));
 		term.setName(Arrays
-				.stream(new String[] { csvPrice.getTermType(),
-						StringUtils.replace(csvPrice.getLeaseContractLength(), " ", ""), name,
-						StringUtils.trimToNull(StringUtils.remove(csvPrice.getOfferingClass(), "standard")) })
+				.stream(new String[] { csv.getTermType(), StringUtils.replace(csv.getLeaseContractLength(), " ", ""),
+						name, StringUtils.trimToNull(StringUtils.remove(csv.getOfferingClass(), "standard")) })
 				.filter(Objects::nonNull).collect(Collectors.joining(", ")));
 
 		// Handle leasing
-		final Matcher matcher = LEASING_TIME.matcher(StringUtils.defaultIfBlank(csvPrice.getLeaseContractLength(), ""));
+		final Matcher matcher = LEASING_TIME.matcher(StringUtils.defaultIfBlank(csv.getLeaseContractLength(), ""));
 		if (matcher.find()) {
 			// Convert years to months
 			term.setPeriod(Integer.parseInt(matcher.group(1)) * 12);

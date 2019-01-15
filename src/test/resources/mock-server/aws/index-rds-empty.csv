@@ -1,0 +1,6 @@
+﻿FormatVersion
+Disclaimer,This pricing list is for informational purposes only. All prices are subject to the additional terms included in the pricing pages on http://aws.amazon.com. All Free Tier prices are also subject to the terms included at https://aws.amazon.com/free/,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Publication Date,2018-12-01T09:11:33Z
+Version,2,02E+13
+OfferCode,AmazonRDS
+SKU,OfferTermCode,RateCode,TermType,PriceDescription,EffectiveDate,StartingRange,EndingRange,Unit,PricePerUnit,Currency,RelatedTo,LeaseContractLength,PurchaseOption,OfferingClass,Product Family,serviceCode,Location,Location Type,Instance Type,Current Generation,Instance Family,vCPU,Physical Processor,Clock Speed,Memory,Storage,Network Performance,Processor Architecture,Storage Media,Volume Type,Min Volume Size,Max Volume Size,Engine Code,Database Engine,Database Edition,License Model,Deployment Option,Group,Group Description,Transfer Type,From Location,From Location Type,To Location,To Location Type,usageType,operation,Dedicated EBS Throughput,Enhanced Networking Supported,Instance Type Family,Normalization Size Factor,Processor Features,serviceName

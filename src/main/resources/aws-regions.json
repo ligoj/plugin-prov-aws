@@ -197,5 +197,15 @@
     "placement": "west",
     "latitude": 36.8000,
     "longitude": -121.1000
+  },
+  "eu-north-1": {
+    "name": "EU (Stockholm)",
+    "continentM49": 150,
+    "regionM49": 154,
+    "countryM49": 752,
+    "countryA2": "SWE",
+    "placement": "north",
+    "latitude": 59.3293,
+    "longitude": 18.0686
   }
 }

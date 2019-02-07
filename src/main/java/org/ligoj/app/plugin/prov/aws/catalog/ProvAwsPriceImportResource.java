@@ -407,7 +407,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 					.collect(Collectors.toMap(ProvDatabasePrice::getCode, Function.identity())));
 			context.setPreviousStorage(spRepository.findAll(context.getNode().getId(), region.getName()).stream()
 					.collect(Collectors.toMap(ProvStoragePrice::getCode, Function.identity())));
-			installRDSPrices(context, region);
+			installRdsPrices(context, region);
 		});
 		context.getDatabaseTypes().clear();
 		context.getPreviousDatabase().clear();
@@ -806,7 +806,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 *            The region to fetch.
 	 * @return The amount installed EC2 instances.
 	 */
-	protected int installRDSPrices(final UpdateContext context, final ProvLocation region) {
+	private int installRdsPrices(final UpdateContext context, final ProvLocation region) {
 		// Track the created instance to cache partial costs
 		context.setPartialCostRds(new HashMap<>());
 		final String endpoint = configuration.get(CONF_URL_RDS_PRICES, RDS_PRICES).replace("%s", region.getName());
@@ -1102,7 +1102,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		p.setLocation(region);
 		p.setCode(code);
 		p.setLicense(StringUtils.trimToNull(csv.getLicenseModel().replace("No License required", "")
-				.replace("Bring your own license", ProvInstancePrice.LICENSE_BYOL)));
+				.replace("No license required", "").replace("Bring your own license", ProvInstancePrice.LICENSE_BYOL)));
 		p.setType(instance);
 		p.setTerm(context.getPriceTerms().computeIfAbsent(csv.getOfferTermCode(),
 				k -> newInstancePriceTerm(context, csv)));

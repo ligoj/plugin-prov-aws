@@ -1203,7 +1203,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 *         generations types are downgraded.
 	 */
 	protected Rate getRate(final String type, final AbstractAwsEc2Price csv, final String name) {
-		Rate rate = getRate(type, name);
+		Rate rate = getRate(type, StringUtils.replaceOnce(name, "db\\.", ""));
 
 		// Downgrade the rate for a previous generation
 		if ("No".equals(csv.getCurrentGeneration())) {

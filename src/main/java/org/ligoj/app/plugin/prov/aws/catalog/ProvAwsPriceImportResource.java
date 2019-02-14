@@ -177,6 +177,8 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 */
 	public static final String CONF_ITYPE = ProvAwsPluginResource.KEY + ":instance-type";
 
+	private static final double HOUR_TO_MONTH = 24 * 30.5;
+
 	/**
 	 * Mapping from Spot region name to API name.
 	 */
@@ -390,11 +392,11 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 					// Get previous prices for this location
 					context.setPrevious(ipRepository.findAll(node.getId(), region.getName()).stream()
 							.collect(Collectors.toMap(ProvInstancePrice::getCode, Function.identity())));
-					return r.getInstanceTypes().stream().flatMap(t -> t.getSizes().stream()).filter(j -> {
-						final boolean availability = context.getInstanceTypes().containsKey(j.getName());
+					return r.getInstanceTypes().stream().flatMap(t -> t.getSizes().stream()).filter(t -> {
+						final boolean availability = context.getInstanceTypes().containsKey(t.getName());
 						if (!availability) {
 							// Unavailable instances type of spot are ignored
-							log.warn("Instance {} is referenced from spot but not available", j.getName());
+							log.warn("Instance {} is referenced from spot but not available", t.getName());
 						}
 						return availability;
 					}).mapToInt(j -> installSpotPrices(context, j, spotPriceType, region)).sum();
@@ -1077,8 +1079,6 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			repository.save(p);
 		});
 	}
-
-	static final double HOUR_TO_MONTH = 24 * 30.5;
 
 	/**
 	 * Install or update a EC2 price

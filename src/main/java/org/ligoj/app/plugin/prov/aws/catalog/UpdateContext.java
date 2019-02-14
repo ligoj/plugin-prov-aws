@@ -6,6 +6,7 @@ package org.ligoj.app.plugin.prov.aws.catalog;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.ligoj.app.model.Node;
 import org.ligoj.app.plugin.prov.aws.catalog.ec2.AwsEc2Price;
@@ -117,5 +118,26 @@ public class UpdateContext {
 	@Getter
 	@Setter
 	private Map<String, ProvStorageType> storageTypesMerged;
+
+	/**
+	 * Valid OS pattern.
+	 */
+	@Getter
+	@Setter
+	private Pattern validOs;
+
+	/**
+	 * Valid instance type pattern.
+	 */
+	@Getter
+	@Setter
+	private Pattern validInstanceType;
+
+	/**
+	 * Valid instance region pattern.
+	 */
+	@Getter
+	@Setter
+	private Pattern validRegion;
 
 }

@@ -32,9 +32,11 @@ import org.ligoj.app.model.Parameter;
 import org.ligoj.app.model.ParameterValue;
 import org.ligoj.app.model.Project;
 import org.ligoj.app.model.Subscription;
+import org.ligoj.app.plugin.prov.ProvQuoteDatabaseResource;
 import org.ligoj.app.plugin.prov.ProvQuoteInstanceResource;
 import org.ligoj.app.plugin.prov.ProvQuoteStorageResource;
 import org.ligoj.app.plugin.prov.ProvResource;
+import org.ligoj.app.plugin.prov.QuoteDatabaseLookup;
 import org.ligoj.app.plugin.prov.QuoteInstanceEditionVo;
 import org.ligoj.app.plugin.prov.QuoteInstanceLookup;
 import org.ligoj.app.plugin.prov.QuoteStorageEditionVo;
@@ -91,6 +93,9 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 
 	@Autowired
 	private ProvQuoteInstanceResource qiResource;
+
+	@Autowired
+	private ProvQuoteDatabaseResource qbResource;
 
 	@Autowired
 	private ProvQuoteStorageResource qsResource;
@@ -298,11 +303,11 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 	private void checkImportStatus() {
 		final ImportCatalogStatus status = this.resource.getImportCatalogResource().getTask("service:prov:aws");
 		Assertions.assertTrue(status.getDone() >= 9);
-		Assertions.assertEquals(12, status.getWorkload());
+		Assertions.assertEquals(16, status.getWorkload());
 		Assertions.assertEquals("efs", status.getPhase());
 		Assertions.assertEquals(DEFAULT_USER, status.getAuthor());
-		Assertions.assertEquals(74, status.getNbInstanceTypes().intValue());
-		Assertions.assertEquals(90, status.getNbInstancePrices().intValue()); // 74 + 6 spot prices
+		Assertions.assertEquals(76, status.getNbInstanceTypes().intValue());
+		Assertions.assertEquals(108, status.getNbInstancePrices().intValue()); // 74 + 6 spot prices
 		Assertions.assertEquals(4, status.getNbLocations().intValue());
 		Assertions.assertEquals(16, status.getNbStorageTypes().intValue());
 	}
@@ -363,6 +368,9 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		configuration.delete(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES_SPOT);
 		configuration.put(ProvAwsPriceImportResource.CONF_REGIONS, "eu-west-1"); // Only one region for UTs
 		configuration.put(ProvAwsPriceImportResource.CONF_OS, "LINUX"); // Only one OS for UTs
+
+		// Only "r4.large" and "t.*","i.*,c1" for UTs
+		configuration.put(ProvAwsPriceImportResource.CONF_ITYPE, "(r4.*|db\\.r5\\.*|db\\.t\\.*|t\\.*|i.*|c1.*)");
 
 		// Aligned to :
 		// https://aws.amazon.com/ec2/pricing/reserved-instances/pricing/
@@ -553,6 +561,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		// Check no instance can be found
 		Assertions.assertNull(
 				qiResource.lookup(subscription, 1, 1, false, VmOs.LINUX, null, true, null, null, null, null));
+		Assertions.assertNull(qbResource.lookup(subscription, 1, 1, null, null, null, null, null, "MYSQL", null));
 	}
 
 	private int server1() {
@@ -633,6 +642,26 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		svo3.setSubscription(subscription);
 		final UpdatedCost createS3 = qsResource.create(svo3);
 		Assertions.assertEquals(0.01, createS3.getCost().getMin(), DELTA);
+
+		// Request a database
+		final QuoteDatabaseLookup blookup1 = qbResource.lookup(subscription, 2, 1741, null, "db.t2.xlarge", null, null,
+				null, "MYSQL", null);
+		Assertions.assertFalse(blookup1.getPrice().getType().getConstant().booleanValue());
+		Assertions.assertNull(blookup1.getPrice().getLicense());
+		Assertions.assertEquals("MYSQL", blookup1.getPrice().getEngine());
+		Assertions.assertNull(blookup1.getPrice().getEdition());
+		Assertions.assertNull(blookup1.getPrice().getStorageEngine());
+		Assertions.assertNull(blookup1.getPrice().getInitialCost());
+		Assertions.assertEquals("OnDemand", blookup1.getPrice().getTerm().getName());
+
+		final QuoteDatabaseLookup blookup2 = qbResource.lookup(subscription, 2, 1741, null, "db.r5.large", null, null,
+				"BYOL", "ORACLE", "ENTERPRISE");
+		Assertions.assertTrue(blookup2.getPrice().getType().getConstant().booleanValue());
+		Assertions.assertEquals("BYOL", blookup2.getPrice().getLicense());
+		Assertions.assertEquals("ORACLE", blookup2.getPrice().getEngine());
+		Assertions.assertEquals("ENTERPRISE", blookup2.getPrice().getEdition());
+		Assertions.assertNull(blookup2.getPrice().getStorageEngine());
+		Assertions.assertNull(blookup2.getPrice().getInitialCost());
 
 		return provResource.getConfiguration(subscription);
 	}

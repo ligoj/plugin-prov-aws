@@ -173,6 +173,11 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	public static final String CONF_OS = ProvAwsPluginResource.KEY + ":os";
 
 	/**
+	 * Configuration key used for enabled instance type pattern names. When value is <code>null</code>, no restriction.
+	 */
+	public static final String CONF_ITYPE = ProvAwsPluginResource.KEY + ":instance-type";
+
+	/**
 	 * Mapping from Spot region name to API name.
 	 */
 	private Map<String, String> mapSpotToNewRegion = new HashMap<>();
@@ -199,6 +204,10 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 */
 	public void install() throws IOException, URISyntaxException {
 		final UpdateContext context = new UpdateContext();
+		context.setValidOs(Pattern.compile(configuration.get(CONF_OS, ".*")));
+		context.setValidInstanceType(Pattern.compile(configuration.get(CONF_ITYPE, ".*")));
+		context.setValidRegion(Pattern.compile(configuration.get(CONF_REGIONS, ".*")));
+
 		// Node is already persisted, install EC2 prices
 		final Node node = nodeRepository.findOneExpected(ProvAwsPluginResource.KEY);
 		context.setNode(node);
@@ -207,7 +216,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		installSupportPrices(context);
 
 		// The previously installed location cache. Key is the location AWS name
-		context.setRegions(locationRepository.findAllBy(BY_NODE, node).stream().filter(this::isEnabledRegion)
+		context.setRegions(locationRepository.findAllBy(BY_NODE, node).stream().filter(r -> isEnabledRegion(context, r))
 				.collect(Collectors.toMap(INamableBean::getName, Function.identity())));
 		nextStep(node, null, 0);
 
@@ -449,7 +458,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			// Install the enabled region as needed
 			final List<R> eRegions = prices.getConfig().getRegions().stream()
 					.peek(r -> r.setRegion(mapSpotToNewRegion.getOrDefault(r.getRegion(), r.getRegion())))
-					.filter(this::isEnabledRegion).collect(Collectors.toList());
+					.filter(r -> isEnabledRegion(context, r)).collect(Collectors.toList());
 			eRegions.forEach(r -> installRegion(context, r.getRegion()));
 			nextStep(context, null, 0);
 
@@ -640,7 +649,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 * @return The corresponding {@link ProvLocation} or <code>null</code>.
 	 */
 	private ProvLocation getRegionByHumanName(final UpdateContext context, final String humanName) {
-		return context.getRegions().values().stream().filter(this::isEnabledRegion)
+		return context.getRegions().values().stream().filter(r -> isEnabledRegion(context, r))
 				.filter(r -> humanName.equals(r.getDescription())).findAny().orElse(null);
 	}
 
@@ -725,7 +734,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		return (int) json.getOsPrices().stream()
 				.filter(op -> !StringUtils.startsWithIgnoreCase(op.getPrices().get("USD"), "N/A"))
 				.peek(op -> op.setOs(op.getName().equals("mswin") ? VmOs.WINDOWS : VmOs.LINUX))
-				.filter(op -> isEnabledOs(op.getOs())).map(op -> {
+				.filter(op -> isEnabledOs(context, op.getOs())).map(op -> {
 					final ProvInstanceType type = context.getInstanceTypes().get(json.getName());
 
 					// Build the key for this spot
@@ -856,6 +865,11 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 * @return The amount of installed prices. Only for the report.
 	 */
 	private int installEc2(final UpdateContext context, final AwsEc2Price csv, final ProvLocation region) {
+		// Filter OS and type
+		if (!isEnabledType(context, csv.getInstanceType()) || !isEnabledOs(context, csv.getOs())) {
+			return 0;
+		}
+
 		// Up-front, partial or not
 		int priceCounter = 0;
 		if (UPFRONT_MODE.matcher(StringUtils.defaultString(csv.getPurchaseOption())).find()) {
@@ -1075,11 +1089,15 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			final ProvInstancePrice p = new ProvInstancePrice();
 			copy(context, csv, region, c, p,
 					installInstanceType(context, csv, context.getInstanceTypes(), ProvInstanceType::new, itRepository));
-			p.setOs(VmOs.valueOf(csv.getOs().toUpperCase(Locale.ENGLISH)));
+			p.setOs(toVmOs(csv.getOs()));
 			p.setTenancy(ProvTenancy.valueOf(StringUtils.upperCase(csv.getTenancy())));
 			p.setSoftware(StringUtils.trimToNull(StringUtils.replace(csv.getSoftware(), "NA", "")));
 			return p;
 		});
+	}
+
+	private VmOs toVmOs(String osName) {
+		return VmOs.valueOf(osName.toUpperCase(Locale.ENGLISH));
 	}
 
 	/**
@@ -1230,45 +1248,79 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	/**
 	 * Indicate the given region is enabled.
 	 *
+	 * @param context
+	 *            The update context.
 	 * @param region
 	 *            The region API name to test.
 	 * @return <code>true</code> when the configuration enable the given region.
 	 */
-	private boolean isEnabledRegion(final AwsRegionPrices region) {
-		return isEnabledRegion(region.getRegion());
+	private boolean isEnabledRegion(final UpdateContext context, final AwsRegionPrices region) {
+		return isEnabledRegion(context, region.getRegion());
 	}
 
 	/**
 	 * Indicate the given region is enabled.
 	 *
+	 * @param context
+	 *            The update context.
 	 * @param region
 	 *            The region API name to test.
 	 * @return <code>true</code> when the configuration enable the given region.
 	 */
-	private boolean isEnabledRegion(final ProvLocation region) {
-		return isEnabledRegion(region.getName());
+	private boolean isEnabledRegion(final UpdateContext context, final ProvLocation region) {
+		return isEnabledRegion(context, region.getName());
 	}
 
 	/**
 	 * Indicate the given region is enabled.
 	 *
+	 * @param context
+	 *            The update context.
 	 * @param region
 	 *            The region API name to test.
 	 * @return <code>true</code> when the configuration enable the given region.
 	 */
-	private boolean isEnabledRegion(final String region) {
-		return region.matches(configuration.get(CONF_REGIONS, ".*"));
+	private boolean isEnabledRegion(final UpdateContext context, final String region) {
+		return context.getValidRegion().matcher(region).matches();
 	}
 
 	/**
 	 * Indicate the given OS is enabled.
 	 *
+	 * @param context
+	 *            The update context.
 	 * @param os
 	 *            The OS to test.
-	 * @return <code>true</code> when the configuration enable the given region.
+	 * @return <code>true</code> when the configuration enable the given OS.
 	 */
-	private boolean isEnabledOs(final VmOs os) {
-		return os.name().matches(configuration.get(CONF_OS, ".*"));
+	private boolean isEnabledOs(final UpdateContext context, final VmOs os) {
+		return isEnabledOs(context, os.name());
+	}
+
+	/**
+	 * Indicate the given OS is enabled.
+	 *
+	 * @param context
+	 *            The update context.
+	 * @param os
+	 *            The OS to test.
+	 * @return <code>true</code> when the configuration enable the given OS.
+	 */
+	private boolean isEnabledOs(final UpdateContext context, final String os) {
+		return context.getValidOs().matcher(os.toUpperCase(Locale.ENGLISH)).matches();
+	}
+
+	/**
+	 * Indicate the given instance type is enabled.
+	 *
+	 * @param context
+	 *            The update context.
+	 * @param type
+	 *            The instance type to test.
+	 * @return <code>true</code> when the configuration enable the given instance type.
+	 */
+	private boolean isEnabledType(final UpdateContext context, final String type) {
+		return context.getValidInstanceType().matcher(type).matches();
 	}
 
 	/**

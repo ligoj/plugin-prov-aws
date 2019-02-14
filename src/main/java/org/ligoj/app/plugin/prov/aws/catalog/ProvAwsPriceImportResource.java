@@ -1085,10 +1085,11 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 */
 	private ProvInstancePrice newEc2Price(final UpdateContext context, final AwsEc2Price csv,
 			final ProvLocation region) {
+		final ProvInstanceType type = installInstanceType(context, csv, context.getInstanceTypes(),
+				ProvInstanceType::new, itRepository);
 		return context.getPrevious().computeIfAbsent(toCode(csv), c -> {
 			final ProvInstancePrice p = new ProvInstancePrice();
-			copy(context, csv, region, c, p,
-					installInstanceType(context, csv, context.getInstanceTypes(), ProvInstanceType::new, itRepository));
+			copy(context, csv, region, c, p, type);
 			p.setOs(toVmOs(csv.getOs()));
 			p.setTenancy(ProvTenancy.valueOf(StringUtils.upperCase(csv.getTenancy())));
 			p.setSoftware(StringUtils.trimToNull(StringUtils.replace(csv.getSoftware(), "NA", "")));
@@ -1105,10 +1106,11 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 */
 	private ProvDatabasePrice newRdsPrice(final UpdateContext context, final AwsRdsPrice csv,
 			final ProvLocation region) {
+		final ProvDatabaseType type = installInstanceType(context, csv, context.getDatabaseTypes(),
+				ProvDatabaseType::new, dtRepository);
 		return context.getPreviousDatabase().computeIfAbsent(toCode(csv), c -> {
 			final ProvDatabasePrice p = new ProvDatabasePrice();
-			copy(context, csv, region, c, p,
-					installInstanceType(context, csv, context.getDatabaseTypes(), ProvDatabaseType::new, dtRepository));
+			copy(context, csv, region, c, p, type);
 			p.setEngine(StringUtils.trimToNull(csv.getEngine().toUpperCase(Locale.ENGLISH)));
 			p.setEdition(StringUtils.trimToNull(StringUtils.trimToEmpty(csv.getEdition()).toUpperCase(Locale.ENGLISH)));
 			return p;

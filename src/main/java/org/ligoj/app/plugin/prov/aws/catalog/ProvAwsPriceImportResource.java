@@ -990,7 +990,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			entity.setDescription(csv.getVolume());
 			entity.setMinimal(toInteger(csv.getSizeMin()));
 			entity.setMaximal(toInteger(csv.getSizeMax()));
-			entity.setEngine(engine.toUpperCase(Locale.ENGLISH));
+			entity.setEngine(engine == null ? null : engine.toUpperCase(Locale.ENGLISH));
 			entity.setDatabaseCompatible(true);
 			entity.setOptimized(ssd ? ProvStorageOptimized.IOPS : null);
 			entity.setLatency(ssd ? Rate.BEST : Rate.MEDIUM);
@@ -1110,7 +1110,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			copy(context, csv, region, c, p,
 					installInstanceType(context, csv, context.getDatabaseTypes(), ProvDatabaseType::new, dtRepository));
 			p.setEngine(StringUtils.trimToNull(csv.getEngine().toUpperCase(Locale.ENGLISH)));
-			p.setEdition(StringUtils.trimToNull(StringUtils.trimToEmpty(csv.getEdition().toUpperCase(Locale.ENGLISH))));
+			p.setEdition(StringUtils.trimToNull(StringUtils.trimToEmpty(csv.getEdition()).toUpperCase(Locale.ENGLISH)));
 			return p;
 		});
 	}

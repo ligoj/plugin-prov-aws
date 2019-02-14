@@ -1139,20 +1139,20 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		final T type = previous.computeIfAbsent(csv.getInstanceType(), k -> {
 			final T t = newType.get();
 			t.setNode(context.getNode());
-			t.setCpu(csv.getCpu());
 			t.setName(csv.getInstanceType());
-
-			// Convert GiB to MiB, and rounded
-			final String memoryStr = StringUtils.removeEndIgnoreCase(csv.getMemory(), " GiB").replace(",", "");
-			t.setRam((int) Math.round(Double.parseDouble(memoryStr) * 1024d));
-			t.setConstant(!"Variable".equals(csv.getEcu()));
 			return t;
 		});
 
 		// Update the statistics only once
 		if (context.getInstanceTypesMerged().add(type.getName())) {
+			type.setCpu(csv.getCpu());
+			t.setConstant(!"Variable".equals(csv.getEcu()));
 			type.setDescription(ArrayUtils.toString(ArrayUtils
 					.removeAllOccurences(new String[] { csv.getPhysicalProcessor(), csv.getClockSpeed() }, null)));
+
+			// Convert GiB to MiB, and rounded
+			final String memoryStr = StringUtils.removeEndIgnoreCase(csv.getMemory(), " GiB").replace(",", "");
+			type.setRam((int) Math.round(Double.parseDouble(memoryStr) * 1024d));
 
 			// Rating
 			type.setCpuRate(getRate("cpu", csv));

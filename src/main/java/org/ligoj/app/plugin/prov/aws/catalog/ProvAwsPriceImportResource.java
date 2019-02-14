@@ -1146,7 +1146,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		// Update the statistics only once
 		if (context.getInstanceTypesMerged().add(type.getName())) {
 			type.setCpu(csv.getCpu());
-			t.setConstant(!"Variable".equals(csv.getEcu()));
+			type.setConstant(!type.getName().startsWith("t") && !type.getName().startsWith("db.t"));
 			type.setDescription(ArrayUtils.toString(ArrayUtils
 					.removeAllOccurences(new String[] { csv.getPhysicalProcessor(), csv.getClockSpeed() }, null)));
 

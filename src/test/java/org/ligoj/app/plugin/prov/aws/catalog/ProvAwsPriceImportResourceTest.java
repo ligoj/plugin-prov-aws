@@ -306,8 +306,8 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		Assertions.assertEquals(16, status.getWorkload());
 		Assertions.assertEquals("efs", status.getPhase());
 		Assertions.assertEquals(DEFAULT_USER, status.getAuthor());
-		Assertions.assertEquals(76, status.getNbInstanceTypes().intValue());
-		Assertions.assertEquals(108, status.getNbInstancePrices().intValue()); // 74 + 6 spot prices
+		Assertions.assertEquals(77, status.getNbInstanceTypes().intValue());
+		Assertions.assertEquals(109, status.getNbInstancePrices().intValue());
 		Assertions.assertEquals(4, status.getNbLocations().intValue());
 		Assertions.assertEquals(16, status.getNbStorageTypes().intValue());
 	}

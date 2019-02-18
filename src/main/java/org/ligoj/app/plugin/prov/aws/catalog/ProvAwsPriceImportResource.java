@@ -30,6 +30,7 @@ import javax.annotation.PostConstruct;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.RegExUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
@@ -192,6 +193,11 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 * Mapping from storage human name to API name.
 	 */
 	private Map<String, String> mapStorageToApi = new HashMap<>();
+
+	/**
+	 * Mapping from AWS software to standard form.
+	 */
+	private Map<String, String> mapSoftware = new HashMap<>();
 
 	@Autowired
 	protected CsvForJpa csvForBean;
@@ -1090,9 +1096,10 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		return context.getPrevious().computeIfAbsent(toCode(csv), c -> {
 			final ProvInstancePrice p = new ProvInstancePrice();
 			copy(context, csv, region, c, p, type);
+			final String software = ObjectUtils.defaultIfNull(csv.getSoftware(), "");
+			p.setSoftware(StringUtils.trimToNull(mapSoftware.computeIfAbsent(software, String::toUpperCase)));
 			p.setOs(toVmOs(csv.getOs()));
 			p.setTenancy(ProvTenancy.valueOf(StringUtils.upperCase(csv.getTenancy())));
-			p.setSoftware(StringUtils.trimToNull(StringUtils.replace(csv.getSoftware(), "NA", "")));
 			return p;
 		});
 	}
@@ -1336,11 +1343,8 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 */
 	@PostConstruct
 	public void initSpotToNewRegion() throws IOException {
-		mapRegionToName.putAll(objectMapper.readValue(
-				IOUtils.toString(new ClassPathResource("aws-regions.json").getInputStream(), StandardCharsets.UTF_8),
-				MAP_LOCATION));
-		mapSpotToNewRegion.putAll(objectMapper.readValue(IOUtils.toString(
-				new ClassPathResource("spot-to-new-region.json").getInputStream(), StandardCharsets.UTF_8), MAP_STR));
+		mapRegionToName.putAll(toMap("aws-regions.json", MAP_LOCATION));
+		mapSpotToNewRegion.putAll(toMap("spot-to-new-region.json", MAP_STR));
 	}
 
 	/**
@@ -1351,9 +1355,23 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	 */
 	@PostConstruct
 	public void initEbsToApi() throws IOException {
-		mapStorageToApi.putAll(objectMapper.readValue(
-				IOUtils.toString(new ClassPathResource("storage-to-api.json").getInputStream(), StandardCharsets.UTF_8),
-				MAP_STR));
+		mapStorageToApi.putAll(toMap("storage-to-api.json", MAP_STR));
+	}
+
+	/**
+	 * Read the EC2 software name from AWS to standard name.
+	 *
+	 * @throws IOException
+	 *             When the JSON mapping file cannot be read.
+	 */
+	@PostConstruct
+	public void initSoftwareNormalize() throws IOException {
+		mapSoftware.putAll(toMap("aws-software.json", MAP_STR));
+	}
+
+	private <T> Map<String, T> toMap(final String path, final TypeReference<Map<String, T>> type) throws IOException {
+		return objectMapper.readValue(
+				IOUtils.toString(new ClassPathResource(path).getInputStream(), StandardCharsets.UTF_8), type);
 	}
 
 	/**

@@ -263,9 +263,9 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 
 	private void assertEquals(final String expected, final String generated) throws IOException {
 		final File expected2 = new File(EXPECTED_PATH, expected).getAbsoluteFile();
-		Assertions.assertTrue(expected2.exists());
+		assertTrue(expected2.exists());
 		final File generatedFile = new File(MOCK_PATH, generated).getAbsoluteFile();
-		Assertions.assertTrue(generatedFile.exists());
+		assertTrue(generatedFile.exists());
 		Assertions.assertEquals(IOUtils.toString(expected2.toURI(), StandardCharsets.UTF_8),
 				IOUtils.toString(generatedFile.toURI(), StandardCharsets.UTF_8));
 	}

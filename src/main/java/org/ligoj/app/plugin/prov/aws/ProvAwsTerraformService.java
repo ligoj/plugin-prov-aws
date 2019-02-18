@@ -48,6 +48,16 @@ import org.springframework.stereotype.Service;
 @Service
 public class ProvAwsTerraformService {
 
+	/**
+	 * Default Root device name.
+	 */
+	private static final String DEFAULT_ROOT_DEVICE = "/dev/sda1";
+
+	/**
+	 * Default EBS device format. See {@link #mappingOsEbsDevice} for more details.
+	 */
+	private static final String DEFAULT_EBS_DEVICE = "/dev/sdf";
+
 	private static final String CLOUD_WATCH_ELB = "AWS/ApplicationELB";
 
 	private static final String INDEX = "{{i}}";
@@ -79,15 +89,11 @@ public class ProvAwsTerraformService {
 	 */
 	private final Map<VmOs, String> mappingOsEbsDevice = new EnumMap<>(VmOs.class);
 
-	/**
-	 * Default Root device name.
-	 */
-	private static final String DEFAULT_ROOT_DEVICE = "/dev/sda1";
+	@Autowired
+	private SubscriptionResource subscriptionResource;
 
-	/**
-	 * Default EBS device format. See {@link #mappingOsEbsDevice} for more details.
-	 */
-	private static final String DEFAULT_EBS_DEVICE = "/dev/sdf";
+	@Autowired
+	protected TerraformUtils utils;
 
 	public ProvAwsTerraformService() {
 		// AMIs
@@ -100,12 +106,6 @@ public class ProvAwsTerraformService {
 		// EBS devices
 		mappingOsEbsDevice.put(VmOs.WINDOWS, "xvdf"); // only Windows
 	}
-
-	@Autowired
-	private SubscriptionResource subscriptionResource;
-
-	@Autowired
-	protected TerraformUtils utils;
 
 	/**
 	 * Generate the Terraform configuration files:

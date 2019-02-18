@@ -24,8 +24,6 @@ public class CsvForBeanEc2 extends AbstractCsvForBeanEc2<AwsEc2Price> {
 		HEADERS_MAPPING.put("Tenancy", "tenancy");
 		HEADERS_MAPPING.put("Operating System", "os");
 		HEADERS_MAPPING.put("Pre Installed S/W", "software");
-		HEADERS_MAPPING.put("EBS Optimized", "ebsOptimized");
-		HEADERS_MAPPING.put("CapacityStatus", "capacityStatus");
 		HEADERS_MAPPING.put("Storage", "storage");
 	}
 

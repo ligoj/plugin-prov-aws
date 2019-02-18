@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsCsvForBean;
-import org.ligoj.app.plugin.prov.aws.catalog.AwsCsvReader;
+import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsCsvReader;
 import org.ligoj.bootstrap.core.csv.CsvBeanReader;
 
 /**
@@ -45,7 +45,7 @@ public class CsvForBeanS3 extends AbstractAwsCsvForBean<AwsS3Price> {
 	@Override
 	protected CsvBeanReader<AwsS3Price> newCsvReader(final Reader reader, final String[] headers,
 			final Class<AwsS3Price> beanType) {
-		return new AwsCsvReader<>(reader, headers, beanType) {
+		return new AbstractAwsCsvReader<>(reader, headers, beanType) {
 
 			@Override
 			protected boolean isValidRaw(final List<String> rawValues) {

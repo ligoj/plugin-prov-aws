@@ -21,7 +21,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.FileWriterWithEncoding;
@@ -257,29 +257,29 @@ public class ProvAwsTerraformService {
 	private String getDashboardNetwork(final Context context) throws IOException {
 		final String format = toString("my-region/dashboard-widgets-line.json");
 		return newMetric(context, format, CLOUD_WATCH_ELB, "LoadBalancer", "${alb{{i}}}",
-				new String[] { "ProcessedBytes", "-", "-", "${alb{{i}}_name}" });
+				new String[][] { new String[] { "ProcessedBytes", "-", "-", "${alb{{i}}_name}" }});
 	}
 
 	private String getDashboardLatency(final Context context) throws IOException {
 		final String format = toString("my-region/dashboard-widgets-line.json");
 		return newMetric(context, format, CLOUD_WATCH_ELB, "LoadBalancer", "${alb{{i}}}",
-				new String[] { "TargetResponseTime", "-", "-", "${alb{{i}}_name}" });
+				new String[][] { new String[] { "TargetResponseTime", "-", "-", "${alb{{i}}_name}" }});
 	}
 
 	private String getDashboardScaling(final Context context) throws IOException {
 		final String format = toString("my-region/dashboard-widgets-area.json");
 		return newMetric(context, format, "AWS/AutoScaling", "AutoScalingGroupName", "${asg{{i}}}",
-				new String[] { "GroupInServiceInstances", "2ca02c", "left", "${asg{{i}}_name}" },
-				new String[] { "GroupPendingInstances", "ff7f0e", "right", "Pending ${asg{{i}}_name}" },
-				new String[] { "GroupTerminatingInstances", "d62728", "right", "Term. ${asg{{i}}_name}" });
+				new String[][] { new String[] { "GroupInServiceInstances", "2ca02c", "left", "${asg{{i}}_name}" },
+						new String[] { "GroupPendingInstances", "ff7f0e", "right", "Pending ${asg{{i}}_name}" },
+						new String[] { "GroupTerminatingInstances", "d62728", "right", "Term. ${asg{{i}}_name}" } });
 	}
 
 	private String getDashboardBalancing(final Context context) throws IOException {
 		final String format = toString("my-region/dashboard-widgets-area.json");
 		return newMetric(context, format, CLOUD_WATCH_ELB, "TargetGroup",
 				"${alb{{i}}_tg}\", \"LoadBalancer\", \"${alb{{i}}}\"",
-				new String[] { "HealthyHostCount", "2ca02c", "left", "OK ${alb{{i}}_name}" },
-				new String[] { "UnHealthyHostCount", "d62728", "right", "KO ${alb{{i}}_name}" });
+				new String[][] { new String[] { "HealthyHostCount", "2ca02c", "left", "OK ${alb{{i}}_name}" },
+						new String[] { "UnHealthyHostCount", "d62728", "right", "KO ${alb{{i}}_name}" } });
 	}
 
 	private String newMetric(final Context context, final String format, final String service, final String idProperty,
@@ -435,7 +435,7 @@ public class ProvAwsTerraformService {
 				StandardCopyOption.REPLACE_EXISTING);
 	}
 
-	private void template(final Context context, final Function<String, String> formater, final String... fragments)
+	private void template(final Context context, final UnaryOperator<String> formater, final String... fragments)
 			throws IOException {
 		try (InputStream source = toInput(String.join("/", fragments));
 				FileOutputStream target = new FileOutputStream(utils.toFile(context.getSubscription(), fragments));

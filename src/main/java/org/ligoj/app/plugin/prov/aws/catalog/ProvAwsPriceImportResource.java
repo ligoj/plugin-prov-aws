@@ -20,6 +20,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.DoubleConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
@@ -957,7 +958,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 			});
 
 			// Update the price as needed
-			saveAsNeeded(price, Double.valueOf(csv.getPricePerUnit()), spRepository::save);
+			saveAsNeeded(price, csv.getPricePerUnit(), spRepository::save);
 		}
 		return priceCounter;
 	}
@@ -1022,7 +1023,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 	}
 
 	private <A extends Serializable, N extends AbstractNamedEntity<A>, T extends AbstractPrice<N>> T saveAsNeeded(
-			final T entity, final double oldCost, final double newCost, final Consumer<Double> updateCost,
+			final T entity, final double oldCost, final double newCost, final DoubleConsumer updateCost,
 			final Consumer<T> c) {
 		if (oldCost != newCost) {
 			updateCost.accept(newCost);
@@ -1248,7 +1249,7 @@ public class ProvAwsPriceImportResource extends AbstractImportCatalogResource {
 		final Matcher matcher = LEASING_TIME.matcher(StringUtils.defaultIfBlank(csv.getLeaseContractLength(), ""));
 		if (matcher.find()) {
 			// Convert years to months
-			term.setPeriod(Integer.parseInt(matcher.group(1)) * 12);
+			term.setPeriod(Integer.parseInt(matcher.group(1)) * 12d);
 		}
 		iptRepository.save(term);
 		return term;

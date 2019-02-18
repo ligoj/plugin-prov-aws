@@ -15,6 +15,4 @@ public class AwsEc2Price extends AbstractAwsEc2Price {
 
 	private String os;
 	private String software;
-	private String ebsOptimized;
-	private String capacityStatus;
 }

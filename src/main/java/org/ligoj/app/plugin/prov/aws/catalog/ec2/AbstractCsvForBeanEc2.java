@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsCsvForBean;
-import org.ligoj.app.plugin.prov.aws.catalog.AwsCsvReader;
+import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsCsvReader;
 import org.ligoj.bootstrap.core.csv.CsvBeanReader;
 
 /**
@@ -37,7 +37,6 @@ public abstract class AbstractCsvForBeanEc2<P extends AbstractAwsEc2Price> exten
 		HEADERS_MAPPING.put("Clock Speed", "clockSpeed");
 		HEADERS_MAPPING.put("Memory", "memory");
 		HEADERS_MAPPING.put("License Model", "licenseModel");
-		HEADERS_MAPPING.put("ECU", "ecu");
 		HEADERS_MAPPING.put("Network Performance", "networkPerformance");
 		HEADERS_MAPPING.put("Current Generation", "currentGeneration");
 		HEADERS_MAPPING.put("Product Family", "family");
@@ -62,7 +61,7 @@ public abstract class AbstractCsvForBeanEc2<P extends AbstractAwsEc2Price> exten
 
 	@Override
 	protected CsvBeanReader<P> newCsvReader(final Reader reader, final String[] headers, final Class<P> beanType) {
-		return new AwsCsvReader<>(reader, headers, beanType) {
+		return new AbstractAwsCsvReader<>(reader, headers, beanType) {
 
 			@Override
 			protected boolean isValidRaw(final List<String> rawValues) {

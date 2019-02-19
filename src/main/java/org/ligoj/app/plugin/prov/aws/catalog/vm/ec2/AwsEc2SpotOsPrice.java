@@ -1,7 +1,7 @@
 /*
  * Licensed under MIT (https://github.com/ligoj/ligoj/blob/master/LICENSE)
  */
-package org.ligoj.app.plugin.prov.aws.catalog.ec2;
+package org.ligoj.app.plugin.prov.aws.catalog.vm.ec2;
 
 import java.util.Map;
 

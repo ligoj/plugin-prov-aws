@@ -1,7 +1,7 @@
 /*
  * Licensed under MIT (https://github.com/ligoj/ligoj/blob/master/LICENSE)
  */
-package org.ligoj.app.plugin.prov.aws.catalog.rds;
+package org.ligoj.app.plugin.prov.aws.catalog.vm.rds;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.ligoj.app.plugin.prov.aws.catalog.ec2.AbstractCsvForBeanEc2;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AbstractCsvForBeanEc2;
 
 /**
  * Read AWS RDS CSV input, skipping the AWS headers and non instance type rows.

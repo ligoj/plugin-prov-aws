@@ -11,13 +11,16 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
+import javax.annotation.PostConstruct;
 import javax.transaction.Transactional;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.reflect.MethodUtils;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,8 +47,15 @@ import org.ligoj.app.plugin.prov.QuoteStorageLookup;
 import org.ligoj.app.plugin.prov.QuoteVo;
 import org.ligoj.app.plugin.prov.UpdatedCost;
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
-import org.ligoj.app.plugin.prov.aws.catalog.ec2.AwsEc2Price;
-import org.ligoj.app.plugin.prov.aws.catalog.ec2.CsvForBeanEc2;
+import org.ligoj.app.plugin.prov.aws.catalog.efs.AwsPriceImportEfs;
+import org.ligoj.app.plugin.prov.aws.catalog.s3.AwsPriceImportS3;
+import org.ligoj.app.plugin.prov.aws.catalog.suppport.AwsPriceImportSupport;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.ebs.AwsPriceImportEbs;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AwsEc2Price;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AwsPriceImportEc2;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.CsvForBeanEc2;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.rds.AwsPriceImportRds;
+import org.ligoj.app.plugin.prov.catalog.AbstractImportCatalogResource;
 import org.ligoj.app.plugin.prov.catalog.ImportCatalogResource;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceRepository;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceTermRepository;
@@ -76,17 +86,17 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 /**
- * Test class of {@link ProvAwsPriceImportResource}
+ * Test class of {@link ProvAwsPriceImport}
  */
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(locations = "classpath:/META-INF/spring/application-context-test.xml")
 @Rollback
 @Transactional
-public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
+public class ProvAwsPriceImportTest extends AbstractServerTest {
 
 	private static final double DELTA = 0.001;
 
-	private ProvAwsPriceImportResource resource;
+	private ProvAwsPriceImport resource;
 
 	@Autowired
 	private ProvResource provResource;
@@ -133,17 +143,36 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		this.subscription = getSubscription("gStack");
 
 		// Disable inner transaction
-		this.resource = new ProvAwsPriceImportResource();
-		applicationContext.getAutowireCapableBeanFactory().autowireBean(resource);
-		this.resource.initSpotToNewRegion();
-		this.resource.initEbsToApi();
-		this.resource.initRate();
-		this.resource.setImportCatalogResource(new ImportCatalogResource());
 		clearAllCache();
 		System.setProperties(initialProperties);
-		applicationContext.getAutowireCapableBeanFactory().autowireBean(this.resource.getImportCatalogResource());
+
+		// Mock catalog import helper
+		final ImportCatalogResource helper = new ImportCatalogResource();
+		applicationContext.getAutowireCapableBeanFactory().autowireBean(helper);
+		this.resource = initCatalog(helper, new ProvAwsPriceImport());
+		this.resource.setBase(initCatalog(helper, new AwsPriceImportBase()));
+		this.resource.setEc2(initCatalog(helper, new AwsPriceImportEc2()));
+		this.resource.setEbs(initCatalog(helper, new AwsPriceImportEbs()));
+		this.resource.setS3(initCatalog(helper, new AwsPriceImportS3()));
+		this.resource.setEfs(initCatalog(helper, new AwsPriceImportEfs()));
+		this.resource.setRds(initCatalog(helper, new AwsPriceImportRds()));
+		this.resource.setSupport(initCatalog(helper, new AwsPriceImportSupport()));
+
 		initSpringSecurityContext(DEFAULT_USER);
 		resetImportTask();
+	}
+
+	private <T extends AbstractImportCatalogResource> T initCatalog(ImportCatalogResource importHelper, T catalog) {
+		applicationContext.getAutowireCapableBeanFactory().autowireBean(catalog);
+		catalog.setImportCatalogResource(importHelper);
+		MethodUtils.getMethodsListWithAnnotation(catalog.getClass(), PostConstruct.class).forEach(m -> {
+			try {
+				m.invoke(catalog);
+			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+				// Ignore;
+			}
+		});
+		return catalog;
 	}
 
 	private void resetImportTask() {
@@ -197,8 +226,8 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		initSpringSecurityContext(DEFAULT_USER);
 		clearAllCache();
 
-		configure(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES, "/%s/index-ec2.csv");
-		configure(ProvAwsPriceImportResource.CONF_URL_RDS_PRICES, "/%s/index-rds.csv");
+		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES, "/%s/index-ec2.csv");
+		configure(AwsPriceImportRds.CONF_URL_RDS_PRICES, "/%s/index-rds.csv");
 
 		mock("/eu-west-1/index-ec2.csv", "mock-server/aws/index-ec2.csv");
 		mock("/us-east-1/index-ec2.csv", "mock-server/aws/index-ec2-empty.csv");
@@ -238,12 +267,12 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 		// Now, change a price within the remote catalog
 
 		// Point to another catalog with different prices
-		configure(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES, "/v2/%s/index-ec2.csv");
-		configure(ProvAwsPriceImportResource.CONF_URL_RDS_PRICES, "/v2/%s/index-rds.csv");
-		configure(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES_SPOT, "/v2/spot.js");
-		configure(ProvAwsPriceImportResource.CONF_URL_EBS_PRICES, "/v2/pricing-ebs.js");
-		configure(ProvAwsPriceImportResource.CONF_URL_EFS_PRICES, "/v2/index-efs.csv");
-		configure(ProvAwsPriceImportResource.CONF_URL_S3_PRICES, "/v2/index-s3.csv");
+		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES, "/v2/%s/index-ec2.csv");
+		configure(AwsPriceImportRds.CONF_URL_RDS_PRICES, "/v2/%s/index-rds.csv");
+		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES_SPOT, "/v2/spot.js");
+		configure(AwsPriceImportEbs.CONF_URL_EBS_PRICES, "/v2/pricing-ebs.js");
+		configure(AwsPriceImportEfs.CONF_URL_EFS_PRICES, "/v2/index-efs.csv");
+		configure(AwsPriceImportS3.CONF_URL_S3_PRICES, "/v2/index-s3.csv");
 		mock("/v2/eu-west-1/index-ec2.csv", "mock-server/aws/v2/index-ec2.csv");
 		mock("/v2/us-east-1/index-ec2.csv", "mock-server/aws/index-ec2-empty.csv");
 		mock("/v2/eu-central-1/index-ec2.csv", "mock-server/aws/index-ec2-empty.csv");
@@ -364,13 +393,13 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 
 	@Test
 	public void installOnLine() throws Exception {
-		configuration.delete(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES);
-		configuration.delete(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES_SPOT);
-		configuration.put(ProvAwsPriceImportResource.CONF_REGIONS, "eu-west-1"); // Only one region for UTs
-		configuration.put(ProvAwsPriceImportResource.CONF_OS, "LINUX"); // Only one OS for UTs
+		configuration.delete(AwsPriceImportEc2.CONF_URL_EC2_PRICES);
+		configuration.delete(AwsPriceImportEc2.CONF_URL_EC2_PRICES_SPOT);
+		configuration.put(AwsPriceImportBase.CONF_REGIONS, "eu-west-1"); // Only one region for UTs
+		configuration.put(AwsPriceImportEc2.CONF_OS, "LINUX"); // Only one OS for UTs
 
 		// Only "r4.large" and "t.*","i.*,c1" for UTs
-		configuration.put(ProvAwsPriceImportResource.CONF_ITYPE, "(r4.*|db\\.r5\\.*|db\\.t\\.*|t\\.*|i.*|c1.*)");
+		configuration.put(AwsPriceImportEc2.CONF_ITYPE, "(r4.*|db\\.r5\\.*|db\\.t\\.*|t\\.*|i.*|c1.*)");
 
 		// Aligned to :
 		// https://aws.amazon.com/ec2/pricing/reserved-instances/pricing/
@@ -397,7 +426,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 	@Test
 	public void installEc2CsvNotFound() throws Exception {
 		patchConfigurationUrl();
-		configure(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES, "/any.csv");
+		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES, "/any.csv");
 		mockServerNoEc2();
 		resource.install();
 		em.flush();
@@ -429,7 +458,7 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 	@Test
 	public void installEfsCsvInvalidHeader() throws Exception {
 		patchConfigurationUrl();
-		configure(ProvAwsPriceImportResource.CONF_URL_EFS_PRICES, "/index-efs-error.csv");
+		configure(AwsPriceImportEfs.CONF_URL_EFS_PRICES, "/index-efs-error.csv");
 		mock("/index-efs-error.csv", "mock-server/aws/index-error.csv");
 		mock("/index-s3.csv", "mock-server/aws/index-s3.csv");
 		httpServer.start();
@@ -468,14 +497,16 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 	 */
 	@Test
 	public void installSpotEmpty() throws Exception {
-		configure(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES, "/index-ec2.csv");
-		configure(ProvAwsPriceImportResource.CONF_URL_RDS_PRICES, "/index-rds.csv");
-		configure(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES_SPOT, "/any.js");
-		configure(ProvAwsPriceImportResource.CONF_URL_S3_PRICES, "/index-s3.csv");
-		configure(ProvAwsPriceImportResource.CONF_URL_EBS_PRICES, "/any.js");
+		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES, "/index-ec2.csv");
+		configure(AwsPriceImportRds.CONF_URL_RDS_PRICES, "/index-rds.csv");
+		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES_SPOT, "/any.js");
+		configure(AwsPriceImportS3.CONF_URL_S3_PRICES, "/index-s3.csv");
+		configure(AwsPriceImportEbs.CONF_URL_EBS_PRICES, "/any.js");
+		configure(AwsPriceImportEfs.CONF_URL_EFS_PRICES, "/index-efs.csv");
 		mock("/index-ec2.csv", "mock-server/aws/index-ec2-empty.csv");
 		mock("/index-rds.csv", "mock-server/aws/index-rds-empty.csv");
 		mock("/index-s3.csv", "mock-server/aws/index-s3-empty.csv");
+		mock("/index-efs.csv", "mock-server/aws/index-efs-empty.csv");
 		httpServer.start();
 
 		// Check the reserved
@@ -511,12 +542,12 @@ public class ProvAwsPriceImportResourceTest extends AbstractServerTest {
 	}
 
 	private void patchConfigurationUrl() {
-		configure(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES, "/index-ec2.csv");
-		configure(ProvAwsPriceImportResource.CONF_URL_RDS_PRICES, "/index-rds.csv");
-		configure(ProvAwsPriceImportResource.CONF_URL_EC2_PRICES_SPOT, "/spot.js");
-		configure(ProvAwsPriceImportResource.CONF_URL_EBS_PRICES, "/pricing-ebs.js");
-		configure(ProvAwsPriceImportResource.CONF_URL_EFS_PRICES, "/index-efs.csv");
-		configure(ProvAwsPriceImportResource.CONF_URL_S3_PRICES, "/index-s3.csv");
+		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES, "/index-ec2.csv");
+		configure(AwsPriceImportRds.CONF_URL_RDS_PRICES, "/index-rds.csv");
+		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES_SPOT, "/spot.js");
+		configure(AwsPriceImportEbs.CONF_URL_EBS_PRICES, "/pricing-ebs.js");
+		configure(AwsPriceImportEfs.CONF_URL_EFS_PRICES, "/index-efs.csv");
+		configure(AwsPriceImportS3.CONF_URL_S3_PRICES, "/index-s3.csv");
 	}
 
 	/**

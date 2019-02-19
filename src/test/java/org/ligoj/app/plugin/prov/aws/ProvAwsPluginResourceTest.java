@@ -33,7 +33,7 @@ import org.ligoj.app.model.Project;
 import org.ligoj.app.model.Subscription;
 import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery;
 import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery.AWS4SignatureQueryBuilder;
-import org.ligoj.app.plugin.prov.aws.catalog.ProvAwsPriceImportResource;
+import org.ligoj.app.plugin.prov.aws.catalog.ProvAwsPriceImport;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvQuote;
 import org.ligoj.app.plugin.prov.terraform.Context;
@@ -82,7 +82,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 	@Test
 	public void install() throws IOException, URISyntaxException {
 		final ProvAwsPluginResource resource2 = new ProvAwsPluginResource();
-		resource2.priceImport = Mockito.mock(ProvAwsPriceImportResource.class);
+		resource2.priceImport = Mockito.mock(ProvAwsPriceImport.class);
 		resource2.install();
 	}
 
@@ -91,7 +91,7 @@ public class ProvAwsPluginResourceTest extends AbstractServerTest {
 		// Re-Install a new configuration
 		final ProvAwsPluginResource resource2 = new ProvAwsPluginResource();
 		super.applicationContext.getAutowireCapableBeanFactory().autowireBean(resource2);
-		resource2.priceImport = Mockito.mock(ProvAwsPriceImportResource.class);
+		resource2.priceImport = Mockito.mock(ProvAwsPriceImport.class);
 		resource2.updateCatalog("service:prov:aws:account");
 	}
 

@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.ligoj.app.plugin.prov.aws.catalog.ec2.AwsEc2Price;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AwsEc2Price;
 import org.ligoj.bootstrap.core.csv.AbstractCsvManager;
 import org.ligoj.bootstrap.core.csv.CsvBeanReader;
 import org.ligoj.bootstrap.core.csv.CsvReader;

@@ -3,14 +3,15 @@
  */
 package org.ligoj.app.plugin.prov.aws.catalog;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.ligoj.app.model.Node;
-import org.ligoj.app.plugin.prov.aws.catalog.ec2.AwsEc2Price;
-import org.ligoj.app.plugin.prov.aws.catalog.rds.AwsRdsPrice;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AwsEc2Price;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.rds.AwsRdsPrice;
 import org.ligoj.app.plugin.prov.model.ProvDatabasePrice;
 import org.ligoj.app.plugin.prov.model.ProvDatabaseType;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
@@ -33,6 +34,24 @@ public class UpdateContext {
 	@Getter
 	@Setter
 	private Node node;
+
+	/**
+	 * Mapping from API region identifier to region name.
+	 */
+	@Getter
+	private Map<String, ProvLocation> mapRegionToName = new HashMap<>();
+
+	/**
+	 * Mapping from storage human name to API name.
+	 */
+	@Getter
+	private Map<String, String> mapStorageToApi = new HashMap<>();
+
+	/**
+	 * Mapping from Spot region name to API name.
+	 */
+	@Getter
+	private Map<String, String> mapSpotToNewRegion = new HashMap<>();
 
 	/**
 	 * The previously installed instance types. Key is the instance name.

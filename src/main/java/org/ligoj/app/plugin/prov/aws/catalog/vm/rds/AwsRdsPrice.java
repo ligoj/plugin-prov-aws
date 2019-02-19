@@ -1,9 +1,9 @@
 /*
  * Licensed under MIT (https://github.com/ligoj/ligoj/blob/master/LICENSE)
  */
-package org.ligoj.app.plugin.prov.aws.catalog.rds;
+package org.ligoj.app.plugin.prov.aws.catalog.vm.rds;
 
-import org.ligoj.app.plugin.prov.aws.catalog.ec2.AbstractAwsEc2Price;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AbstractAwsEc2Price;
 
 import lombok.Getter;
 import lombok.Setter;

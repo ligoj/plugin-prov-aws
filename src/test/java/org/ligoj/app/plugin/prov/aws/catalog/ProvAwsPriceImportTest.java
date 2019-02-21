@@ -686,7 +686,7 @@ public class ProvAwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("OnDemand", blookup1.getPrice().getTerm().getName());
 
 		final QuoteDatabaseLookup blookup2 = qbResource.lookup(subscription, QuoteDatabaseQuery.builder().cpu(2)
-				.ram(1741).type("db.r5.large").license("BYOL").engine("ORACLE").license("ENTERPRISE").build());
+				.ram(1741).type("db.r5.large").license("BYOL").engine("ORACLE").edition("ENTERPRISE").build());
 		Assertions.assertTrue(blookup2.getPrice().getType().getConstant().booleanValue());
 		Assertions.assertEquals("BYOL", blookup2.getPrice().getLicense());
 		Assertions.assertEquals("ORACLE", blookup2.getPrice().getEngine());

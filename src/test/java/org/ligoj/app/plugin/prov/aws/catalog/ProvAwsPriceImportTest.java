@@ -3,6 +3,7 @@
  */
 package org.ligoj.app.plugin.prov.aws.catalog;
 
+import static org.ligoj.app.plugin.prov.QuoteInstanceQuery.builder;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
@@ -40,6 +41,7 @@ import org.ligoj.app.plugin.prov.ProvQuoteInstanceResource;
 import org.ligoj.app.plugin.prov.ProvQuoteStorageResource;
 import org.ligoj.app.plugin.prov.ProvResource;
 import org.ligoj.app.plugin.prov.QuoteDatabaseLookup;
+import org.ligoj.app.plugin.prov.QuoteDatabaseQuery;
 import org.ligoj.app.plugin.prov.QuoteInstanceEditionVo;
 import org.ligoj.app.plugin.prov.QuoteInstanceLookup;
 import org.ligoj.app.plugin.prov.QuoteStorageEditionVo;
@@ -244,7 +246,7 @@ public class ProvAwsPriceImportTest extends AbstractServerTest {
 
 		// Check the spot
 		final QuoteInstanceLookup spotPrice = qiResource.lookup(instance.getConfiguration().getSubscription().getId(),
-				2, 1741, true, VmOs.LINUX, null, true, null, null, null, null);
+				builder().cpu(2).ram(1741).constant(true).ephemeral(true).build());
 		Assertions.assertEquals(12.664, spotPrice.getCost(), DELTA);
 		Assertions.assertEquals(12.664d, spotPrice.getPrice().getCost(), 0.0001);
 		Assertions.assertEquals(0.0173d, spotPrice.getPrice().getCostPeriod(), 0.0001);
@@ -408,8 +410,8 @@ public class ProvAwsPriceImportTest extends AbstractServerTest {
 		final ProvQuoteInstance instance = quote.getInstances().get(0);
 
 		// Check the spot
-		final QuoteInstanceLookup price = qiResource.lookup(instance.getConfiguration().getSubscription().getId(), 2,
-				1741, null, VmOs.LINUX, "r4.large", true, null, null, null, null);
+		final QuoteInstanceLookup price = qiResource.lookup(instance.getConfiguration().getSubscription().getId(),
+				builder().cpu(2).ram(1741).type("r4.large").ephemeral(true).build());
 		Assertions.assertTrue(price.getCost() > 5d);
 		Assertions.assertTrue(price.getCost() < 100d);
 		final ProvInstancePrice instance2 = price.getPrice();
@@ -519,8 +521,7 @@ public class ProvAwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertNull(iptRepository.findByName("Reserved, 3yr, All Upfront"));
 
 		// Check the spot is not available
-		Assertions.assertNull(
-				qiResource.lookup(subscription, 1, 1, false, VmOs.LINUX, null, true, null, null, null, null));
+		Assertions.assertNull(qiResource.lookup(subscription, builder().constant(false).ephemeral(true).build()));
 	}
 
 	/**
@@ -590,9 +591,8 @@ public class ProvAwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(0, ipRepository.findAllBy("type.name", "Spot").size());
 
 		// Check no instance can be found
-		Assertions.assertNull(
-				qiResource.lookup(subscription, 1, 1, false, VmOs.LINUX, null, true, null, null, null, null));
-		Assertions.assertNull(qbResource.lookup(subscription, 1, 1, null, null, null, null, null, "MYSQL", null));
+		Assertions.assertNull(qiResource.lookup(subscription, builder().constant(false).ephemeral(true).build()));
+		Assertions.assertNull(qbResource.lookup(subscription, QuoteDatabaseQuery.builder().engine("MYSQL").build()));
 	}
 
 	private int server1() {
@@ -618,8 +618,8 @@ public class ProvAwsPriceImportTest extends AbstractServerTest {
 		em.clear();
 
 		// Request an instance that would not be a Spot
-		final QuoteInstanceLookup lookup = qiResource.lookup(subscription, 2, 1741, true, VmOs.LINUX, "c1.medium",
-				false, null, "36month", null, null);
+		final QuoteInstanceLookup lookup = qiResource.lookup(subscription,
+				builder().cpu(2).ram(1741).constant(true).type("c1.medium").usage("36month").build());
 
 		final QuoteInstanceEditionVo ivo = new QuoteInstanceEditionVo();
 		ivo.setCpu(1d);
@@ -675,8 +675,8 @@ public class ProvAwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(0.01, createS3.getCost().getMin(), DELTA);
 
 		// Request a database
-		final QuoteDatabaseLookup blookup1 = qbResource.lookup(subscription, 2, 1741, null, "db.t2.xlarge", null, null,
-				null, "MYSQL", null);
+		final QuoteDatabaseLookup blookup1 = qbResource.lookup(subscription,
+				QuoteDatabaseQuery.builder().cpu(2).ram(1741).type("db.t2.xlarge").engine("MYSQL").build());
 		Assertions.assertFalse(blookup1.getPrice().getType().getConstant().booleanValue());
 		Assertions.assertNull(blookup1.getPrice().getLicense());
 		Assertions.assertEquals("MYSQL", blookup1.getPrice().getEngine());
@@ -685,8 +685,8 @@ public class ProvAwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertNull(blookup1.getPrice().getInitialCost());
 		Assertions.assertEquals("OnDemand", blookup1.getPrice().getTerm().getName());
 
-		final QuoteDatabaseLookup blookup2 = qbResource.lookup(subscription, 2, 1741, null, "db.r5.large", null, null,
-				"BYOL", "ORACLE", "ENTERPRISE");
+		final QuoteDatabaseLookup blookup2 = qbResource.lookup(subscription, QuoteDatabaseQuery.builder().cpu(2)
+				.ram(1741).type("db.r5.large").license("BYOL").engine("ORACLE").license("ENTERPRISE").build());
 		Assertions.assertTrue(blookup2.getPrice().getType().getConstant().booleanValue());
 		Assertions.assertEquals("BYOL", blookup2.getPrice().getLicense());
 		Assertions.assertEquals("ORACLE", blookup2.getPrice().getEngine());

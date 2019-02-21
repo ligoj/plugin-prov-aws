@@ -224,6 +224,15 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	}
 
 	/**
+	 * Return the default region for this plug-in.
+	 *
+	 * @return the default region.
+	 */
+	protected String getRegion() {
+		return configuration.get(CONF_REGION, DEFAULT_REGION);
+	}
+
+	/**
 	 * Check AWS connection and account.
 	 *
 	 * @param parameters
@@ -238,15 +247,6 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 		try (CurlProcessor curlProcessor = new CurlProcessor()) {
 			return curlProcessor.process(newRequest(builder, parameters));
 		}
-	}
-
-	/**
-	 * Return the default region for this plug-in.
-	 *
-	 * @return the default region.
-	 */
-	protected String getRegion() {
-		return configuration.get(CONF_REGION, DEFAULT_REGION);
 	}
 
 	/**

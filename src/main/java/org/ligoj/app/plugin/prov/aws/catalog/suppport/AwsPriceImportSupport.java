@@ -64,6 +64,7 @@ public class AwsPriceImportSupport extends AbstractAwsImport {
 			entity.setAccessPhone(t.getAccessPhone());
 			entity.setSlaStartTime(t.getSlaStartTime());
 			entity.setSlaEndTime(t.getSlaEndTime());
+			entity.setDescription(t.getDescription());
 
 			entity.setSlaBusinessCriticalSystemDown(t.getSlaBusinessCriticalSystemDown());
 			entity.setSlaGeneralGuidance(t.getSlaGeneralGuidance());

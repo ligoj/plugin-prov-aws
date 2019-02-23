@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsImport;
 import org.ligoj.app.plugin.prov.aws.catalog.AwsCsvPrice;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
+import org.ligoj.app.plugin.prov.catalog.ImportCatalog;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
@@ -27,7 +28,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-public class AwsPriceImportEfs extends AbstractAwsImport {
+public class AwsPriceImportEfs extends AbstractAwsImport implements ImportCatalog<UpdateContext> {
 
 	/**
 	 * The EFS price end-point, a CSV file. Multi-region.

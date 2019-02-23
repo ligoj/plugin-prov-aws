@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
+import org.ligoj.app.plugin.prov.catalog.ImportCatalog;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.bootstrap.core.INamableBean;
 import org.springframework.stereotype.Component;
@@ -21,7 +22,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
  * The base import data.
  */
 @Component
-public class AwsPriceImportBase extends AbstractAwsImport {
+public class AwsPriceImportBase extends AbstractAwsImport implements ImportCatalog<UpdateContext> {
 
 	/**
 	 * Configuration key used for enabled regions pattern names. When value is <code>null</code>, no restriction.

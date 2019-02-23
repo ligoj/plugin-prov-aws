@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsImport;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
+import org.ligoj.app.plugin.prov.catalog.ImportCatalog;
 import org.ligoj.app.plugin.prov.model.AbstractPrice;
 import org.ligoj.app.plugin.prov.model.ProvSupportPrice;
 import org.ligoj.app.plugin.prov.model.ProvSupportType;
@@ -21,7 +22,7 @@ import org.springframework.stereotype.Component;
  * The provisioning support price service for AWS. Manage install or update of prices.
  */
 @Component
-public class AwsPriceImportSupport extends AbstractAwsImport {
+public class AwsPriceImportSupport extends AbstractAwsImport implements ImportCatalog<UpdateContext> {
 
 	@Override
 	public void install(final UpdateContext context) throws IOException, URISyntaxException {

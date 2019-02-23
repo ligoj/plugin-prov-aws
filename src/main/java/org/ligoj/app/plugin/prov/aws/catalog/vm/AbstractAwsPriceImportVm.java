@@ -26,6 +26,7 @@ import org.ligoj.app.plugin.prov.aws.catalog.AwsPrices;
 import org.ligoj.app.plugin.prov.aws.catalog.AwsRegionPrices;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AbstractAwsEc2Price;
+import org.ligoj.app.plugin.prov.catalog.ImportCatalog;
 import org.ligoj.app.plugin.prov.dao.BaseProvInstanceTypeRepository;
 import org.ligoj.app.plugin.prov.dao.BaseProvTermPriceRepository;
 import org.ligoj.app.plugin.prov.model.AbstractInstanceType;
@@ -42,7 +43,7 @@ import lombok.extern.slf4j.Slf4j;
  * The compute part of AWS catalog import.
  */
 @Slf4j
-public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport {
+public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport implements ImportCatalog<UpdateContext> {
 
 	private static final Pattern LEASING_TIME = Pattern.compile("(\\d)\\s*yr");
 	protected static final Pattern UPFRONT_MODE = Pattern.compile("(All|Partial)\\s*Upfront");
@@ -264,6 +265,19 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport {
 			log.info("AWS {} import finished : {} prices", api, priceCounter);
 			nextStep(context, null, 1);
 		}
+	}
+
+	/**
+	 * Indicate the given region is enabled.
+	 *
+	 * @param context
+	 *            The update context.
+	 * @param region
+	 *            The region API name to test.
+	 * @return <code>true</code> when the configuration enable the given region.
+	 */
+	protected boolean isEnabledRegion(final UpdateContext context, final AwsRegionPrices region) {
+		return isEnabledRegion(context, region.getRegion());
 	}
 
 	/**

@@ -10,7 +10,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Formatter;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -79,6 +78,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 
 	@Override
 	public void install(final UpdateContext context) throws IOException, URISyntaxException {
+		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("ec2"));
 		context.setValidOs(Pattern.compile(configuration.get(CONF_OS, ".*")));
 		context.setValidInstanceType(Pattern.compile(configuration.get(CONF_ITYPE, ".*")));
 		final ProvInstancePriceTerm spotPriceType = newSpotInstanceType(context.getNode());
@@ -114,14 +114,12 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	 *            The related AWS Spot instance price type.
 	 * @param region
 	 *            The target region.
-	 * @return The amount of installed prices. Only for the report.
 	 */
-	private int installSpotPrices(final UpdateContext context, final AwsEc2SpotPrice json,
+	private void installSpotPrices(final UpdateContext context, final AwsEc2SpotPrice json,
 			final ProvInstancePriceTerm spotPriceType, final ProvLocation region) {
-		return (int) json.getOsPrices().stream()
-				.filter(op -> !StringUtils.startsWithIgnoreCase(op.getPrices().get("USD"), "N/A"))
+		json.getOsPrices().stream().filter(op -> !StringUtils.startsWithIgnoreCase(op.getPrices().get("USD"), "N/A"))
 				.peek(op -> op.setOs(op.getName().equals("mswin") ? VmOs.WINDOWS : VmOs.LINUX))
-				.filter(op -> isEnabledOs(context, op.getOs())).map(op -> {
+				.filter(op -> isEnabledOs(context, op.getOs())).forEach(op -> {
 					final ProvInstanceType type = context.getInstanceTypes().get(json.getName());
 
 					// Build the key for this spot
@@ -139,11 +137,11 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 
 					// Update the price as needed
 					final double cost = Double.parseDouble(op.getPrices().get("USD"));
-					return saveAsNeeded(price, round3Decimals(cost * HOUR_TO_MONTH), p -> {
+					saveAsNeeded(price, round3Decimals(cost * HOUR_TO_MONTH), p -> {
 						p.setCostPeriod(cost);
 						ipRepository.save(p);
 					});
-				}).count();
+				});
 	}
 
 	private void installEc2(final UpdateContext context, final Node node, final ProvInstancePriceTerm spotPriceType)
@@ -153,7 +151,6 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 				.collect(Collectors.toMap(ProvInstanceType::getName, Function.identity())));
 
 		// Install the EC2 (non spot) prices
-		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("ec2"));
 		context.getRegions().values().forEach(region -> {
 			nextStep(node, region.getName(), 1);
 			// Get previous prices for this location
@@ -170,14 +167,14 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 					// Get previous prices for this location
 					context.setPrevious(ipRepository.findAll(node.getId(), region.getName()).stream()
 							.collect(Collectors.toMap(ProvInstancePrice::getCode, Function.identity())));
-					return r.getInstanceTypes().stream().flatMap(t -> t.getSizes().stream()).filter(t -> {
+					r.getInstanceTypes().stream().flatMap(t -> t.getSizes().stream()).filter(t -> {
 						final boolean availability = context.getInstanceTypes().containsKey(t.getName());
 						if (!availability) {
 							// Unavailable instances type of spot are ignored
 							log.warn("Instance {} is referenced from spot but not available", t.getName());
 						}
 						return availability;
-					}).mapToInt(j -> installSpotPrices(context, j, spotPriceType, region)).sum();
+					}).forEach(j -> installSpotPrices(context, j, spotPriceType, region));
 				});
 		context.getInstanceTypes().clear();
 	}
@@ -291,36 +288,6 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 			p.setTenancy(ProvTenancy.valueOf(StringUtils.upperCase(csv.getTenancy())));
 			return p;
 		});
-	}
-
-	private VmOs toVmOs(String osName) {
-		return VmOs.valueOf(osName.toUpperCase(Locale.ENGLISH));
-	}
-
-	/**
-	 * Indicate the given OS is enabled.
-	 *
-	 * @param context
-	 *            The update context.
-	 * @param os
-	 *            The OS to test.
-	 * @return <code>true</code> when the configuration enable the given OS.
-	 */
-	private boolean isEnabledOs(final UpdateContext context, final VmOs os) {
-		return isEnabledOs(context, os.name());
-	}
-
-	/**
-	 * Indicate the given OS is enabled.
-	 *
-	 * @param context
-	 *            The update context.
-	 * @param os
-	 *            The OS to test.
-	 * @return <code>true</code> when the configuration enable the given OS.
-	 */
-	private boolean isEnabledOs(final UpdateContext context, final String os) {
-		return context.getValidOs().matcher(os.toUpperCase(Locale.ENGLISH)).matches();
 	}
 
 	/**

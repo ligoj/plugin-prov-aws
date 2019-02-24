@@ -39,6 +39,7 @@ public class AwsPriceImportEbs extends AbstractAwsPriceImportVm {
 
 	@Override
 	public void install(final UpdateContext context) throws IOException, URISyntaxException {
+		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("ebs"));
 		// The previously installed storage types cache. Key is the storage name
 		final Node node = context.getNode();
 		context.setStorageTypes(installStorageTypes(context));
@@ -50,12 +51,10 @@ public class AwsPriceImportEbs extends AbstractAwsPriceImportVm {
 					// Get previous prices for this location
 					final Map<Integer, ProvStoragePrice> previous = spRepository.findAll(node.getId(), region.getName())
 							.stream().collect(Collectors.toMap(p -> p.getType().getId(), Function.identity()));
-					return (int) r
-							.getTypes().stream().filter(t -> containsKey(context, t)).filter(
-									t -> t.getValues().stream().filter(j -> !"perPIOPSreq".equals(j.getRate()))
-											.anyMatch(j -> installStorageType(j,
-													context.getStorageTypes().get(t.getName()), region, previous)))
-							.count();
+					r.getTypes().stream().filter(t -> containsKey(context, t))
+							.forEach(t -> t.getValues().stream().filter(j -> !"perPIOPSreq".equals(j.getRate()))
+									.findFirst().ifPresent(j -> installStoragePrice(j,
+											context.getStorageTypes().get(t.getName()), region, previous)));
 				});
 	}
 
@@ -84,7 +83,7 @@ public class AwsPriceImportEbs extends AbstractAwsPriceImportVm {
 	}
 
 	/**
-	 * Install the EBS/S3 price using the related storage type.
+	 * Install the EBS price using the related storage price.
 	 *
 	 * @param json
 	 *            The current JSON entry.
@@ -92,15 +91,14 @@ public class AwsPriceImportEbs extends AbstractAwsPriceImportVm {
 	 *            The related storage type.
 	 * @param region
 	 *            The target region.
-	 * @return The amount of installed prices. Only for the report.
 	 */
-	private <T extends AwsPrice> boolean installStorageType(final T json, final ProvStorageType type,
+	private <T extends AwsPrice> void installStoragePrice(final T json, final ProvStorageType type,
 			final ProvLocation region, final Map<Integer, ProvStoragePrice> previous) {
-		return Optional.ofNullable(json.getPrices().get("USD")).filter(NumberUtils::isParsable)
-				.map(usd -> installStorageType(type, region, previous, usd)).isPresent();
+		Optional.ofNullable(json.getPrices().get("USD")).filter(NumberUtils::isParsable)
+				.ifPresent(usd -> installStoragePrice(type, region, previous, usd));
 	}
 
-	private ProvStoragePrice installStorageType(final ProvStorageType type, final ProvLocation region,
+	private void installStoragePrice(final ProvStorageType type, final ProvLocation region,
 			final Map<Integer, ProvStoragePrice> previous, String usd) {
 		final ProvStoragePrice price = previous.computeIfAbsent(type.getId(), s -> {
 			final ProvStoragePrice p = new ProvStoragePrice();
@@ -112,6 +110,6 @@ public class AwsPriceImportEbs extends AbstractAwsPriceImportVm {
 		price.setCode(region.getName() + "-" + type.getName());
 
 		// Update the price as needed
-		return saveAsNeeded(price, Double.valueOf(usd), spRepository::save);
+		saveAsNeeded(price, Double.valueOf(usd), spRepository::save);
 	}
 }

@@ -49,11 +49,11 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 
 	@Override
 	public void install(final UpdateContext context) throws IOException, URISyntaxException {
+		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("rds"));
 		context.setDatabaseTypes(dtRepository.findAllBy(BY_NODE, context.getNode()).stream()
 				.collect(Collectors.toMap(ProvDatabaseType::getName, Function.identity())));
-		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("rds"));
 		context.getRegions().values().forEach(region -> {
-			nextStep(context.getNode(), region.getName(), 1);
+			nextStep(context, region.getName(), 1);
 			// Get previous RDS storage and instance prices for this location
 			context.setPreviousDatabase(dpRepository.findAll(context.getNode().getId(), region.getName()).stream()
 					.collect(Collectors.toMap(ProvDatabasePrice::getCode, Function.identity())));

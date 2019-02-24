@@ -8,7 +8,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
@@ -20,7 +19,6 @@ import javax.annotation.PostConstruct;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.RegExUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsImport;
 import org.ligoj.app.plugin.prov.aws.catalog.AwsPrices;
 import org.ligoj.app.plugin.prov.aws.catalog.AwsRegionPrices;
@@ -37,6 +35,8 @@ import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.Rate;
 import org.ligoj.bootstrap.core.curl.CurlProcessor;
 
+import com.hazelcast.util.function.BiConsumer;
+
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -46,13 +46,24 @@ import lombok.extern.slf4j.Slf4j;
 public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport implements ImportCatalog<UpdateContext> {
 
 	private static final Pattern LEASING_TIME = Pattern.compile("(\\d)\\s*yr");
+
+	/**
+	 * Pattern validating a a partial price entry.
+	 */
 	protected static final Pattern UPFRONT_MODE = Pattern.compile("(All|Partial)\\s*Upfront");
 
 	/**
-	 * Configuration key used for enabled instance type pattern names. When value is <code>null</code>, no restriction.
+	 * Handle partial upfront prices split into multiple price entries.
+	 *
+	 * @param price
+	 *            The current price entity.
+	 * @param csv
+	 *            The current CSV price entry.
+	 * @param other
+	 *            The previous CSV price entry.
+	 * @param repository
+	 *            The repository managing the price entity.
 	 */
-	public static final String CONF_ITYPE = ProvAwsPluginResource.KEY + ":instance-type";
-
 	protected <T extends AbstractInstanceType, P extends AbstractTermPrice<T>, C extends AbstractAwsEc2Price> void handleUpfront(
 			final P price, final C csv, final C other, final BaseProvTermPriceRepository<T, P> repository) {
 		final AbstractAwsEc2Price quantity;
@@ -76,26 +87,61 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 		});
 	}
 
+	/**
+	 * Copy a CSN price entry to a price entity.
+	 *
+	 * @param context
+	 *            The current context to handle lazy sub-entities creation.
+	 * @param csv
+	 *            The current CSV entry.
+	 * @param region
+	 *            The current region.
+	 * @param code
+	 *            The price code.
+	 * @param p
+	 *            The target price entity.
+	 * @param type
+	 *            The instance type.
+	 */
 	protected <T extends AbstractInstanceType> void copy(final UpdateContext context, final AbstractAwsEc2Price csv,
-			final ProvLocation region, final String code, final AbstractTermPrice<T> p, final T instance) {
+			final ProvLocation region, final String code, final AbstractTermPrice<T> p, final T type) {
 		p.setLocation(region);
 		p.setCode(code);
 		p.setLicense(StringUtils.trimToNull(csv.getLicenseModel().replace("No License required", "")
 				.replace("No license required", "").replace("Bring your own license", ProvInstancePrice.LICENSE_BYOL)));
-		p.setType(instance);
+		p.setType(type);
 		p.setTerm(context.getPriceTerms().computeIfAbsent(csv.getOfferTermCode(),
 				k -> newInstancePriceTerm(context, csv)));
 	}
 
+	/**
+	 * Build a price code from the CSV entry.
+	 *
+	 * @param csv
+	 *            The current CSV entry.
+	 * @return A price code built from the CSV entry.
+	 */
 	protected String toCode(final AbstractAwsEc2Price csv) {
 		return csv.getSku() + csv.getOfferTermCode();
 	}
 
 	/**
-	 * Install a new EC2/RDS instance type
+	 * Install a new EC2/RDS instance type. The previous entries will contains this type at the end of this operation.
+	 *
+	 * @param context
+	 *            The current context to handle lazy sub-entities creation.
+	 * @param csv
+	 *            The current CSV entry.
+	 * @param previous
+	 *            The previous installed types.
+	 * @param newType
+	 *            The constructor to use in case of this type was not already in the previous installed types.
+	 * @param repository
+	 *            The repository handling the instance type entity, and used when a new type need to be created.
+	 * @return Either the previous entity, either a new one. Never <code>null</code>.
 	 */
 	protected <T extends AbstractInstanceType> T installInstanceType(final UpdateContext context,
-			final AbstractAwsEc2Price csv, Map<String, T> previous, Supplier<T> newType,
+			final AbstractAwsEc2Price csv, final Map<String, T> previous, Supplier<T> newType,
 			final BaseProvInstanceTypeRepository<T> repository) {
 		final T type = previous.computeIfAbsent(csv.getInstanceType(), k -> {
 			final T t = newType.get();
@@ -200,21 +246,15 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	}
 
 	/**
-	 * Indicate the given instance type is enabled.
 	 *
-	 * @param context
-	 *            The update context.
-	 * @param type
-	 *            The instance type to test.
-	 * @return <code>true</code> when the configuration enable the given instance type.
+	 * @param entity
+	 * @param newCost
+	 * @param c
+	 * @return
 	 */
-	protected boolean isEnabledType(final UpdateContext context, final String type) {
-		return context.getValidInstanceType().matcher(type).matches();
-	}
-
-	protected <T extends AbstractInstanceType, P extends AbstractTermPrice<T>> P saveAsNeeded(final P entity,
+	protected <T extends AbstractInstanceType, P extends AbstractTermPrice<T>> void saveAsNeeded(final P entity,
 			final double newCost, final Consumer<P> c) {
-		return saveAsNeeded(entity, entity.getCost(), newCost, entity::setCost, c);
+		saveAsNeeded(entity, entity.getCost(), newCost, entity::setCost, c);
 	}
 
 	/**
@@ -232,14 +272,9 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	 *            The mapping function from JSON at region level to JPA entity.
 	 */
 	protected <R extends AwsRegionPrices, T extends AwsPrices<R>> void installJsonPrices(final UpdateContext context,
-			final String api, final String endpoint, final Class<T> apiClass,
-			final BiFunction<R, ProvLocation, Integer> mapper) throws IOException {
+			final String api, final String endpoint, final Class<T> apiClass, final BiConsumer<R, ProvLocation> mapper)
+			throws IOException {
 		log.info("AWS {} prices...", api);
-
-		// Track the created instance to cache instance and price type
-		int priceCounter = 0;
-		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase(api));
-
 		try (CurlProcessor curl = new CurlProcessor()) {
 			// Get the remote prices stream
 			final String rawJson = StringUtils.defaultString(curl.get(endpoint),
@@ -258,11 +293,10 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 			nextStep(context, null, 0);
 
 			// Install the prices for each region
-			priceCounter = eRegions.stream().mapToInt(r -> mapper.apply(r, context.getRegions().get(r.getRegion())))
-					.sum();
+			eRegions.stream().forEach(r -> mapper.accept(r, context.getRegions().get(r.getRegion())));
 		} finally {
 			// Report
-			log.info("AWS {} import finished : {} prices", api, priceCounter);
+			log.info("AWS {} import finished", api);
 			nextStep(context, null, 1);
 		}
 	}

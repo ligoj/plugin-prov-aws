@@ -6,7 +6,6 @@ package org.ligoj.app.plugin.prov.aws.catalog;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
-import org.ligoj.app.model.Node;
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
 import org.ligoj.app.plugin.prov.aws.catalog.efs.AwsPriceImportEfs;
 import org.ligoj.app.plugin.prov.aws.catalog.s3.AwsPriceImportS3;
@@ -25,7 +24,7 @@ import lombok.Setter;
  */
 @Component
 @Setter
-public class ProvAwsPriceImport extends AbstractImportCatalogResource {
+public class AwsPriceImport extends AbstractImportCatalogResource {
 
 	@Autowired
 	private AwsPriceImportBase base;
@@ -58,10 +57,7 @@ public class ProvAwsPriceImport extends AbstractImportCatalogResource {
 	 */
 	public void install() throws IOException, URISyntaxException {
 		final UpdateContext context = new UpdateContext();
-
-		// Node is already persisted, install EC2 prices
-		final Node node = nodeRepository.findOneExpected(ProvAwsPluginResource.KEY);
-		context.setNode(node);
+		context.setNode(nodeRepository.findOneExpected(ProvAwsPluginResource.KEY));
 
 		base.install(context);
 		ebs.install(context);

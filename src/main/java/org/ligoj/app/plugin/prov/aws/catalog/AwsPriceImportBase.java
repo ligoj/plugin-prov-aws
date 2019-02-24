@@ -35,6 +35,7 @@ public class AwsPriceImportBase extends AbstractAwsImport implements ImportCatal
 
 	@Override
 	public void install(final UpdateContext context) throws IOException, URISyntaxException {
+		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("region"));
 		context.setValidRegion(Pattern.compile(configuration.get(CONF_REGIONS, ".*")));
 		context.getMapRegionToName().putAll(toMap("aws-regions.json", MAP_LOCATION));
 		context.getMapStorageToApi().putAll(toMap("storage-to-api.json", MAP_STR));
@@ -43,5 +44,6 @@ public class AwsPriceImportBase extends AbstractAwsImport implements ImportCatal
 		context.setRegions(locationRepository.findAllBy(BY_NODE, context.getNode()).stream()
 				.filter(r -> isEnabledRegion(context, r))
 				.collect(Collectors.toMap(INamableBean::getName, Function.identity())));
+		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("region"));
 	}
 }

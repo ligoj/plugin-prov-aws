@@ -22,7 +22,7 @@ import org.ligoj.app.plugin.prov.AbstractProvResource;
 import org.ligoj.app.plugin.prov.ProvResource;
 import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery;
 import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery.AWS4SignatureQueryBuilder;
-import org.ligoj.app.plugin.prov.aws.catalog.ProvAwsPriceImport;
+import org.ligoj.app.plugin.prov.aws.catalog.AwsPriceImport;
 import org.ligoj.app.plugin.prov.aws.auth.AWS4SignerForAuthorizationHeader;
 import org.ligoj.app.plugin.prov.catalog.ImportCatalogService;
 import org.ligoj.app.plugin.prov.terraform.Context;
@@ -85,7 +85,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	private ConfigurationResource configuration;
 
 	@Autowired
-	protected ProvAwsPriceImport priceImport;
+	protected AwsPriceImport priceImport;
 
 	@Autowired
 	protected ProvAwsTerraformService terraformService;

@@ -88,17 +88,17 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 /**
- * Test class of {@link ProvAwsPriceImport}
+ * Test class of {@link AwsPriceImport}
  */
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(locations = "classpath:/META-INF/spring/application-context-test.xml")
 @Rollback
 @Transactional
-public class ProvAwsPriceImportTest extends AbstractServerTest {
+public class AwsPriceImportTest extends AbstractServerTest {
 
 	private static final double DELTA = 0.001;
 
-	private ProvAwsPriceImport resource;
+	private AwsPriceImport resource;
 
 	@Autowired
 	private ProvResource provResource;
@@ -151,7 +151,7 @@ public class ProvAwsPriceImportTest extends AbstractServerTest {
 		// Mock catalog import helper
 		final ImportCatalogResource helper = new ImportCatalogResource();
 		applicationContext.getAutowireCapableBeanFactory().autowireBean(helper);
-		this.resource = initCatalog(helper, new ProvAwsPriceImport());
+		this.resource = initCatalog(helper, new AwsPriceImport());
 		this.resource.setBase(initCatalog(helper, new AwsPriceImportBase()));
 		this.resource.setEc2(initCatalog(helper, new AwsPriceImportEc2()));
 		this.resource.setEbs(initCatalog(helper, new AwsPriceImportEbs()));

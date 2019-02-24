@@ -241,20 +241,22 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 			// Convert years to months
 			term.setPeriod(Integer.parseInt(matcher.group(1)) * 12d);
 		}
-		iptRepository.save(term);
-		return term;
+		return iptRepository.save(term);
 	}
 
 	/**
+	 * Save a price when the attached cost is different from the old one.
 	 *
 	 * @param entity
+	 *            The target entity to update.
 	 * @param newCost
-	 * @param c
-	 * @return
+	 *            The new cost.
+	 * @param persister
+	 *            The consumer used to persist the replacement. Usually a repository operation.
 	 */
 	protected <T extends AbstractInstanceType, P extends AbstractTermPrice<T>> void saveAsNeeded(final P entity,
-			final double newCost, final Consumer<P> c) {
-		saveAsNeeded(entity, entity.getCost(), newCost, entity::setCost, c);
+			final double newCost, final Consumer<P> persister) {
+		saveAsNeeded(entity, entity.getCost(), newCost, entity::setCost, persister);
 	}
 
 	/**

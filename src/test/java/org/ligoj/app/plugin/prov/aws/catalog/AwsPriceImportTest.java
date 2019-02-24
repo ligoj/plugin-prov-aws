@@ -3,10 +3,10 @@
  */
 package org.ligoj.app.plugin.prov.aws.catalog;
 
-import static org.ligoj.app.plugin.prov.QuoteInstanceQuery.builder;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static org.ligoj.app.plugin.prov.quote.instance.QuoteInstanceQuery.builder;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -36,16 +36,7 @@ import org.ligoj.app.model.Parameter;
 import org.ligoj.app.model.ParameterValue;
 import org.ligoj.app.model.Project;
 import org.ligoj.app.model.Subscription;
-import org.ligoj.app.plugin.prov.ProvQuoteDatabaseResource;
-import org.ligoj.app.plugin.prov.ProvQuoteInstanceResource;
-import org.ligoj.app.plugin.prov.ProvQuoteStorageResource;
 import org.ligoj.app.plugin.prov.ProvResource;
-import org.ligoj.app.plugin.prov.QuoteDatabaseLookup;
-import org.ligoj.app.plugin.prov.QuoteDatabaseQuery;
-import org.ligoj.app.plugin.prov.QuoteInstanceEditionVo;
-import org.ligoj.app.plugin.prov.QuoteInstanceLookup;
-import org.ligoj.app.plugin.prov.QuoteStorageEditionVo;
-import org.ligoj.app.plugin.prov.QuoteStorageLookup;
 import org.ligoj.app.plugin.prov.QuoteVo;
 import org.ligoj.app.plugin.prov.UpdatedCost;
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
@@ -78,6 +69,16 @@ import org.ligoj.app.plugin.prov.model.ProvTenancy;
 import org.ligoj.app.plugin.prov.model.ProvUsage;
 import org.ligoj.app.plugin.prov.model.Rate;
 import org.ligoj.app.plugin.prov.model.VmOs;
+import org.ligoj.app.plugin.prov.quote.database.ProvQuoteDatabaseResource;
+import org.ligoj.app.plugin.prov.quote.database.QuoteDatabaseLookup;
+import org.ligoj.app.plugin.prov.quote.database.QuoteDatabaseQuery;
+import org.ligoj.app.plugin.prov.quote.instance.ProvQuoteInstanceResource;
+import org.ligoj.app.plugin.prov.quote.instance.QuoteInstanceEditionVo;
+import org.ligoj.app.plugin.prov.quote.instance.QuoteInstanceLookup;
+import org.ligoj.app.plugin.prov.quote.storage.ProvQuoteStorageResource;
+import org.ligoj.app.plugin.prov.quote.storage.QuoteStorageEditionVo;
+import org.ligoj.app.plugin.prov.quote.storage.QuoteStorageLookup;
+import org.ligoj.app.plugin.prov.quote.storage.QuoteStorageQuery;
 import org.ligoj.bootstrap.core.resource.TechnicalException;
 import org.ligoj.bootstrap.dao.system.SystemConfigurationRepository;
 import org.ligoj.bootstrap.resource.system.configuration.ConfigurationResource;
@@ -634,8 +635,8 @@ public class AwsPriceImportTest extends AbstractServerTest {
 		em.clear();
 
 		// Add storage to this instance
-		final QuoteStorageLookup slookup = qsResource.lookup(subscription, 5, Rate.GOOD, server1(), null, null, null)
-				.get(0);
+		final QuoteStorageLookup slookup = qsResource.lookup(subscription,
+				QuoteStorageQuery.builder().size(5).latency(Rate.GOOD).instance(server1()).build()).get(0);
 		final QuoteStorageEditionVo svo = new QuoteStorageEditionVo();
 		svo.setQuoteInstance(server1());
 		svo.setSize(5);
@@ -647,8 +648,9 @@ public class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertTrue(createStorage.getTotal().getMin() > 40);
 
 		// Add storage (EFS) to this quote
-		final QuoteStorageLookup efsLookpup = qsResource
-				.lookup(subscription, 1, Rate.GOOD, null, null, ProvStorageOptimized.THROUGHPUT, null).get(0);
+		final QuoteStorageLookup efsLookpup = qsResource.lookup(subscription,
+				QuoteStorageQuery.builder().latency(Rate.GOOD).optimized(ProvStorageOptimized.THROUGHPUT).build())
+				.get(0);
 		final QuoteStorageEditionVo svo2 = new QuoteStorageEditionVo();
 		svo2.setSize(1);
 		svo2.setOptimized(ProvStorageOptimized.THROUGHPUT);
@@ -659,8 +661,9 @@ public class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(0.33, createEfs.getCost().getMin(), DELTA);
 
 		// Add storage (S3) to this quote
-		final QuoteStorageLookup s3Lookpup = qsResource
-				.lookup(subscription, 1, Rate.MEDIUM, null, null, ProvStorageOptimized.DURABILITY, null).get(0);
+		final QuoteStorageLookup s3Lookpup = qsResource.lookup(subscription,
+				QuoteStorageQuery.builder().latency(Rate.MEDIUM).optimized(ProvStorageOptimized.DURABILITY).build())
+				.get(0);
 		final ProvStorageType type = s3Lookpup.getPrice().getType();
 		Assertions.assertEquals(99.5d, type.getAvailability(), 0.000000001d);
 		Assertions.assertEquals(11, type.getDurability9().intValue());

@@ -188,16 +188,14 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	 *            The current CSV entry.
 	 * @param region
 	 *            The current region.
-	 * @return The amount of installed prices. Only for the report.
 	 */
-	private int installEc2(final UpdateContext context, final AwsEc2Price csv, final ProvLocation region) {
+	private void installEc2(final UpdateContext context, final AwsEc2Price csv, final ProvLocation region) {
 		// Filter OS and type
 		if (!isEnabledType(context, csv.getInstanceType()) || !isEnabledOs(context, csv.getOs())) {
-			return 0;
+			return;
 		}
 
 		// Up-front, partial or not
-		int priceCounter = 0;
 		if (UPFRONT_MODE.matcher(StringUtils.defaultString(csv.getPurchaseOption())).find()) {
 			// Up-front ALL/PARTIAL
 			final Map<String, AwsEc2Price> partialCost = context.getPartialCost();
@@ -207,14 +205,12 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 
 				// The price is completed, cleanup
 				partialCost.remove(code);
-				priceCounter++;
 			} else {
 				// First time, save this entry for a future completion
 				partialCost.put(code, csv);
 			}
 		} else {
 			// No up-front, cost is fixed
-			priceCounter++;
 			final ProvInstancePrice price = newEc2Price(context, csv, region);
 			final double cost = csv.getPricePerUnit() * HOUR_TO_MONTH;
 			saveAsNeeded(price, round3Decimals(cost), p -> {
@@ -222,7 +218,6 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 				ipRepository.save(p);
 			});
 		}
-		return priceCounter;
 	}
 
 	/**
@@ -232,14 +227,12 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	 *            The update context.
 	 * @param region
 	 *            The region to fetch.
-	 * @return The amount installed EC2 instances.
 	 */
-	private int installEC2Prices(final UpdateContext context, final ProvLocation region) {
+	private void installEC2Prices(final UpdateContext context, final ProvLocation region) {
 		// Track the created instance to cache partial costs
 		context.setPartialCost(new HashMap<>());
 		final String endpoint = configuration.get(CONF_URL_EC2_PRICES, EC2_PRICES).replace("%s", region.getName());
 		log.info("AWS EC2 OnDemand/Reserved import started for region {}@{} ...", region, endpoint);
-		int priceCounter = 0;
 
 		// Get the remote prices stream
 		try (BufferedReader reader = new BufferedReader(
@@ -254,7 +247,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 				region.setDescription(csv.getLocation());
 
 				// Persist this price
-				priceCounter += installEc2(context, csv, region);
+				installEc2(context, csv, region);
 
 				// Read the next one
 				csv = csvReader.read();
@@ -264,12 +257,9 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 			log.info("AWS EC2 OnDemand/Reserved import failed for region {}", region.getName(), use);
 		} finally {
 			// Report
-			log.info("AWS EC2 OnDemand/Reserved import finished for region {} : {} instance, {} price types, {} prices",
-					region.getName(), context.getInstanceTypes().size(), context.getPriceTerms().size(), priceCounter);
+			log.info("AWS EC2 OnDemand/Reserved import finished for region {} : {} instance, {} price types",
+					region.getName(), context.getInstanceTypes().size(), context.getPriceTerms().size());
 		}
-
-		// Return the available instances types
-		return priceCounter;
 	}
 
 	/**

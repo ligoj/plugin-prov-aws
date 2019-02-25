@@ -72,14 +72,12 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 	 *            The update context.
 	 * @param region
 	 *            The region to fetch.
-	 * @return The amount installed EC2 instances.
 	 */
-	private int installRdsPrices(final UpdateContext context, final ProvLocation region) {
+	private void installRdsPrices(final UpdateContext context, final ProvLocation region) {
 		// Track the created instance to cache partial costs
 		context.setPartialCostRds(new HashMap<>());
 		final String endpoint = configuration.get(CONF_URL_RDS_PRICES, RDS_PRICES).replace("%s", region.getName());
 		log.info("AWS RDS OnDemand/Reserved import started for region {}@{} ...", region, endpoint);
-		int priceCounter = 0;
 
 		// Get the remote prices stream
 		try (BufferedReader reader = new BufferedReader(
@@ -94,7 +92,7 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 				region.setDescription(csv.getLocation());
 
 				// Persist this price
-				priceCounter += installRds(context, csv, region);
+				installRds(context, csv, region);
 
 				// Read the next one
 				csv = csvReader.read();
@@ -105,11 +103,8 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 		} finally {
 			// Report
 			log.info("AWS RDS OnDemand/Reserved import finished for region {} : {} instance, {} price types, {} prices",
-					region.getName(), context.getInstanceTypes().size(), context.getPriceTerms().size(), priceCounter);
+					region.getName(), context.getInstanceTypes().size(), context.getPriceTerms().size());
 		}
-
-		// Return the available instances types
-		return priceCounter;
 	}
 
 	/**
@@ -121,11 +116,9 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 	 *            The current CSV entry.
 	 * @param region
 	 *            The current region.
-	 * @return The amount of installed prices. Only for the report.
 	 */
-	private int installRds(final UpdateContext context, final AwsRdsPrice csv, final ProvLocation region) {
+	private void installRds(final UpdateContext context, final AwsRdsPrice csv, final ProvLocation region) {
 		// Up-front, partial or not
-		int priceCounter = 0;
 		if (UPFRONT_MODE.matcher(StringUtils.defaultString(csv.getPurchaseOption())).find()) {
 			// Up-front ALL/PARTIAL
 			final Map<String, AwsRdsPrice> partialCost = context.getPartialCostRds();
@@ -135,14 +128,12 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 
 				// The price is completed, cleanup
 				partialCost.remove(code);
-				priceCounter++;
 			} else {
 				// First time, save this entry for a future completion
 				partialCost.put(code, csv);
 			}
 		} else if ("Database Instance".equals(csv.getFamily())) {
 			// No up-front, cost is fixed
-			priceCounter++;
 			final ProvDatabasePrice price = newRdsPrice(context, csv, region);
 			final double cost = csv.getPricePerUnit() * HOUR_TO_MONTH;
 			saveAsNeeded(price, round3Decimals(cost), p -> {
@@ -151,7 +142,6 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 			});
 		} else {
 			// Database storage
-			priceCounter++;
 			final ProvStorageType type = installRdsStorageTypeAsNeeded(context, csv);
 			final ProvStoragePrice price = context.getPreviousStorage().computeIfAbsent(csv.getSku(), s -> {
 				final ProvStoragePrice p = new ProvStoragePrice();
@@ -164,7 +154,6 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 			// Update the price as needed
 			saveAsNeeded(price, csv.getPricePerUnit(), spRepository::save);
 		}
-		return priceCounter;
 	}
 
 	/**

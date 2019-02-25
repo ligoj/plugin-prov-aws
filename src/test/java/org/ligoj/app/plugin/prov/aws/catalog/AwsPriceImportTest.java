@@ -402,7 +402,8 @@ public class AwsPriceImportTest extends AbstractServerTest {
 		configuration.put(AwsPriceImportEc2.CONF_OS, "LINUX"); // Only one OS for UTs
 
 		// Only "r4.large" and "t.*","i.*,c1" for UTs
-		configuration.put(AwsPriceImportEc2.CONF_ITYPE, "(r4.*|db\\.r5\\.*|db\\.t\\.*|t\\.*|i.*|c1.*)");
+		configuration.put(AwsPriceImportEc2.CONF_ITYPE, "(r4.*|t\\.*|i.*|c1.*)");
+		configuration.put(AwsPriceImportRds.CONF_DTYPE, "(db\\.r5.*|db\\.t2.*)");
 
 		// Aligned to :
 		// https://aws.amazon.com/ec2/pricing/reserved-instances/pricing/

@@ -13,9 +13,11 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVm;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AbstractAwsEc2Price;
@@ -43,6 +45,11 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 	private static final String RDS_PRICES = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonRDS/current/%s/index.csv";
 
 	/**
+	 * Configuration key used for enabled database type pattern names. When value is <code>null</code>, no restriction.
+	 */
+	public static final String CONF_DTYPE = ProvAwsPluginResource.KEY + ":database-type";
+
+	/**
 	 * Configuration key used for {@link #RDS_PRICES}
 	 */
 	public static final String CONF_URL_RDS_PRICES = String.format(CONF_URL_API_PRICES, "rds");
@@ -52,6 +59,7 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("rds"));
 		context.setDatabaseTypes(dtRepository.findAllBy(BY_NODE, context.getNode()).stream()
 				.collect(Collectors.toMap(ProvDatabaseType::getName, Function.identity())));
+		context.setValidDatabaseType(Pattern.compile(configuration.get(CONF_DTYPE, ".*")));
 		context.getRegions().values().forEach(region -> {
 			nextStep(context, region.getName(), 1);
 			// Get previous RDS storage and instance prices for this location
@@ -102,13 +110,13 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 			log.info("AWS RDS OnDemand/Reserved import failed for region {}", region.getName(), use);
 		} finally {
 			// Report
-			log.info("AWS RDS OnDemand/Reserved import finished for region {} : {} instance, {} price types, {} prices",
+			log.info("AWS RDS OnDemand/Reserved import finished for region {} : {} instance, {} price types",
 					region.getName(), context.getInstanceTypes().size(), context.getPriceTerms().size());
 		}
 	}
 
 	/**
-	 * Install the install the instance type (if needed), the instance price type (if needed) and the price.
+	 * Install the install the database type (if needed), the instance price type (if needed) and the price.
 	 *
 	 * @param context
 	 *            The update context.
@@ -118,6 +126,11 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 	 *            The current region.
 	 */
 	private void installRds(final UpdateContext context, final AwsRdsPrice csv, final ProvLocation region) {
+		// Filter type
+		if (csv.getInstanceType() != null && !isEnabledDatabase(context, csv.getInstanceType())) {
+			return;
+		}
+
 		// Up-front, partial or not
 		if (UPFRONT_MODE.matcher(StringUtils.defaultString(csv.getPurchaseOption())).find()) {
 			// Up-front ALL/PARTIAL
@@ -142,7 +155,7 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 			});
 		} else {
 			// Database storage
-			final ProvStorageType type = installRdsStorageTypeAsNeeded(context, csv);
+			final ProvStorageType type = installStorageTypeAsNeeded(context, csv);
 			final ProvStoragePrice price = context.getPreviousStorage().computeIfAbsent(csv.getSku(), s -> {
 				final ProvStoragePrice p = new ProvStoragePrice();
 				p.setType(type);
@@ -159,7 +172,7 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 	/**
 	 * Install the RDS storage type as needed, and return it.
 	 */
-	private final ProvStorageType installRdsStorageTypeAsNeeded(final UpdateContext context, final AwsRdsPrice csv) {
+	private final ProvStorageType installStorageTypeAsNeeded(final UpdateContext context, final AwsRdsPrice csv) {
 		// RDS Storage type is composition of
 		final String name;
 		final String engine;

@@ -180,47 +180,6 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	}
 
 	/**
-	 * Install the install the instance type (if needed), the instance price type (if needed) and the price.
-	 *
-	 * @param context
-	 *            The update context.
-	 * @param csv
-	 *            The current CSV entry.
-	 * @param region
-	 *            The current region.
-	 */
-	private void installEc2(final UpdateContext context, final AwsEc2Price csv, final ProvLocation region) {
-		// Filter OS and type
-		if (!isEnabledType(context, csv.getInstanceType()) || !isEnabledOs(context, csv.getOs())) {
-			return;
-		}
-
-		// Up-front, partial or not
-		if (UPFRONT_MODE.matcher(StringUtils.defaultString(csv.getPurchaseOption())).find()) {
-			// Up-front ALL/PARTIAL
-			final Map<String, AwsEc2Price> partialCost = context.getPartialCost();
-			final String code = csv.getSku() + csv.getOfferTermCode() + region.getName();
-			if (partialCost.containsKey(code)) {
-				handleUpfront(newEc2Price(context, csv, region), csv, partialCost.get(code), ipRepository);
-
-				// The price is completed, cleanup
-				partialCost.remove(code);
-			} else {
-				// First time, save this entry for a future completion
-				partialCost.put(code, csv);
-			}
-		} else {
-			// No up-front, cost is fixed
-			final ProvInstancePrice price = newEc2Price(context, csv, region);
-			final double cost = csv.getPricePerUnit() * HOUR_TO_MONTH;
-			saveAsNeeded(price, round3Decimals(cost), p -> {
-				p.setCostPeriod(round3Decimals(cost * p.getTerm().getPeriod()));
-				ipRepository.save(p);
-			});
-		}
-	}
-
-	/**
 	 * Download and install EC2 prices from AWS server.
 	 *
 	 * @param context
@@ -259,6 +218,47 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 			// Report
 			log.info("AWS EC2 OnDemand/Reserved import finished for region {} : {} instance, {} price types",
 					region.getName(), context.getInstanceTypes().size(), context.getPriceTerms().size());
+		}
+	}
+
+	/**
+	 * Install the install the instance type (if needed), the instance price type (if needed) and the price.
+	 *
+	 * @param context
+	 *            The update context.
+	 * @param csv
+	 *            The current CSV entry.
+	 * @param region
+	 *            The current region.
+	 */
+	private void installEc2(final UpdateContext context, final AwsEc2Price csv, final ProvLocation region) {
+		// Filter OS and type
+		if (!isEnabledType(context, csv.getInstanceType()) || !isEnabledOs(context, csv.getOs())) {
+			return;
+		}
+
+		// Up-front, partial or not
+		if (UPFRONT_MODE.matcher(StringUtils.defaultString(csv.getPurchaseOption())).find()) {
+			// Up-front ALL/PARTIAL
+			final Map<String, AwsEc2Price> partialCost = context.getPartialCost();
+			final String code = csv.getSku() + csv.getOfferTermCode() + region.getName();
+			if (partialCost.containsKey(code)) {
+				handleUpfront(newEc2Price(context, csv, region), csv, partialCost.get(code), ipRepository);
+
+				// The price is completed, cleanup
+				partialCost.remove(code);
+			} else {
+				// First time, save this entry for a future completion
+				partialCost.put(code, csv);
+			}
+		} else {
+			// No up-front, cost is fixed
+			final ProvInstancePrice price = newEc2Price(context, csv, region);
+			final double cost = csv.getPricePerUnit() * HOUR_TO_MONTH;
+			saveAsNeeded(price, round3Decimals(cost), p -> {
+				p.setCostPeriod(round3Decimals(cost * p.getTerm().getPeriod()));
+				ipRepository.save(p);
+			});
 		}
 	}
 

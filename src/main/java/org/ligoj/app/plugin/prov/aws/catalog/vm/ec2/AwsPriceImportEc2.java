@@ -137,7 +137,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 
 					// Update the price as needed
 					final double cost = Double.parseDouble(op.getPrices().get("USD"));
-					saveAsNeeded(price, round3Decimals(cost * HOUR_TO_MONTH), p -> {
+					saveAsNeeded(price, round3Decimals(cost * context.getHoursMonth()), p -> {
 						p.setCostPeriod(cost);
 						ipRepository.save(p);
 					});
@@ -243,7 +243,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 			final Map<String, AwsEc2Price> partialCost = context.getPartialCost();
 			final String code = csv.getSku() + csv.getOfferTermCode() + region.getName();
 			if (partialCost.containsKey(code)) {
-				handleUpfront(newEc2Price(context, csv, region), csv, partialCost.get(code), ipRepository);
+				handleUpfront(context, newEc2Price(context, csv, region), csv, partialCost.get(code), ipRepository);
 
 				// The price is completed, cleanup
 				partialCost.remove(code);
@@ -254,7 +254,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 		} else {
 			// No up-front, cost is fixed
 			final ProvInstancePrice price = newEc2Price(context, csv, region);
-			final double cost = csv.getPricePerUnit() * HOUR_TO_MONTH;
+			final double cost = csv.getPricePerUnit() * context.getHoursMonth();
 			saveAsNeeded(price, round3Decimals(cost), p -> {
 				p.setCostPeriod(round3Decimals(cost * p.getTerm().getPeriod()));
 				ipRepository.save(p);

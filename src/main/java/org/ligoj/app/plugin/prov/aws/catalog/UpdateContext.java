@@ -40,5 +40,4 @@ public class UpdateContext extends AbstractUpdateContext {
 	@Getter
 	@Setter
 	private Map<String, AwsRdsPrice> partialCostRds;
-
 }

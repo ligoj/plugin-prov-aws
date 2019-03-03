@@ -56,8 +56,7 @@ public class AwsPriceImport extends AbstractImportCatalogResource {
 	 *             When CSV or XML files cannot be read.
 	 */
 	public void install() throws IOException, URISyntaxException {
-		final UpdateContext context = new UpdateContext();
-		context.setNode(nodeRepository.findOneExpected(ProvAwsPluginResource.KEY));
+		final UpdateContext context = initContext(new UpdateContext(), ProvAwsPluginResource.KEY);
 
 		base.install(context);
 		ebs.install(context);

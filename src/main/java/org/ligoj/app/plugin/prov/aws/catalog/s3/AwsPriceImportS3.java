@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -56,7 +55,6 @@ public class AwsPriceImportS3 extends AbstractAwsImport implements ImportCatalog
 		context.setPreviousStorage(previous);
 		context.setStorageTypes(previous.values().stream().map(ProvStoragePrice::getType).distinct()
 				.collect(Collectors.toMap(ProvStorageType::getName, Function.identity())));
-		context.setStorageTypesMerged(new HashMap<>());
 
 		int priceCounter = 0;
 		// Get the remote prices stream

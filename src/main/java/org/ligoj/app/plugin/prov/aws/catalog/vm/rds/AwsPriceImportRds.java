@@ -137,7 +137,7 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 			final Map<String, AwsRdsPrice> partialCost = context.getPartialCostRds();
 			final String code = csv.getSku() + csv.getOfferTermCode() + region.getName();
 			if (partialCost.containsKey(code)) {
-				handleUpfront(newRdsPrice(context, csv, region), csv, partialCost.get(code), dpRepository);
+				handleUpfront(context, newRdsPrice(context, csv, region), csv, partialCost.get(code), dpRepository);
 
 				// The price is completed, cleanup
 				partialCost.remove(code);
@@ -148,14 +148,14 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 		} else if ("Database Instance".equals(csv.getFamily())) {
 			// No up-front, cost is fixed
 			final ProvDatabasePrice price = newRdsPrice(context, csv, region);
-			final double cost = csv.getPricePerUnit() * HOUR_TO_MONTH;
+			final double cost = csv.getPricePerUnit() * context.getHoursMonth();
 			saveAsNeeded(price, round3Decimals(cost), p -> {
 				p.setCostPeriod(round3Decimals(cost * p.getTerm().getPeriod()));
 				dpRepository.save(p);
 			});
 		} else {
 			// Database storage
-			final ProvStorageType type = installStorageTypeAsNeeded(context, csv);
+			final ProvStorageType type = installStorageType(context, csv);
 			final ProvStoragePrice price = context.getPreviousStorage().computeIfAbsent(csv.getSku(), s -> {
 				final ProvStoragePrice p = new ProvStoragePrice();
 				p.setType(type);
@@ -172,43 +172,49 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 	/**
 	 * Install the RDS storage type as needed, and return it.
 	 */
-	private final ProvStorageType installStorageTypeAsNeeded(final UpdateContext context, final AwsRdsPrice csv) {
+	private final ProvStorageType installStorageType(final UpdateContext context, final AwsRdsPrice csv) {
 		// RDS Storage type is composition of
 		final String name;
 		final String engine;
 		if ("General Purpose-Aurora".equals(csv.getVolume())) {
 			if ("Aurora PostgreSQL".equals(csv.getEngine())) {
-				name = "gp-aurora-postgresql";
+				name = "rds-gp-aurora-postgresql";
 				engine = "Aurora PostgreSQL";
 			} else {
-				name = "gp-aurora-mysql";
+				name = "rds-gp-aurora-mysql";
 				engine = "Aurora MySQL";
 			}
 		} else {
 			engine = null;
 			if ("General Purpose".equals(csv.getVolume())) {
-				name = "gp-rds";
+				name = "rds-gp";
 			} else if ("Provisioned IOPS".equals(csv.getVolume())) {
-				name = "io-rds";
+				name = "rds-io";
 			} else {
-				name = "magnetic-rds";
+				name = "rds-magnetic";
 			}
 		}
 
-		return context.getStorageTypes().computeIfAbsent(name, n -> {
-			final ProvStorageType entity = new ProvStorageType();
+		// Create as needed
+		final ProvStorageType type = context.getStorageTypes().computeIfAbsent(name, n -> {
+			final ProvStorageType newType = new ProvStorageType();
+			newType.setNode(context.getNode());
+			newType.setName(n);
+			return newType;
+		});
+
+		// Merge the updated statistics
+		return context.getStorageTypesMerged().computeIfAbsent(name, n -> {
 			final boolean ssd = "SSD".equals(csv.getStorage());
-			entity.setNode(context.getNode());
-			entity.setName(n);
-			entity.setDescription(csv.getVolume());
-			entity.setMinimal(toInteger(csv.getSizeMin()));
-			entity.setMaximal(toInteger(csv.getSizeMax()));
-			entity.setEngine(engine == null ? null : engine.toUpperCase(Locale.ENGLISH));
-			entity.setDatabaseCompatible(true);
-			entity.setOptimized(ssd ? ProvStorageOptimized.IOPS : null);
-			entity.setLatency(ssd ? Rate.BEST : Rate.MEDIUM);
-			stRepository.save(entity);
-			return entity;
+			type.setDescription(csv.getVolume());
+			type.setMinimal(toInteger(csv.getSizeMin()));
+			type.setMaximal(toInteger(csv.getSizeMax()));
+			type.setEngine(engine == null ? null : engine.toUpperCase(Locale.ENGLISH));
+			type.setDatabaseType("%");
+			type.setOptimized(ssd ? ProvStorageOptimized.IOPS : null);
+			type.setLatency(ssd ? Rate.BEST : Rate.MEDIUM);
+			stRepository.save(type);
+			return type;
 		});
 	}
 

@@ -55,6 +55,8 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	/**
 	 * Handle partial upfront prices split into multiple price entries.
 	 *
+	 * @param context
+	 *            The current context to handle lazy sub-entities creation.
 	 * @param price
 	 *            The current price entity.
 	 * @param csv
@@ -65,7 +67,8 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	 *            The repository managing the price entity.
 	 */
 	protected <T extends AbstractInstanceType, P extends AbstractTermPrice<T>, C extends AbstractAwsEc2Price> void handleUpfront(
-			final P price, final C csv, final C other, final BaseProvTermPriceRepository<T, P> repository) {
+			final UpdateContext context, final P price, final C csv, final C other,
+			final BaseProvTermPriceRepository<T, P> repository) {
 		final AbstractAwsEc2Price quantity;
 		final AbstractAwsEc2Price hourly;
 		if (csv.getPriceUnit().equals("Quantity")) {
@@ -78,11 +81,11 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 
 		// Round the computed hourly cost and save as needed
 		final double initCost = quantity.getPricePerUnit() / price.getTerm().getPeriod();
-		final double cost = hourly.getPricePerUnit() * HOUR_TO_MONTH + initCost;
+		final double cost = hourly.getPricePerUnit() * context.getHoursMonth() + initCost;
 		saveAsNeeded(price, round3Decimals(cost), p -> {
 			p.setInitialCost(quantity.getPricePerUnit());
 			p.setCostPeriod(round3Decimals(
-					p.getInitialCost() + hourly.getPricePerUnit() * p.getTerm().getPeriod() * HOUR_TO_MONTH));
+					p.getInitialCost() + hourly.getPricePerUnit() * p.getTerm().getPeriod() * context.getHoursMonth()));
 			repository.save(p);
 		});
 	}
@@ -279,8 +282,7 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 		log.info("AWS {} prices...", api);
 		try (CurlProcessor curl = new CurlProcessor()) {
 			// Get the remote prices stream
-			final String rawJson = StringUtils.defaultString(curl.get(endpoint),
-					"callback({\"config\":{\"regions\":[]}});");
+			final String rawJson = StringUtils.defaultString(curl.get(endpoint), "any({\"config\":{\"regions\":[]}});");
 
 			// All regions are considered
 			final int configIndex = rawJson.indexOf('{');

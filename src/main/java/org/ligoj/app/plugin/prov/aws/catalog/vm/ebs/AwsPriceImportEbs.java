@@ -42,7 +42,9 @@ public class AwsPriceImportEbs extends AbstractAwsPriceImportVm {
 		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("ebs"));
 		// The previously installed storage types cache. Key is the storage name
 		final Node node = context.getNode();
-		context.setStorageTypes(installStorageTypes(context));
+		context.setStorageTypes(stRepository.findAllBy(BY_NODE, context.getNode()).stream()
+				.collect(Collectors.toMap(INamableBean::getName, Function.identity())));
+		installStorageTypes(context);
 		context.getMapSpotToNewRegion().putAll(toMap("spot-to-new-region.json", MAP_STR));
 
 		// Install EBS prices
@@ -58,28 +60,31 @@ public class AwsPriceImportEbs extends AbstractAwsPriceImportVm {
 				});
 	}
 
-	private Map<String, ProvStorageType> installStorageTypes(final UpdateContext context) throws IOException {
-		final Map<String, ProvStorageType> previous = stRepository.findAllBy(BY_NODE, context.getNode()).stream()
-				.collect(Collectors.toMap(INamableBean::getName, Function.identity()));
+	private void installStorageTypes(final UpdateContext context) throws IOException {
 		csvForBean.toBean(ProvStorageType.class, "csv/aws-prov-storage-type.csv").forEach(t -> {
-			final ProvStorageType entity = previous.computeIfAbsent(t.getName(), n -> {
-				t.setNode(context.getNode());
-				return t;
+			final ProvStorageType entity = context.getStorageTypes().computeIfAbsent(t.getName(), n -> {
+				final ProvStorageType newType = new ProvStorageType();
+				newType.setNode(context.getNode());
+				newType.setName(n);
+				return newType;
 			});
 
 			// Merge the storage type details
 			entity.setDescription(t.getDescription());
-			entity.setInstanceCompatible(t.isInstanceCompatible());
+			entity.setInstanceType(t.getInstanceType());
+			entity.setDatabaseType(t.getDatabaseType());
 			entity.setIops(t.getIops());
 			entity.setLatency(t.getLatency());
 			entity.setMaximal(t.getMaximal());
 			entity.setMinimal(t.getMinimal());
 			entity.setOptimized(t.getOptimized());
 			entity.setThroughput(t.getThroughput());
+			entity.setAvailability(t.getAvailability());
+			entity.setDurability9(t.getDurability9());
+			entity.setEngine(t.getEngine());
+			entity.setIncrement(t.getIncrement());
 			stRepository.save(entity);
-
 		});
-		return previous;
 	}
 
 	/**

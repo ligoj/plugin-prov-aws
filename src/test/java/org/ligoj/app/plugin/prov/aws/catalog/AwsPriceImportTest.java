@@ -53,8 +53,10 @@ import org.ligoj.app.plugin.prov.catalog.ImportCatalogResource;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceRepository;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceTermRepository;
 import org.ligoj.app.plugin.prov.dao.ProvInstanceTypeRepository;
+import org.ligoj.app.plugin.prov.dao.ProvQuoteDatabaseRepository;
 import org.ligoj.app.plugin.prov.dao.ProvQuoteInstanceRepository;
 import org.ligoj.app.plugin.prov.dao.ProvQuoteRepository;
+import org.ligoj.app.plugin.prov.dao.ProvQuoteStorageRepository;
 import org.ligoj.app.plugin.prov.model.ImportCatalogStatus;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
@@ -70,6 +72,7 @@ import org.ligoj.app.plugin.prov.model.ProvUsage;
 import org.ligoj.app.plugin.prov.model.Rate;
 import org.ligoj.app.plugin.prov.model.VmOs;
 import org.ligoj.app.plugin.prov.quote.database.ProvQuoteDatabaseResource;
+import org.ligoj.app.plugin.prov.quote.database.QuoteDatabaseEditionVo;
 import org.ligoj.app.plugin.prov.quote.database.QuoteDatabaseLookup;
 import org.ligoj.app.plugin.prov.quote.database.QuoteDatabaseQuery;
 import org.ligoj.app.plugin.prov.quote.instance.ProvQuoteInstanceResource;
@@ -121,6 +124,12 @@ public class AwsPriceImportTest extends AbstractServerTest {
 
 	@Autowired
 	private ProvQuoteInstanceRepository qiRepository;
+
+	@Autowired
+	private ProvQuoteDatabaseRepository qbRepository;
+
+	@Autowired
+	private ProvQuoteStorageRepository qsRepository;
 
 	@Autowired
 	private ProvQuoteRepository repository;
@@ -243,14 +252,14 @@ public class AwsPriceImportTest extends AbstractServerTest {
 		final QuoteVo quote = installAndConfigure();
 
 		// Check the whole quote
-		final ProvQuoteInstance instance = check(quote, 47.557d, 46.667d);
+		final ProvQuoteInstance instance = check(quote, 449.057d, 46.667d);
 
 		// Check the spot
 		final QuoteInstanceLookup spotPrice = qiResource.lookup(instance.getConfiguration().getSubscription().getId(),
 				builder().cpu(2).ram(1741).constant(true).ephemeral(true).build());
-		Assertions.assertEquals(12.664, spotPrice.getCost(), DELTA);
-		Assertions.assertEquals(12.664d, spotPrice.getPrice().getCost(), 0.0001);
-		Assertions.assertEquals(0.0173d, spotPrice.getPrice().getCostPeriod(), 0.0001);
+		Assertions.assertEquals(12.629, spotPrice.getCost(), DELTA);
+		Assertions.assertEquals(12.629d, spotPrice.getPrice().getCost(), DELTA);
+		Assertions.assertEquals(0.0173d, spotPrice.getPrice().getCostPeriod(), DELTA);
 		Assertions.assertEquals("Spot", spotPrice.getPrice().getTerm().getName());
 		Assertions.assertTrue(spotPrice.getPrice().getTerm().isEphemeral());
 		Assertions.assertEquals("r4.large", spotPrice.getPrice().getType().getName());
@@ -264,7 +273,7 @@ public class AwsPriceImportTest extends AbstractServerTest {
 		resetImportTask();
 		resource.install();
 		provResource.updateCost(subscription);
-		check(provResource.getConfiguration(subscription), 47.557d, 46.667d);
+		check(provResource.getConfiguration(subscription), 449.057d, 46.667d);
 		checkImportStatus();
 
 		// Now, change a price within the remote catalog
@@ -290,7 +299,7 @@ public class AwsPriceImportTest extends AbstractServerTest {
 
 		// Check the new price
 		final QuoteVo newQuote = provResource.getConfiguration(subscription);
-		Assertions.assertEquals(47.44d, newQuote.getCost().getMin(), DELTA);
+		Assertions.assertEquals(448.94d, newQuote.getCost().getMin(), DELTA);
 
 		// Storage price is updated
 		final ProvQuoteStorage storage = newQuote.getStorages().get(0);
@@ -647,6 +656,7 @@ public class AwsPriceImportTest extends AbstractServerTest {
 		final UpdatedCost createStorage = qsResource.create(svo);
 		Assertions.assertTrue(createStorage.getCost().getMin() >= 0.5);
 		Assertions.assertTrue(createStorage.getTotal().getMin() > 40);
+		Assertions.assertEquals("gp2", qsRepository.findOne(createStorage.getId()).getPrice().getType().getName());
 
 		// Add storage (EFS) to this quote
 		final QuoteStorageLookup efsLookpup = qsResource.lookup(subscription,
@@ -660,6 +670,7 @@ public class AwsPriceImportTest extends AbstractServerTest {
 		svo2.setSubscription(subscription);
 		final UpdatedCost createEfs = qsResource.create(svo2);
 		Assertions.assertEquals(0.33, createEfs.getCost().getMin(), DELTA);
+		Assertions.assertEquals("efs", qsRepository.findOne(createEfs.getId()).getPrice().getType().getName());
 
 		// Add storage (S3) to this quote
 		final QuoteStorageLookup s3Lookpup = qsResource.lookup(subscription,
@@ -677,10 +688,11 @@ public class AwsPriceImportTest extends AbstractServerTest {
 		svo3.setSubscription(subscription);
 		final UpdatedCost createS3 = qsResource.create(svo3);
 		Assertions.assertEquals(0.01, createS3.getCost().getMin(), DELTA);
+		Assertions.assertEquals("s3-z-ia", qsRepository.findOne(createS3.getId()).getPrice().getType().getName());
 
 		// Request a database
 		final QuoteDatabaseLookup blookup1 = qbResource.lookup(subscription,
-				QuoteDatabaseQuery.builder().cpu(2).ram(1741).type("db.t2.xlarge").engine("MYSQL").build());
+				QuoteDatabaseQuery.builder().cpu(4).ram(1741).constant(false).engine("MYSQL").build());
 		Assertions.assertFalse(blookup1.getPrice().getType().getConstant().booleanValue());
 		Assertions.assertNull(blookup1.getPrice().getLicense());
 		Assertions.assertEquals("MYSQL", blookup1.getPrice().getEngine());
@@ -688,6 +700,17 @@ public class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertNull(blookup1.getPrice().getStorageEngine());
 		Assertions.assertNull(blookup1.getPrice().getInitialCost());
 		Assertions.assertEquals("OnDemand", blookup1.getPrice().getTerm().getName());
+
+		final QuoteDatabaseEditionVo qb1 = new QuoteDatabaseEditionVo();
+		qb1.setCpu(4);
+		qb1.setRam(1741);
+		qb1.setConstant(false);
+		qb1.setEngine("MYSQL");
+		qb1.setSubscription(subscription);
+		qb1.setPrice(blookup1.getPrice().getId());
+		qb1.setName("database1");
+		final UpdatedCost createDb = qbResource.create(qb1);
+		Assertions.assertEquals("db.t2.xlarge", qbRepository.findOne(createDb.getId()).getPrice().getType().getName());
 
 		final QuoteDatabaseLookup blookup2 = qbResource.lookup(subscription, QuoteDatabaseQuery.builder().cpu(2)
 				.ram(1741).type("db.r5.large").license("BYOL").engine("ORACLE").edition("ENTERPRISE").build());
@@ -697,6 +720,19 @@ public class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("ENTERPRISE", blookup2.getPrice().getEdition());
 		Assertions.assertNull(blookup2.getPrice().getStorageEngine());
 		Assertions.assertNull(blookup2.getPrice().getInitialCost());
+
+		final QuoteDatabaseEditionVo qb2 = new QuoteDatabaseEditionVo();
+		qb2.setCpu(2);
+		qb2.setRam(1741);
+		qb2.setEngine("ORACLE");
+		qb2.setEdition("ENTERPRISE");
+		qb2.setLicense("BYOL");
+		qb2.setType("db.r5.large");
+		qb2.setSubscription(subscription);
+		qb2.setPrice(blookup2.getPrice().getId());
+		qb2.setName("database2");
+		final UpdatedCost createDb2 = qbResource.create(qb2);
+		Assertions.assertEquals("db.r5.large", qbRepository.findOne(createDb2.getId()).getPrice().getType().getName());
 
 		return provResource.getConfiguration(subscription);
 	}

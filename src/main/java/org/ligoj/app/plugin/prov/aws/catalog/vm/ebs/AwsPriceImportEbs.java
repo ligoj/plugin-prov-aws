@@ -82,7 +82,6 @@ public class AwsPriceImportEbs extends AbstractAwsPriceImportVm {
 			entity.setAvailability(t.getAvailability());
 			entity.setDurability9(t.getDurability9());
 			entity.setEngine(t.getEngine());
-			entity.setIncrement(t.getIncrement());
 			stRepository.save(entity);
 		});
 	}

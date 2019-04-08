@@ -49,7 +49,7 @@ public abstract class AbstractAwsCsvReader<T> extends CsvBeanReader<T> {
 			return null;
 		}
 		if (isValidRaw(rawValues)) {
-			return build(rawValues);
+			return build(rawValues, null);
 		}
 
 		// Skip this entry

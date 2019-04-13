@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/ligoj/plugin-prov-aws.svg?branch=master)](https://travis-ci.org/ligoj/plugin-prov-aws)
 [![Build Status](https://circleci.com/gh/ligoj/plugin-prov-aws.svg?style=svg)](https://circleci.com/gh/ligoj/plugin-prov-aws)
 [![Build Status](https://semaphoreci.com/api/v1/ligoj/plugin-prov-aws/branches/master/shields_badge.svg)](https://semaphoreci.com/ligoj/plugin-prov-aws)
-[![Build Status](https://ci.appveyor.com/api/projects/status/5926fmf0p5qp9j16/branch/master?svg=true)](https://ci.appveyor.com/project/ligoj/plugin-prov-aws/branch/master)
+[![Build Status](https://ci.appveyor.com/api/projects/status/ef23b7hg5d3i4l7t/branch/master?svg=true)](https://ci.appveyor.com/project/ligoj/plugin-prov-aws/branch/master)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=org.ligoj.plugin%3Aplugin-prov-aws&metric=coverage)](https://sonarcloud.io/dashboard?id=org.ligoj.plugin%3Aplugin-prov-aws)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?metric=alert_status&project=org.ligoj.plugin:plugin-prov-aws)](https://sonarcloud.io/dashboard/index/org.ligoj.plugin:plugin-prov-aws)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/7972cb9a10d54d119b8c434fef8d4013)](https://www.codacy.com/app/ligoj/plugin-prov-aws?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ligoj/plugin-prov-aws&amp;utm_campaign=Badge_Grade)

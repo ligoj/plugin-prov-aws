@@ -49,6 +49,11 @@ import org.springframework.stereotype.Service;
 public class ProvAwsTerraformService {
 
 	/**
+	 * Dashboard placement.
+	 */
+	private static final String RIGHT = "right";
+
+	/**
 	 * Default Root device name.
 	 */
 	private static final String DEFAULT_ROOT_DEVICE = "/dev/sda1";
@@ -127,10 +132,8 @@ public class ProvAwsTerraformService {
 	 * <li><code>./$my-region/ami-$os.tf</code> for enabled OS in this region.</li>
 	 * </ul>
 	 *
-	 * @param context
-	 *            The Terraform context holding the subscription, the quote and the user inputs.
-	 * @throws IOException
-	 *             When Terraform content cannot be written.
+	 * @param context The Terraform context holding the subscription, the quote and the user inputs.
+	 * @throws IOException When Terraform content cannot be written.
 	 */
 	public void write(final Context context) throws IOException {
 		writeStatics(context);
@@ -257,29 +260,29 @@ public class ProvAwsTerraformService {
 	private String getDashboardNetwork(final Context context) throws IOException {
 		final String format = toString("my-region/dashboard-widgets-line.json");
 		return newMetric(context, format, CLOUD_WATCH_ELB, "LoadBalancer", "${alb{{i}}}",
-				new String[][] { new String[] { "ProcessedBytes", "-", "-", "${alb{{i}}_name}" }});
+				new String[][] { { "ProcessedBytes", "-", "-", "${alb{{i}}_name}" } });
 	}
 
 	private String getDashboardLatency(final Context context) throws IOException {
 		final String format = toString("my-region/dashboard-widgets-line.json");
 		return newMetric(context, format, CLOUD_WATCH_ELB, "LoadBalancer", "${alb{{i}}}",
-				new String[][] { new String[] { "TargetResponseTime", "-", "-", "${alb{{i}}_name}" }});
+				new String[][] { { "TargetResponseTime", "-", "-", "${alb{{i}}_name}" } });
 	}
 
 	private String getDashboardScaling(final Context context) throws IOException {
 		final String format = toString("my-region/dashboard-widgets-area.json");
 		return newMetric(context, format, "AWS/AutoScaling", "AutoScalingGroupName", "${asg{{i}}}",
-				new String[][] { new String[] { "GroupInServiceInstances", "2ca02c", "left", "${asg{{i}}_name}" },
-						new String[] { "GroupPendingInstances", "ff7f0e", "right", "Pending ${asg{{i}}_name}" },
-						new String[] { "GroupTerminatingInstances", "d62728", "right", "Term. ${asg{{i}}_name}" } });
+				new String[][] { { "GroupInServiceInstances", "2ca02c", "left", "${asg{{i}}_name}" },
+						{ "GroupPendingInstances", "ff7f0e", RIGHT, "Pending ${asg{{i}}_name}" },
+						{ "GroupTerminatingInstances", "d62728", RIGHT, "Term. ${asg{{i}}_name}" } });
 	}
 
 	private String getDashboardBalancing(final Context context) throws IOException {
 		final String format = toString("my-region/dashboard-widgets-area.json");
 		return newMetric(context, format, CLOUD_WATCH_ELB, "TargetGroup",
 				"${alb{{i}}_tg}\", \"LoadBalancer\", \"${alb{{i}}}\"",
-				new String[][] { new String[] { "HealthyHostCount", "2ca02c", "left", "OK ${alb{{i}}_name}" },
-						new String[] { "UnHealthyHostCount", "d62728", "right", "KO ${alb{{i}}_name}" } });
+				new String[][] { { "HealthyHostCount", "2ca02c", "left", "OK ${alb{{i}}_name}" },
+						{ "UnHealthyHostCount", "d62728", RIGHT, "KO ${alb{{i}}_name}" } });
 	}
 
 	private String newMetric(final Context context, final String format, final String service, final String idProperty,
@@ -408,10 +411,8 @@ public class ProvAwsTerraformService {
 	/**
 	 * Write the secrets required by the provider.
 	 *
-	 * @param subscription
-	 *            The subscription identifier.
-	 * @throws IOException
-	 *             When secret cannot be written.
+	 * @param subscription The subscription identifier.
+	 * @throws IOException When secret cannot be written.
 	 */
 	public void writeSecrets(final Subscription subscription) throws IOException {
 		try (final Writer out = new FileWriterWithEncoding(utils.toFile(subscription, "secrets.auto.tfvars"),

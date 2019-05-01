@@ -106,17 +106,13 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	/**
 	 * EC2 spot installer. Install the instance type (if needed), the instance price type (if needed) and the price.
 	 *
-	 * @param context
-	 *            The update context.
-	 * @param json
-	 *            The current JSON entry.
-	 * @param spotPriceType
-	 *            The related AWS Spot instance price type.
-	 * @param region
-	 *            The target region.
+	 * @param context       The update context.
+	 * @param json          The current JSON entry.
+	 * @param spotPriceType The related AWS Spot instance price type.
+	 * @param region        The target region.
 	 */
 	private void installSpotPrices(final UpdateContext context, final AwsEc2SpotPrice json,
-			final ProvInstancePriceTerm spotPriceType, final ProvLocation region) {
+			final ProvInstancePriceTerm spotPriceType, final ProvLocation region, final UpdateContext localContext) {
 		json.getOsPrices().stream().filter(op -> !StringUtils.startsWithIgnoreCase(op.getPrices().get("USD"), "N/A"))
 				.peek(op -> op.setOs(op.getName().equals("mswin") ? VmOs.WINDOWS : VmOs.LINUX))
 				.filter(op -> isEnabledOs(context, op.getOs())).forEach(op -> {
@@ -124,7 +120,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 
 					// Build the key for this spot
 					final String code = "spot-" + region.getName() + "-" + type.getName() + "-" + op.getOs();
-					final ProvInstancePrice price = context.getPrevious().computeIfAbsent(code, c -> {
+					final ProvInstancePrice price = localContext.getPrevious().computeIfAbsent(code, c -> {
 						final ProvInstancePrice p = new ProvInstancePrice();
 						p.setCode(c);
 						p.setType(type);
@@ -148,24 +144,26 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 			throws IOException {
 		// The previously installed instance types cache. Key is the instance name
 		context.setInstanceTypes(itRepository.findAllBy(BY_NODE, node).stream()
-				.collect(Collectors.toMap(ProvInstanceType::getName, Function.identity())));
+				.collect(Collectors.toConcurrentMap(ProvInstanceType::getName, Function.identity())));
 
 		// Install the EC2 (non spot) prices
-		context.getRegions().values().forEach(region -> {
-			nextStep(node, region.getName(), 1);
+		context.getRegions().values().parallelStream().forEach(region -> {
 			// Get previous prices for this location
-			context.setPrevious(ipRepository.findAll(node.getId(), region.getName()).stream()
+			nextStep(node, region.getName(), 0);
+			final var localContext = new UpdateContext();
+			localContext.setPrevious(ipRepository.findAll(node.getId(), region.getName()).stream()
 					.collect(Collectors.toMap(ProvInstancePrice::getCode, Function.identity())));
-			installEC2Prices(context, region);
+			installEC2Prices(context, region, localContext);
+			nextStep(node, region.getName(), 1);
 		});
-		context.getPrevious().clear();
 
 		// Install the SPOT EC2 prices
 		installJsonPrices(context, "ec2-spot", configuration.get(CONF_URL_EC2_PRICES_SPOT, EC2_PRICES_SPOT),
 				SpotPrices.class, (r, region) -> {
 					nextStep(node, region.getName(), 1);
 					// Get previous prices for this location
-					context.setPrevious(ipRepository.findAll(node.getId(), region.getName()).stream()
+					final var localContext = new UpdateContext();
+					localContext.setPrevious(ipRepository.findAll(node.getId(), region.getName()).stream()
 							.collect(Collectors.toMap(ProvInstancePrice::getCode, Function.identity())));
 					r.getInstanceTypes().stream().flatMap(t -> t.getSizes().stream()).filter(t -> {
 						final boolean availability = context.getInstanceTypes().containsKey(t.getName());
@@ -174,7 +172,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 							log.warn("Instance {} is referenced from spot but not available", t.getName());
 						}
 						return availability;
-					}).forEach(j -> installSpotPrices(context, j, spotPriceType, region));
+					}).forEach(j -> installSpotPrices(context, j, spotPriceType, region, localContext));
 				});
 		context.getInstanceTypes().clear();
 	}
@@ -182,14 +180,13 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	/**
 	 * Download and install EC2 prices from AWS server.
 	 *
-	 * @param context
-	 *            The update context.
-	 * @param region
-	 *            The region to fetch.
+	 * @param context The update context.
+	 * @param region  The region to fetch.
 	 */
-	private void installEC2Prices(final UpdateContext context, final ProvLocation region) {
+	private void installEC2Prices(final UpdateContext context, final ProvLocation region,
+			final UpdateContext localContext) {
 		// Track the created instance to cache partial costs
-		context.setPartialCost(new HashMap<>());
+		localContext.setPartialCost(new HashMap<>());
 		final String endpoint = configuration.get(CONF_URL_EC2_PRICES, EC2_PRICES).replace("%s", region.getName());
 		log.info("AWS EC2 OnDemand/Reserved import started for region {}@{} ...", region, endpoint);
 
@@ -206,7 +203,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 				region.setDescription(csv.getLocation());
 
 				// Persist this price
-				installEc2(context, csv, region);
+				installEc2(context, csv, region, localContext);
 
 				// Read the next one
 				csv = csvReader.read();
@@ -224,14 +221,12 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	/**
 	 * Install the install the instance type (if needed), the instance price type (if needed) and the price.
 	 *
-	 * @param context
-	 *            The update context.
-	 * @param csv
-	 *            The current CSV entry.
-	 * @param region
-	 *            The current region.
+	 * @param context The update context.
+	 * @param csv     The current CSV entry.
+	 * @param region  The current region.
 	 */
-	private void installEc2(final UpdateContext context, final AwsEc2Price csv, final ProvLocation region) {
+	private void installEc2(final UpdateContext context, final AwsEc2Price csv, final ProvLocation region,
+			final UpdateContext localContext) {
 		// Filter OS and type
 		if (!isEnabledType(context, csv.getInstanceType()) || !isEnabledOs(context, csv.getOs())) {
 			return;
@@ -240,10 +235,11 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 		// Up-front, partial or not
 		if (UPFRONT_MODE.matcher(StringUtils.defaultString(csv.getPurchaseOption())).find()) {
 			// Up-front ALL/PARTIAL
-			final Map<String, AwsEc2Price> partialCost = context.getPartialCost();
+			final Map<String, AwsEc2Price> partialCost = localContext.getPartialCost();
 			final String code = csv.getSku() + csv.getOfferTermCode() + region.getName();
 			if (partialCost.containsKey(code)) {
-				handleUpfront(context, newEc2Price(context, csv, region), csv, partialCost.get(code), ipRepository);
+				handleUpfront(context, newEc2Price(context, csv, region, localContext), csv, partialCost.get(code),
+						ipRepository);
 
 				// The price is completed, cleanup
 				partialCost.remove(code);
@@ -253,7 +249,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 			}
 		} else {
 			// No up-front, cost is fixed
-			final ProvInstancePrice price = newEc2Price(context, csv, region);
+			final ProvInstancePrice price = newEc2Price(context, csv, region, localContext);
 			final double cost = csv.getPricePerUnit() * context.getHoursMonth();
 			saveAsNeeded(price, round3Decimals(cost), p -> {
 				p.setCostPeriod(round3Decimals(cost * p.getTerm().getPeriod()));
@@ -265,11 +261,11 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	/**
 	 * Install or update a EC2 price
 	 */
-	private ProvInstancePrice newEc2Price(final UpdateContext context, final AwsEc2Price csv,
-			final ProvLocation region) {
+	private ProvInstancePrice newEc2Price(final UpdateContext context, final AwsEc2Price csv, final ProvLocation region,
+			final UpdateContext localContext) {
 		final ProvInstanceType type = installInstanceType(context, csv, context.getInstanceTypes(),
 				ProvInstanceType::new, itRepository);
-		return context.getPrevious().computeIfAbsent(toCode(csv), c -> {
+		return localContext.getPrevious().computeIfAbsent(toCode(csv), c -> {
 			final ProvInstancePrice p = new ProvInstancePrice();
 			copy(context, csv, region, c, p, type);
 			final String software = ObjectUtils.defaultIfNull(csv.getSoftware(), "");
@@ -283,8 +279,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	/**
 	 * Read the EC2 software name from AWS to standard name.
 	 *
-	 * @throws IOException
-	 *             When the JSON mapping file cannot be read.
+	 * @throws IOException When the JSON mapping file cannot be read.
 	 */
 	@PostConstruct
 	public void initSoftwareNormalize() throws IOException {

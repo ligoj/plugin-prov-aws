@@ -54,17 +54,16 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 
 	/**
 	 * Handle partial upfront prices split into multiple price entries.
+	 * 
+	 * @param <T>        The instance type's type.
+	 * @param <P>        The price's type.
+	 * @param <C>        The JSON price type.
 	 *
-	 * @param context
-	 *            The current context to handle lazy sub-entities creation.
-	 * @param price
-	 *            The current price entity.
-	 * @param csv
-	 *            The current CSV price entry.
-	 * @param other
-	 *            The previous CSV price entry.
-	 * @param repository
-	 *            The repository managing the price entity.
+	 * @param context    The current context to handle lazy sub-entities creation.
+	 * @param price      The current price entity.
+	 * @param csv        The current CSV price entry.
+	 * @param other      The previous CSV price entry.
+	 * @param repository The repository managing the price entity.
 	 */
 	protected <T extends AbstractInstanceType, P extends AbstractTermPrice<T>, C extends AbstractAwsEc2Price> void handleUpfront(
 			final UpdateContext context, final P price, final C csv, final C other,
@@ -92,19 +91,15 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 
 	/**
 	 * Copy a CSN price entry to a price entity.
+	 * 
+	 * @param <T>     The instance type type.
 	 *
-	 * @param context
-	 *            The current context to handle lazy sub-entities creation.
-	 * @param csv
-	 *            The current CSV entry.
-	 * @param region
-	 *            The current region.
-	 * @param code
-	 *            The price code.
-	 * @param p
-	 *            The target price entity.
-	 * @param type
-	 *            The instance type.
+	 * @param context The current context to handle lazy sub-entities creation.
+	 * @param csv     The current CSV entry.
+	 * @param region  The current region.
+	 * @param code    The price code.
+	 * @param p       The target price entity.
+	 * @param type    The instance type.
 	 */
 	protected <T extends AbstractInstanceType> void copy(final UpdateContext context, final AbstractAwsEc2Price csv,
 			final ProvLocation region, final String code, final AbstractTermPrice<T> p, final T type) {
@@ -120,8 +115,7 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	/**
 	 * Build a price code from the CSV entry.
 	 *
-	 * @param csv
-	 *            The current CSV entry.
+	 * @param csv The current CSV entry.
 	 * @return A price code built from the CSV entry.
 	 */
 	protected String toCode(final AbstractAwsEc2Price csv) {
@@ -129,19 +123,20 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	}
 
 	/**
-	 * Install a new EC2/RDS instance type. The previous entries will contains this type at the end of this operation.
+	 * Install a new EC2/RDS instance type. The previous entries will contains this
+	 * type at the end of this operation.
+	 * 
+	 * @param <T>        The instance type type.
 	 *
-	 * @param context
-	 *            The current context to handle lazy sub-entities creation.
-	 * @param csv
-	 *            The current CSV entry.
-	 * @param previous
-	 *            The previous installed types.
-	 * @param newType
-	 *            The constructor to use in case of this type was not already in the previous installed types.
-	 * @param repository
-	 *            The repository handling the instance type entity, and used when a new type need to be created.
-	 * @return Either the previous entity, either a new one. Never <code>null</code>.
+	 * @param context    The current context to handle lazy sub-entities creation.
+	 * @param csv        The current CSV entry.
+	 * @param previous   The previous installed types.
+	 * @param newType    The constructor to use in case of this type was not already
+	 *                   in the previous installed types.
+	 * @param repository The repository handling the instance type entity, and used
+	 *                   when a new type need to be created.
+	 * @return Either the previous entity, either a new one. Never
+	 *         <code>null</code>.
 	 */
 	protected <T extends AbstractInstanceType> T installInstanceType(final UpdateContext context,
 			final AbstractAwsEc2Price csv, final Map<String, T> previous, Supplier<T> newType,
@@ -188,12 +183,11 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	/**
 	 * Return the most precise rate from the AWS instance type definition.
 	 *
-	 * @param type
-	 *            The rating mapping name.
-	 * @param csv
-	 *            The CSV price row.
-	 * @return The direct [class, generation, size] rate association, or the [class, generation] rate association, or
-	 *         the [class] association, of the explicit "default association or {@link Rate#MEDIUM} value.
+	 * @param type The rating mapping name.
+	 * @param csv  The CSV price row.
+	 * @return The direct [class, generation, size] rate association, or the [class,
+	 *         generation] rate association, or the [class] association, of the
+	 *         explicit "default association or {@link Rate#MEDIUM} value.
 	 */
 	private Rate getRate(final String type, final AbstractAwsEc2Price csv) {
 		return getRate(type, csv, csv.getInstanceType());
@@ -202,14 +196,12 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	/**
 	 * Return the most precise rate from a name.
 	 *
-	 * @param type
-	 *            The rating mapping name.
-	 * @param name
-	 *            The name to map.
-	 * @param csv
-	 *            The CSV price row.
-	 * @return The direct [class, generation, size] rate association, or the [class, generation] rate association, or
-	 *         the [class] association, of the explicit "default association or {@link Rate#MEDIUM} value. Previous
+	 * @param type The rating mapping name.
+	 * @param name The name to map.
+	 * @param csv  The CSV price row.
+	 * @return The direct [class, generation, size] rate association, or the [class,
+	 *         generation] rate association, or the [class] association, of the
+	 *         explicit "default association or {@link Rate#MEDIUM} value. Previous
 	 *         generations types are downgraded.
 	 */
 	protected Rate getRate(final String type, final AbstractAwsEc2Price csv, final String name) {
@@ -249,13 +241,14 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 
 	/**
 	 * Save a price when the attached cost is different from the old one.
+	 * 
+	 * @param <T>       The price's type.
+	 * @param <P>       The instance type's type.
 	 *
-	 * @param entity
-	 *            The target entity to update.
-	 * @param newCost
-	 *            The new cost.
-	 * @param persister
-	 *            The consumer used to persist the replacement. Usually a repository operation.
+	 * @param entity    The target entity to update.
+	 * @param newCost   The new cost.
+	 * @param persister The consumer used to persist the replacement. Usually a
+	 *                  repository operation.
 	 */
 	protected <T extends AbstractInstanceType, P extends AbstractTermPrice<T>> void saveAsNeeded(final P entity,
 			final double newCost, final Consumer<P> persister) {
@@ -264,17 +257,16 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 
 	/**
 	 * Install AWS prices from a JSON file.
+	 * 
+	 * @param <R>      The region prices wrapper type.
+	 * @param <T>      The region price type.
 	 *
-	 * @param context
-	 *            The update context.
-	 * @param api
-	 *            The API name, only for log.
-	 * @param endpoint
-	 *            The prices end-point JSON URL.
-	 * @param apiClass
-	 *            The mapping model from JSON at region level.
-	 * @param mapper
-	 *            The mapping function from JSON at region level to JPA entity.
+	 * @param context  The update context.
+	 * @param api      The API name, only for log.
+	 * @param endpoint The prices end-point JSON URL.
+	 * @param apiClass The mapping model from JSON at region level.
+	 * @param mapper   The mapping function from JSON at region level to JPA entity.
+	 * @throws IOException When JSON content cannot be parsed.
 	 */
 	protected <R extends AwsRegionPrices, T extends AwsPrices<R>> void installJsonPrices(final UpdateContext context,
 			final String api, final String endpoint, final Class<T> apiClass, final BiConsumer<R, ProvLocation> mapper)
@@ -308,10 +300,8 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	/**
 	 * Indicate the given region is enabled.
 	 *
-	 * @param context
-	 *            The update context.
-	 * @param region
-	 *            The region API name to test.
+	 * @param context The update context.
+	 * @param region  The region API name to test.
 	 * @return <code>true</code> when the configuration enable the given region.
 	 */
 	protected boolean isEnabledRegion(final UpdateContext context, final AwsRegionPrices region) {
@@ -319,14 +309,13 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	}
 
 	/**
-	 * Read the network rate mapping. File containing the mapping from the AWS network rate to the normalized
-	 * application rating.
+	 * Read the network rate mapping. File containing the mapping from the AWS
+	 * network rate to the normalized application rating.
 	 *
 	 * @see <a href="https://calculator.s3.amazonaws.com/index.html">calculator</a>
 	 * @see <a href="https://aws.amazon.com/ec2/instance-types/">instance-types</a>
 	 *
-	 * @throws IOException
-	 *             When the JSON mapping file cannot be read.
+	 * @throws IOException When the JSON mapping file cannot be read.
 	 */
 	@PostConstruct
 	public void initRate() throws IOException {

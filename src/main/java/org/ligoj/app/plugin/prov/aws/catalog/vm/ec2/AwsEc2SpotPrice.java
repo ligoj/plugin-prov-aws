@@ -11,7 +11,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * AWS price configuration of several OS.
+ * AWS EC2 Spot price configuration of several OS.
  */
 @Getter
 @Setter
@@ -24,7 +24,7 @@ public class AwsEc2SpotPrice {
 	private Collection<AwsEc2SpotOsPrice> osPrices;
 
 	/**
-	 * Instance name.
+	 * Instance type name.
 	 */
 	@JsonProperty("size")
 	private String name;

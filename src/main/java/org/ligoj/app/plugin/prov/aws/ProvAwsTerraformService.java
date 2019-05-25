@@ -78,17 +78,21 @@ public class ProvAwsTerraformService {
 	private final Map<VmOs, String> mappingOsRootDevice = new EnumMap<>(VmOs.class);
 
 	/**
-	 * Mapping between OS name and EBS device name. The value is a format using the last char and increment it by the
-	 * index (base 0). Sample, for index <code>4</code>:
+	 * Mapping between OS name and EBS device name. The value is a format using the
+	 * last char and increment it by the index (base 0). Sample, for index
+	 * <code>4</code>:
 	 * <ul>
 	 * <li>Format <code>/dev/sda1</code> gives <code>/dev/sda4</code></li>
 	 * <li>Format <code>/dev/xvda</code> gives <code>/dev/xvdj</code></li>
 	 * </ul>
-	 * Note that the root device does not use this format. The first non root EBS device has index <code>0</code>.
+	 * Note that the root device does not use this format. The first non root EBS
+	 * device has index <code>0</code>.
 	 *
-	 * @see <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html">device_naming.html</a> for
-	 *      recommendations.
-	 * @see <a href="https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/device_naming.html">device_naming.html</a>
+	 * @see <a href=
+	 *      "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html">device_naming.html</a>
+	 *      for recommendations.
+	 * @see <a href=
+	 *      "https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/device_naming.html">device_naming.html</a>
 	 *      for recommendations.
 	 *
 	 */
@@ -100,6 +104,9 @@ public class ProvAwsTerraformService {
 	@Autowired
 	protected TerraformUtils utils;
 
+	/**
+	 * COnstructor initializing the mapping.
+	 */
 	public ProvAwsTerraformService() {
 		// AMIs
 		mappingOsAmi.put(VmOs.SUSE, "suse-sles");
@@ -115,10 +122,13 @@ public class ProvAwsTerraformService {
 	/**
 	 * Generate the Terraform configuration files:
 	 * <ul>
-	 * <li><code>./terraform.tfvars</code> the project, public keys, customizations and subscription variables.</li>
-	 * <li><code>./secrets.auto.tfvars</code> the secret variables, cannot be downloaded.</li>
+	 * <li><code>./terraform.tfvars</code> the project, public keys, customizations
+	 * and subscription variables.</li>
+	 * <li><code>./secrets.auto.tfvars</code> the secret variables, cannot be
+	 * downloaded.</li>
 	 * <li><code>./$my-region.tf</code> the region specific configuration.</li>
-	 * <li><code>./$my-region/instance-$instance.tf</code> for instances of this quote in a region.</li>
+	 * <li><code>./$my-region/instance-$instance.tf</code> for instances of this
+	 * quote in a region.</li>
 	 * <li><code>./$my-region/dashboard-*</code> for dashboard in a region.</li>
 	 * </ul>
 	 * Static files are:
@@ -132,7 +142,8 @@ public class ProvAwsTerraformService {
 	 * <li><code>./$my-region/ami-$os.tf</code> for enabled OS in this region.</li>
 	 * </ul>
 	 *
-	 * @param context The Terraform context holding the subscription, the quote and the user inputs.
+	 * @param context The Terraform context holding the subscription, the quote and
+	 *                the user inputs.
 	 * @throws IOException When Terraform content cannot be written.
 	 */
 	public void write(final Context context) throws IOException {
@@ -331,7 +342,8 @@ public class ProvAwsTerraformService {
 	 * Write instances configuration.
 	 */
 	private void writeRegionInstances(final Context context) throws IOException {
-		// Write the the region bootstrap module : will be persistent to handle emptied region
+		// Write the the region bootstrap module : will be persistent to handle emptied
+		// region
 		templateFromTo(context, "my-region.tf", context.getLocation() + ".keep.tf");
 
 		// Write the instances, ALB,... within this instance

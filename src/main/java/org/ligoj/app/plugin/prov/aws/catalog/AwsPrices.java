@@ -12,6 +12,8 @@ import lombok.Setter;
 
 /**
  * AWS prices JSON file structure.
+ * 
+ * @param <T> The region pricing container type.
  */
 @Getter
 @Setter
@@ -20,6 +22,11 @@ public class AwsPrices<T extends AwsRegionPrices> {
 
 	private StorageConfig<T> config;
 
+	/**
+	 * The JSON storage configuration.
+	 *
+	 * @param <T> The region pricing type.
+	 */
 	@Getter
 	@Setter
 	@JsonIgnoreProperties(ignoreUnknown = true)

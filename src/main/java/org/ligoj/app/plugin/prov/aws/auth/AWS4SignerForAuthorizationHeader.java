@@ -17,13 +17,13 @@ import org.springframework.stereotype.Service;
 public class AWS4SignerForAuthorizationHeader extends AWS4SignerBase {
 
 	/** SHA256 hash of an empty request body **/
-	public static final String EMPTY_BODY_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+	private static final String EMPTY_BODY_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
 	/**
 	 * format strings for the date/time and date stamps required during signing
 	 **/
-	public static final String ISO8601_FORMAT = "yyyyMMdd'T'HHmmss'Z'";
-	public static final String DATE_FORMAT = "yyyyMMdd";
+	private static final String ISO8601_FORMAT = "yyyyMMdd'T'HHmmss'Z'";
+	private static final String DATE_FORMAT = "yyyyMMdd";
 
 	/**
 	 * clock used to date query

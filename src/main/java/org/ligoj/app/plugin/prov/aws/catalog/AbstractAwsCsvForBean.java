@@ -19,6 +19,8 @@ import org.ligoj.bootstrap.core.resource.TechnicalException;
 
 /**
  * Read AWS CSV input, skipping the AWS headers and non instance type rows.
+ * 
+ * @param <T> Te target bean type.
  */
 public abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 
@@ -40,11 +42,13 @@ public abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 	 * Build the reader parsing the CSV file from AWS to build {@link AwsEc2Price}
 	 * instances. Non AWS instances data are skipped, and headers are ignored.
 	 *
-	 * @param reader
-	 *            The original AWS CSV input.
+	 * @param reader   The original AWS CSV input.
+	 * @param mapping  The mapping table for header.
+	 * @param beanType The target bean type.
+	 * @throws IOException When the CSV content cannot be read.
 	 */
-	protected AbstractAwsCsvForBean(final BufferedReader reader, final Map<String, String> mapping, final Class<T> beanType)
-			throws IOException {
+	protected AbstractAwsCsvForBean(final BufferedReader reader, final Map<String, String> mapping,
+			final Class<T> beanType) throws IOException {
 
 		// Complete the standard mappings
 		final Map<String, String> mMapping = new HashMap<>(HEADERS_MAPPING);
@@ -61,14 +65,15 @@ public abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 			}
 			if (values.get(0).equals("SKU")) {
 				// The real CSV header has be reached
-				this.beanReader = newCsvReader(reader, values.stream().map(v -> mMapping.getOrDefault(v, "drop")).toArray(String[]::new),
-						beanType);
+				this.beanReader = newCsvReader(reader,
+						values.stream().map(v -> mMapping.getOrDefault(v, "drop")).toArray(String[]::new), beanType);
 				break;
 			}
 		} while (true);
 	}
 
-	protected abstract CsvBeanReader<T> newCsvReader(final Reader reader, final String[] headers, final Class<T> beanType);
+	protected abstract CsvBeanReader<T> newCsvReader(final Reader reader, final String[] headers,
+			final Class<T> beanType);
 
 	/**
 	 * Do not use this, method.
@@ -86,8 +91,7 @@ public abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 	 * expected.
 	 *
 	 * @return The bean read from the next CSV record.
-	 * @throws IOException
-	 *             When the CSV record cannot be read.
+	 * @throws IOException When the CSV record cannot be read.
 	 */
 	public T read() throws IOException {
 		return beanReader.read();

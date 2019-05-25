@@ -19,6 +19,8 @@ import org.ligoj.bootstrap.core.csv.CsvBeanReader;
 
 /**
  * Read AWS EC2 CSV input, skipping the AWS headers and non instance type rows.
+ * 
+ * @param <P> Target EC2 price type.
  */
 public abstract class AbstractCsvForBeanEc2<P extends AbstractAwsEc2Price> extends AbstractAwsCsvForBean<P> {
 
@@ -43,15 +45,13 @@ public abstract class AbstractCsvForBeanEc2<P extends AbstractAwsEc2Price> exten
 	}
 
 	/**
-	 * Build the reader parsing the CSV file from AWS to build {@link AwsEc2Price} instances. Non AWS instances data are
-	 * skipped, and headers are ignored.
+	 * Build the reader parsing the CSV file from AWS to build {@link AwsEc2Price}
+	 * instances. Non AWS instances data are skipped, and headers are ignored.
 	 *
-	 * @param reader
-	 *            The original AWS CSV input.
-	 * @param mapping
-	 *            Additional header mapping.
-	 * @throws IOException
-	 *             When CSV content cannot be read.
+	 * @param reader  The original AWS CSV input.
+	 * @param mapping Additional header mapping.
+	 * @param type    Target EC2 price class.
+	 * @throws IOException When CSV content cannot be read.
 	 */
 	public AbstractCsvForBeanEc2(final BufferedReader reader, Map<String, String> mapping, final Class<P> type)
 			throws IOException {
@@ -74,8 +74,7 @@ public abstract class AbstractCsvForBeanEc2<P extends AbstractAwsEc2Price> exten
 	/**
 	 * Validate a CSV raw
 	 *
-	 * @param rawValues
-	 *            The row raw values.
+	 * @param rawValues The row raw values.
 	 * @return <code>true</code> when this row is accepted.
 	 */
 	public abstract boolean isValidRaw(final List<String> rawValues);

@@ -21,6 +21,9 @@ import lombok.Setter;
 public class SpotRegion extends AwsRegionPrices {
 	private Collection<SpotInstanceType> instanceTypes;
 
+	/**
+	 * The Spot prices container.
+	 */
 	@Getter
 	@Setter
 	@JsonIgnoreProperties(ignoreUnknown = true)

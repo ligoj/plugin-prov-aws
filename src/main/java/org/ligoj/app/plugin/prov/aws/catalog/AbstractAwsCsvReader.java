@@ -13,6 +13,8 @@ import org.ligoj.bootstrap.core.csv.CsvReader;
 
 /**
  * Read CSV reader skipping the useless rows.
+ * 
+ * @param <T> Target bean type.
  */
 public abstract class AbstractAwsCsvReader<T> extends CsvBeanReader<T> {
 
@@ -24,12 +26,10 @@ public abstract class AbstractAwsCsvReader<T> extends CsvBeanReader<T> {
 	/**
 	 * Build a CSV reader to build {@link AwsEc2Price} objects.
 	 *
-	 * @param reader
-	 *            The CSV input, without headers and starting from the first raw.
-	 * @param headers
-	 *            The header used to parse the CSV file.
-	 * @param beanType
-	 *            The target bean type.
+	 * @param reader   The CSV input, without headers and starting from the first
+	 *                 raw.
+	 * @param headers  The header used to parse the CSV file.
+	 * @param beanType The target bean type.
 	 */
 	public AbstractAwsCsvReader(final Reader reader, final String[] headers, final Class<T> beanType) {
 		super(reader, beanType, headers);
@@ -57,10 +57,10 @@ public abstract class AbstractAwsCsvReader<T> extends CsvBeanReader<T> {
 	}
 
 	/**
-	 * Check the given raw is valid to build an AWS Price. When invalid, the record is dropped.
+	 * Check the given raw is valid to build an AWS Price. When invalid, the record
+	 * is dropped.
 	 *
-	 * @param rawValues
-	 *            The column of the current record.
+	 * @param rawValues The column of the current record.
 	 * @return <code>true</code> when this record can be used to build a bean.
 	 */
 	protected abstract boolean isValidRaw(final List<String> rawValues);

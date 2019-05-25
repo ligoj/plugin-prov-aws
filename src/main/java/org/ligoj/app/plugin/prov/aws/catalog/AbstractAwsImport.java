@@ -29,11 +29,10 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 
 	/**
 	 * Convert the JSON name to the API name and check this storage is exists
-	 *
-	 * @param context
-	 *            The update context.
-	 * @param storage
-	 *            The storage to evaluate.
+	 * 
+	 * @param <T>     The storage type.
+	 * @param context The update context.
+	 * @param storage The storage to evaluate.
 	 * @return <code>true</code> when the storage is valid.
 	 */
 	protected <T extends INamableBean<?>> boolean containsKey(final UpdateContext context, final T storage) {

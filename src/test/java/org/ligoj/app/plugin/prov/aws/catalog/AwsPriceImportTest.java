@@ -98,7 +98,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 @ContextConfiguration(locations = "classpath:/META-INF/spring/application-context-test.xml")
 @Rollback
 @Transactional
-public class AwsPriceImportTest extends AbstractServerTest {
+class AwsPriceImportTest extends AbstractServerTest {
 
 	private static final double DELTA = 0.001;
 
@@ -145,7 +145,7 @@ public class AwsPriceImportTest extends AbstractServerTest {
 	private static Properties initialProperties = (Properties) System.getProperties().clone();
 
 	@BeforeEach
-	public void prepareData() throws IOException {
+	void prepareData() throws IOException {
 		persistSystemEntities();
 		persistEntities("csv",
 				new Class[] { Node.class, Project.class, CacheCompany.class, CacheUser.class, DelegateNode.class,
@@ -204,7 +204,7 @@ public class AwsPriceImportTest extends AbstractServerTest {
 	 * Only for dead but necessary contracted code.
 	 */
 	@Test
-	public void dummyCoverage() throws IOException {
+	void dummyCoverage() throws IOException {
 		new CsvForBeanEc2(new BufferedReader(new StringReader("SKU"))).toBean(null, (Reader) null);
 		new AwsEc2Price().getDrop();
 	}
@@ -213,25 +213,25 @@ public class AwsPriceImportTest extends AbstractServerTest {
 	 * Invalid EC2 CSV header
 	 */
 	@Test
-	public void installInvalidHeader() {
+	void installInvalidHeader() {
 		Assertions.assertEquals("Premature end of CSV file, headers were not found",
 				Assertions.assertThrows(TechnicalException.class, () -> {
 					new CsvForBeanEc2(new BufferedReader(new StringReader("any"))).toBean(null, (Reader) null);
 				}).getMessage());
 	}
 
-	public void mock(final String url, final String file) throws IOException {
+	void mock(final String url, final String file) throws IOException {
 		httpServer.stubFor(get(urlEqualTo(url)).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
 				.withBody(IOUtils.toString(new ClassPathResource(file).getInputStream(), "UTF-8"))));
 
 	}
 
-	public void configure(final String configuration, final String url) {
+	void configure(final String configuration, final String url) {
 		this.configuration.put(configuration, "http://localhost:" + MOCK_PORT + url);
 	}
 
 	@Test
-	public void installOffLine() throws Exception {
+	void installOffLine() throws Exception {
 		// Install a new configuration
 		mockServer();
 		applicationContext.getBean(SystemConfigurationRepository.class).findAll();
@@ -404,7 +404,7 @@ public class AwsPriceImportTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void installOnLine() throws Exception {
+	void installOnLine() throws Exception {
 		configuration.delete(AwsPriceImportEc2.CONF_URL_EC2_PRICES);
 		configuration.delete(AwsPriceImportEc2.CONF_URL_EC2_PRICES_SPOT);
 		configuration.put(AwsPriceImportBase.CONF_REGIONS, "eu-west-1"); // Only one region for UTs
@@ -437,7 +437,7 @@ public class AwsPriceImportTest extends AbstractServerTest {
 	 * Unable to retrieve the EC2 CSV file
 	 */
 	@Test
-	public void installEc2CsvNotFound() throws Exception {
+	void installEc2CsvNotFound() throws Exception {
 		patchConfigurationUrl();
 		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES, "/any.csv");
 		mockServerNoEc2();
@@ -454,7 +454,7 @@ public class AwsPriceImportTest extends AbstractServerTest {
 	 * Invalid EC2 CSV file
 	 */
 	@Test
-	public void installEc2CsvInvalidHeader() throws Exception {
+	void installEc2CsvInvalidHeader() throws Exception {
 		patchConfigurationUrl();
 		mock("/index-ec2.csv", "mock-server/aws/index-header-not-found.csv");
 		mockServerNoEc2();
@@ -469,7 +469,7 @@ public class AwsPriceImportTest extends AbstractServerTest {
 	 * Invalid EFS CSV file
 	 */
 	@Test
-	public void installEfsCsvInvalidHeader() throws Exception {
+	void installEfsCsvInvalidHeader() throws Exception {
 		patchConfigurationUrl();
 		configure(AwsPriceImportEfs.CONF_URL_EFS_PRICES, "/index-efs-error.csv");
 		mock("/index-efs-error.csv", "mock-server/aws/index-error.csv");
@@ -486,7 +486,7 @@ public class AwsPriceImportTest extends AbstractServerTest {
 	 * Invalid S3 CSV file
 	 */
 	@Test
-	public void installS3CsvInvalidHeader() throws Exception {
+	void installS3CsvInvalidHeader() throws Exception {
 		patchConfigurationUrl();
 		mock("/index-s3.csv", "mock-server/aws/index-error.csv");
 		httpServer.start();
@@ -509,7 +509,7 @@ public class AwsPriceImportTest extends AbstractServerTest {
 	 * Reserved prices are available but not the spot instances.
 	 */
 	@Test
-	public void installSpotEmpty() throws Exception {
+	void installSpotEmpty() throws Exception {
 		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES, "/index-ec2.csv");
 		configure(AwsPriceImportRds.CONF_URL_RDS_PRICES, "/index-rds.csv");
 		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES_SPOT, "/any.js");
@@ -539,7 +539,7 @@ public class AwsPriceImportTest extends AbstractServerTest {
 	 * Reserved prices are valid, but not the spot instances.
 	 */
 	@Test
-	public void installSpotError() throws Exception {
+	void installSpotError() throws Exception {
 		patchConfigurationUrl();
 		mock("/index-ec2.csv", "mock-server/aws/index-ec2.csv");
 		mock("/index-rds.csv", "mock-server/aws/index-rds.csv");
@@ -566,7 +566,7 @@ public class AwsPriceImportTest extends AbstractServerTest {
 	 * Spot refers to a non existing/not available instance
 	 */
 	@Test
-	public void installSpotInstanceBrokenReference() throws Exception {
+	void installSpotInstanceBrokenReference() throws Exception {
 		patchConfigurationUrl();
 		mock("/index-efs.csv", "mock-server/aws/index-efs.csv");
 		mock("/index-s3.csv", "mock-server/aws/index-s3.csv");
@@ -586,7 +586,7 @@ public class AwsPriceImportTest extends AbstractServerTest {
 	 * No data available from the AWS end-points
 	 */
 	@Test
-	public void installSpotRegionNotFound() throws Exception {
+	void installSpotRegionNotFound() throws Exception {
 		patchConfigurationUrl();
 		mock("/index-efs.csv", "mock-server/aws/index-efs.csv");
 		mock("/index-ec2.csv", "mock-server/aws/index-ec2-empty.csv");
@@ -740,7 +740,7 @@ public class AwsPriceImportTest extends AbstractServerTest {
 	/**
 	 * Return the subscription identifier of the given project. Assumes there is only one subscription for a service.
 	 */
-	protected int getSubscription(final String project) {
+	private int getSubscription(final String project) {
 		return getSubscription(project, ProvAwsPluginResource.KEY);
 	}
 }

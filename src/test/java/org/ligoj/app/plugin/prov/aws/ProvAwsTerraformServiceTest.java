@@ -53,7 +53,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 @ContextConfiguration(locations = "classpath:/META-INF/spring/application-context-test.xml")
 @Rollback
 @Transactional
-public class ProvAwsTerraformServiceTest extends AbstractServerTest {
+class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	private static final File MOCK_PATH = new File("target/test-classes/terraform-it").getAbsoluteFile();
 	private static final File EXPECTED_PATH = new File("target/test-classes/terraform").getAbsoluteFile();
 
@@ -64,13 +64,13 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 
 	@AfterEach
 	@BeforeEach
-	public void cleanupFiles() throws IOException {
+	void cleanupFiles() throws IOException {
 		FileUtils.deleteDirectory(MOCK_PATH);
 		FileUtils.forceMkdir(MOCK_PATH);
 	}
 
 	@BeforeEach
-	public void prepareData() throws IOException {
+	void prepareData() throws IOException {
 		persistSystemEntities();
 		persistEntities("csv",
 				new Class[] { Node.class, Project.class, Parameter.class, Subscription.class, ParameterValue.class },
@@ -79,7 +79,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void writeSimpleCentos() throws IOException {
+	void writeSimpleCentos() throws IOException {
 		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.CENTOS, null, 1, 1, 10, 8);
 		write(subscription, newQuoteVo(instance));
 		assertEquals("instance-centos.tf", "eu-west-3/vm-instancea.tf");
@@ -87,7 +87,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void writeSimpleAmz() throws IOException {
+	void writeSimpleAmz() throws IOException {
 		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 1, 10, 8);
 		write(subscription, newQuoteVo(instance));
 		assertEquals("instance-amazon.tf", "eu-west-3/vm-instancea.tf");
@@ -99,7 +99,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void writeSimpleAmzRootOnly() throws IOException {
+	void writeSimpleAmzRootOnly() throws IOException {
 		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 1, 10);
 		write(subscription, newQuoteVo(instance));
 		assertEquals("instance-amazon-1-device.tf", "eu-west-3/vm-instancea.tf");
@@ -107,7 +107,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void writeSimpleAmz3Devices() throws IOException {
+	void writeSimpleAmz3Devices() throws IOException {
 		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 1, 10, 11, 12);
 		write(subscription, newQuoteVo(instance));
 		assertEquals("instance-amazon-3-devices.tf", "eu-west-3/vm-instancea.tf");
@@ -115,7 +115,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void writeSimpleWindows() throws IOException {
+	void writeSimpleWindows() throws IOException {
 		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.WINDOWS, null, 1, 1, 10, 8);
 		write(subscription, newQuoteVo(instance));
 		assertEquals("instance-windows.tf", "eu-west-3/vm-instancea.tf");
@@ -123,7 +123,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void writeSimpleRHEL() throws IOException {
+	void writeSimpleRHEL() throws IOException {
 		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.RHEL, null, 1, 1, 10, 8);
 		write(subscription, newQuoteVo(instance));
 		assertEquals("instance-rhel.tf", "eu-west-3/vm-instancea.tf");
@@ -131,7 +131,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void writeSpotAmz() throws IOException {
+	void writeSpotAmz() throws IOException {
 		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, 0.1, 1, 1, 10, 8);
 		write(subscription, newQuoteVo(instance));
 		assertEquals("instance-spot.tf", "eu-west-3/ephemeral-instancea.tf");
@@ -142,7 +142,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void writeAutoScaling() throws IOException {
+	void writeAutoScaling() throws IOException {
 		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 2, 10, 8);
 		write(subscription, newQuoteVo(instance));
 		assertEquals("instance-auto_scaling.tf", "eu-west-3/auto_scaling-instancea.tf");
@@ -150,7 +150,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void writeAutoScaling1Device() throws IOException {
+	void writeAutoScaling1Device() throws IOException {
 		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 2, 10);
 		write(subscription, newQuoteVo(instance));
 		assertEquals("instance-auto_scaling-1-device.tf", "eu-west-3/auto_scaling-instancea.tf");
@@ -158,7 +158,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void writeAutoScaling3Devices() throws IOException {
+	void writeAutoScaling3Devices() throws IOException {
 		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 2, 10, 11, 12);
 		write(subscription, newQuoteVo(instance));
 		assertEquals("instance-auto_scaling-3-devices.tf", "eu-west-3/auto_scaling-instancea.tf");
@@ -166,7 +166,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void writeAutoScalingUnbound() throws IOException {
+	void writeAutoScalingUnbound() throws IOException {
 		final ProvQuoteInstance instanceA = newQuoteInstance("InstanceA", VmOs.LINUX, null, 2, null, 10, 8);
 		write(subscription, newQuoteVo(instanceA));
 		assertEquals("instance-auto_scaling-unbound.tf", "eu-west-3/auto_scaling-instancea.tf");
@@ -174,7 +174,7 @@ public class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void writeMutliple() throws IOException {
+	void writeMutliple() throws IOException {
 		final ProvQuoteInstance instanceA = newQuoteInstance("InstanceEC21", VmOs.LINUX, null, 1, 1, 10, 8);
 		final ProvQuoteInstance instanceB = newQuoteInstance("InstanceEC22", VmOs.WINDOWS, null, 1, 1, 10, 8);
 		final ProvQuoteInstance instanceC = newQuoteInstance("InstanceSpot1", VmOs.LINUX, 0.1, 1, 1, 10, 8);

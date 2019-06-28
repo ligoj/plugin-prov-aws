@@ -83,7 +83,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 		context.setValidInstanceType(Pattern.compile(configuration.get(CONF_ITYPE, ".*")));
 		final ProvInstancePriceTerm spotPriceType = newSpotInstanceType(context.getNode());
 		context.setPriceTerms(iptRepository.findAllBy(BY_NODE, context.getNode()).stream()
-				.collect(Collectors.toMap(ProvInstancePriceTerm::getCode, Function.identity())));
+				.collect(Collectors.toConcurrentMap(ProvInstancePriceTerm::getCode, Function.identity())));
 		installEc2(context, context.getNode(), spotPriceType);
 	}
 

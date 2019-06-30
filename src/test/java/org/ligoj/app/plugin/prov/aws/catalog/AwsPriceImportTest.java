@@ -169,6 +169,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		this.resource.setEfs(initCatalog(helper, new AwsPriceImportEfs()));
 		this.resource.setRds(initCatalog(helper, new AwsPriceImportRds()));
 		this.resource.setSupport(initCatalog(helper, new AwsPriceImportSupport()));
+		configuration.put(ProvResource.USE_PARALLEL, "0");
 
 		initSpringSecurityContext(DEFAULT_USER);
 		resetImportTask();
@@ -292,7 +293,8 @@ class AwsPriceImportTest extends AbstractServerTest {
 		mock("/v2/us-east-1/index-rds.csv", "mock-server/aws/index-rds-empty.csv");
 		mock("/v2/eu-central-1/index-rds.csv", "mock-server/aws/index-rds-empty.csv");
 
-		// Install the new catalog, update occurs
+		// Install the new catalog, update/deletion occurs
+		// Code 'HF7N6NNE7N8GDMBE' is deleted, 'NEW' is new
 		resetImportTask();
 		resource.install();
 		provResource.updateCost(subscription);

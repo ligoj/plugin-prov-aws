@@ -41,6 +41,8 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 
+	private static final String CODE_SPOT = "spot-";
+
 	/**
 	 * The EC2 reserved and on-demand price end-point, a CSV file, accepting the region code with {@link Formatter}
 	 */
@@ -119,7 +121,8 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 					final var type = context.getInstanceTypes().get(json.getName());
 
 					// Build the key for this spot
-					final var code = "spot-" + region.getName() + "-" + type.getName() + "-" + op.getOs();
+					final var code = CODE_SPOT + region.getName() + "-" + type.getName() + "-" + op.getOs();
+					localContext.getActualCodes().add(code);
 					final var price = localContext.getPrevious().computeIfAbsent(code, c -> {
 						final ProvInstancePrice p = new ProvInstancePrice();
 						p.setCode(c);
@@ -147,13 +150,18 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 				.collect(Collectors.toConcurrentMap(ProvInstanceType::getName, Function.identity())));
 
 		// Install the EC2 (non spot) prices
-		context.getRegions().values().parallelStream().peek(region -> {
+		newStream(context.getRegions().values()).map(region -> {
 			// Get previous prices for this location
 			final var localContext = new UpdateContext();
 			localContext.setPrevious(ipRepository.findAll(node.getId(), region.getName()).stream()
+					.filter(p -> !p.getCode().startsWith(CODE_SPOT))
 					.collect(Collectors.toMap(ProvInstancePrice::getCode, Function.identity())));
 			installEC2Prices(context, region, localContext);
-		}).sequential().forEach(region -> nextStep(node, region.getName(), 1));
+			return region;
+		}).reduce((region1, region2) -> {
+			nextStep(node, region2.getName(), 1);
+			return region1;
+		});
 
 		// Install the SPOT EC2 prices
 		installJsonPrices(context, "ec2-spot", configuration.get(CONF_URL_EC2_PRICES_SPOT, EC2_PRICES_SPOT),
@@ -162,6 +170,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 					// Get previous prices for this location
 					final var localContext = new UpdateContext();
 					localContext.setPrevious(ipRepository.findAll(node.getId(), region.getName()).stream()
+							.filter(p -> p.getCode().startsWith(CODE_SPOT))
 							.collect(Collectors.toMap(ProvInstancePrice::getCode, Function.identity())));
 					r.getInstanceTypes().stream().flatMap(t -> t.getSizes().stream()).filter(t -> {
 						final var availability = context.getInstanceTypes().containsKey(t.getName());
@@ -171,6 +180,9 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 						}
 						return availability;
 					}).forEach(j -> installSpotPrices(context, j, spotPriceType, region, localContext));
+
+					// Purge the SKUs
+					purgeSku(context, localContext);
 				});
 		context.getInstanceTypes().clear();
 	}
@@ -205,13 +217,31 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 				// Read the next one
 				csv = csvReader.read();
 			}
+
+			// Purge the SKUs
+			purgeSku(context, localContext);
 		} catch (final IOException | URISyntaxException use) {
 			// Something goes wrong for this region, stop for this region
 			log.info("AWS EC2 OnDemand/Reserved import failed for region {}", region.getName(), use);
 		} finally {
 			// Report
-			log.info("AWS EC2 OnDemand/Reserved import finished for region {} : {} instance, {} price types",
-					region.getName(), context.getInstanceTypes().size(), context.getPriceTerms().size());
+			log.info("AWS EC2 OnDemand/Reserved import finished for region {} : {} instance, {} price types, {} prices",
+					region.getName(), context.getInstanceTypes().size(), context.getPriceTerms().size(),
+					localContext.getActualCodes().size());
+		}
+	}
+
+	/**
+	 * Remove SKU that were present in the context and not refresh with this update.
+	 */
+	private void purgeSku(final UpdateContext context, final UpdateContext localContext) {
+		localContext.getPrevious().keySet().removeAll(localContext.getActualCodes());
+		if (!localContext.getPrevious().isEmpty()) {
+			log.info("Need to purge {} prices", localContext.getPrevious().size());
+			localContext.getPrevious().keySet().removeAll(qiRepository.finUsedPrices(context.getNode().getId()));
+			log.info("Need to purge unused {} prices", localContext.getPrevious().size());
+			localContext.getPrevious().values().forEach(ipRepository::delete);
+			log.info("Code purged");
 		}
 	}
 
@@ -229,11 +259,14 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 			return;
 		}
 
+		// Add this code to the existing SKU codes
+		final var code = toCode(csv);
+		localContext.getActualCodes().add(code);
+
 		// Up-front, partial or not
 		if (UPFRONT_MODE.matcher(StringUtils.defaultString(csv.getPurchaseOption())).find()) {
 			// Up-front ALL/PARTIAL
 			final var partialCost = localContext.getPartialCost();
-			final var code = toCode(csv);
 			if (partialCost.containsKey(code)) {
 				handleUpfront(context, newEc2Price(context, csv, region, localContext), csv, partialCost.get(code),
 						ipRepository);

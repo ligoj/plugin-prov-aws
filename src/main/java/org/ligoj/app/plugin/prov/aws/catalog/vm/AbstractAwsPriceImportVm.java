@@ -281,7 +281,7 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 			nextStep(context, null, 0);
 
 			// Install the prices for each region
-			eRegions.stream().forEach(r -> mapper.accept(r, context.getRegions().get(r.getRegion())));
+			newStream(eRegions).forEach(r -> mapper.accept(r, context.getRegions().get(r.getRegion())));
 		} finally {
 			// Report
 			log.info("AWS {} import finished", api);

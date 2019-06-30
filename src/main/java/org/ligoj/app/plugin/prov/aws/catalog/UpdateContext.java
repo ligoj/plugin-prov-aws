@@ -4,7 +4,9 @@
 package org.ligoj.app.plugin.prov.aws.catalog;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AwsEc2Price;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.rds.AwsRdsPrice;
@@ -40,4 +42,10 @@ public class UpdateContext extends AbstractUpdateContext {
 	@Getter
 	@Setter
 	private Map<String, AwsRdsPrice> partialCostRds;
+
+	/**
+	 * List of SKU codes to keep after the update. Will be used to purge deleted and unused codes.
+	 */
+	@Getter
+	private Set<String> actualCodes = new HashSet<>();
 }

@@ -3,18 +3,29 @@
  */
 package org.ligoj.app.plugin.prov.aws.catalog;
 
+import java.util.Collection;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
+import org.ligoj.app.plugin.prov.ProvResource;
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
 import org.ligoj.app.plugin.prov.catalog.AbstractImportCatalogResource;
+import org.ligoj.app.plugin.prov.dao.ProvQuoteInstanceRepository;
 import org.ligoj.app.plugin.prov.model.ImportCatalogStatus;
 import org.ligoj.bootstrap.core.INamableBean;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * The provisioning price service for AWS. Manage install or update of prices.
  */
 public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
+
+	@Autowired
+	private ProvResource provResource;
+
+	@Autowired
+	protected ProvQuoteInstanceRepository qiRepository;
 
 	/**
 	 * Configuration key used for AWS URL prices.
@@ -25,6 +36,17 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 		return Optional.ofNullable(StringUtils.trimToNull(value))
 				.map(v -> StringUtils.replaceEach(v, new String[] { "GB", "TB", " " }, new String[] { "", "", "" }))
 				.map(Integer::valueOf).map(v -> value.contains("TB") ? v * 1024 : v).orElse(null);
+	}
+
+	/**
+	 * Return a parallel stream if allowed.
+	 * 
+	 * @param <T>        The stream item type.
+	 * @param collection The collection to stream.
+	 * @return The parallel or sequential stream.
+	 */
+	protected <T> Stream<T> newStream(Collection<T> collection) {
+		return provResource.newStream(collection);
 	}
 
 	/**

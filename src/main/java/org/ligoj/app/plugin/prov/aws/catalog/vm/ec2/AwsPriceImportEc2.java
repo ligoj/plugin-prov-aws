@@ -233,7 +233,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 		if (UPFRONT_MODE.matcher(StringUtils.defaultString(csv.getPurchaseOption())).find()) {
 			// Up-front ALL/PARTIAL
 			final var partialCost = localContext.getPartialCost();
-			final var code = csv.getSku() + csv.getOfferTermCode() + region.getName();
+			final var code = toCode(csv);
 			if (partialCost.containsKey(code)) {
 				handleUpfront(context, newEc2Price(context, csv, region, localContext), csv, partialCost.get(code),
 						ipRepository);

@@ -116,11 +116,11 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 		json.getOsPrices().stream().filter(op -> !StringUtils.startsWithIgnoreCase(op.getPrices().get("USD"), "N/A"))
 				.peek(op -> op.setOs(op.getName().equals("mswin") ? VmOs.WINDOWS : VmOs.LINUX))
 				.filter(op -> isEnabledOs(context, op.getOs())).forEach(op -> {
-					final ProvInstanceType type = context.getInstanceTypes().get(json.getName());
+					final var type = context.getInstanceTypes().get(json.getName());
 
 					// Build the key for this spot
-					final String code = "spot-" + region.getName() + "-" + type.getName() + "-" + op.getOs();
-					final ProvInstancePrice price = localContext.getPrevious().computeIfAbsent(code, c -> {
+					final var code = "spot-" + region.getName() + "-" + type.getName() + "-" + op.getOs();
+					final var price = localContext.getPrevious().computeIfAbsent(code, c -> {
 						final ProvInstancePrice p = new ProvInstancePrice();
 						p.setCode(c);
 						p.setType(type);
@@ -132,7 +132,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 					});
 
 					// Update the price as needed
-					final double cost = Double.parseDouble(op.getPrices().get("USD"));
+					final var cost = Double.parseDouble(op.getPrices().get("USD"));
 					saveAsNeeded(price, round3Decimals(cost * context.getHoursMonth()), p -> {
 						p.setCostPeriod(cost);
 						ipRepository.save(p);
@@ -147,15 +147,13 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 				.collect(Collectors.toConcurrentMap(ProvInstanceType::getName, Function.identity())));
 
 		// Install the EC2 (non spot) prices
-		context.getRegions().values().parallelStream().forEach(region -> {
+		context.getRegions().values().parallelStream().peek(region -> {
 			// Get previous prices for this location
-			nextStep(node, region.getName(), 0);
 			final var localContext = new UpdateContext();
 			localContext.setPrevious(ipRepository.findAll(node.getId(), region.getName()).stream()
 					.collect(Collectors.toMap(ProvInstancePrice::getCode, Function.identity())));
 			installEC2Prices(context, region, localContext);
-			nextStep(node, region.getName(), 1);
-		});
+		}).sequential().forEach(region -> nextStep(node, region.getName(), 1));
 
 		// Install the SPOT EC2 prices
 		installJsonPrices(context, "ec2-spot", configuration.get(CONF_URL_EC2_PRICES_SPOT, EC2_PRICES_SPOT),
@@ -166,7 +164,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 					localContext.setPrevious(ipRepository.findAll(node.getId(), region.getName()).stream()
 							.collect(Collectors.toMap(ProvInstancePrice::getCode, Function.identity())));
 					r.getInstanceTypes().stream().flatMap(t -> t.getSizes().stream()).filter(t -> {
-						final boolean availability = context.getInstanceTypes().containsKey(t.getName());
+						final var availability = context.getInstanceTypes().containsKey(t.getName());
 						if (!availability) {
 							// Unavailable instances type of spot are ignored
 							log.warn("Instance {} is referenced from spot but not available", t.getName());
@@ -187,14 +185,13 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 			final UpdateContext localContext) {
 		// Track the created instance to cache partial costs
 		localContext.setPartialCost(new HashMap<>());
-		final String endpoint = configuration.get(CONF_URL_EC2_PRICES, EC2_PRICES).replace("%s", region.getName());
+		final var endpoint = configuration.get(CONF_URL_EC2_PRICES, EC2_PRICES).replace("%s", region.getName());
 		log.info("AWS EC2 OnDemand/Reserved import started for region {}@{} ...", region, endpoint);
 
 		// Get the remote prices stream
-		try (BufferedReader reader = new BufferedReader(
-				new InputStreamReader(new URI(endpoint).toURL().openStream()))) {
+		try (var reader = new BufferedReader(new InputStreamReader(new URI(endpoint).toURL().openStream()))) {
 			// Pipe to the CSV reader
-			final CsvForBeanEc2 csvReader = new CsvForBeanEc2(reader);
+			final var csvReader = new CsvForBeanEc2(reader);
 
 			// Build the AWS instance prices from the CSV
 			AwsEc2Price csv = csvReader.read();
@@ -235,8 +232,8 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 		// Up-front, partial or not
 		if (UPFRONT_MODE.matcher(StringUtils.defaultString(csv.getPurchaseOption())).find()) {
 			// Up-front ALL/PARTIAL
-			final Map<String, AwsEc2Price> partialCost = localContext.getPartialCost();
-			final String code = csv.getSku() + csv.getOfferTermCode() + region.getName();
+			final var partialCost = localContext.getPartialCost();
+			final var code = csv.getSku() + csv.getOfferTermCode() + region.getName();
 			if (partialCost.containsKey(code)) {
 				handleUpfront(context, newEc2Price(context, csv, region, localContext), csv, partialCost.get(code),
 						ipRepository);
@@ -249,8 +246,8 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 			}
 		} else {
 			// No up-front, cost is fixed
-			final ProvInstancePrice price = newEc2Price(context, csv, region, localContext);
-			final double cost = csv.getPricePerUnit() * context.getHoursMonth();
+			final var price = newEc2Price(context, csv, region, localContext);
+			final var cost = csv.getPricePerUnit() * context.getHoursMonth();
 			saveAsNeeded(price, round3Decimals(cost), p -> {
 				p.setCostPeriod(round3Decimals(cost * p.getTerm().getPeriod()));
 				ipRepository.save(p);
@@ -263,12 +260,12 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	 */
 	private ProvInstancePrice newEc2Price(final UpdateContext context, final AwsEc2Price csv, final ProvLocation region,
 			final UpdateContext localContext) {
-		final ProvInstanceType type = installInstanceType(context, csv, context.getInstanceTypes(),
-				ProvInstanceType::new, itRepository);
+		final var type = installInstanceType(context, csv, context.getInstanceTypes(), ProvInstanceType::new,
+				itRepository);
 		return localContext.getPrevious().computeIfAbsent(toCode(csv), c -> {
-			final ProvInstancePrice p = new ProvInstancePrice();
+			final var p = new ProvInstancePrice();
 			copy(context, csv, region, c, p, type);
-			final String software = ObjectUtils.defaultIfNull(csv.getSoftware(), "");
+			final var software = ObjectUtils.defaultIfNull(csv.getSoftware(), "");
 			p.setSoftware(StringUtils.trimToNull(mapSoftware.computeIfAbsent(software, String::toUpperCase)));
 			p.setOs(toVmOs(csv.getOs()));
 			p.setTenancy(ProvTenancy.valueOf(StringUtils.upperCase(csv.getTenancy())));

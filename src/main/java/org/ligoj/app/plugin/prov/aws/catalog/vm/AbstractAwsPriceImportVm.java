@@ -5,12 +5,10 @@ package org.ligoj.app.plugin.prov.aws.catalog.vm;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -79,8 +77,8 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 		}
 
 		// Round the computed hourly cost and save as needed
-		final double initCost = quantity.getPricePerUnit() / price.getTerm().getPeriod();
-		final double cost = hourly.getPricePerUnit() * context.getHoursMonth() + initCost;
+		final var initCost = quantity.getPricePerUnit() / price.getTerm().getPeriod();
+		final var cost = hourly.getPricePerUnit() * context.getHoursMonth() + initCost;
 		saveAsNeeded(price, round3Decimals(cost), p -> {
 			p.setInitialCost(quantity.getPricePerUnit());
 			p.setCostPeriod(round3Decimals(
@@ -106,7 +104,8 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 		p.setLocation(region);
 		p.setCode(code);
 		p.setLicense(StringUtils.trimToNull(csv.getLicenseModel().replace("No License required", "")
-				.replace("No license required", "").replace("Bring your own license", ProvInstancePrice.LICENSE_BYOL)));
+				.replace("No license required", "").replace("License included", "")
+				.replace("Bring your own license", ProvInstancePrice.LICENSE_BYOL)));
 		p.setType(type);
 		p.setTerm(context.getPriceTerms().computeIfAbsent(csv.getOfferTermCode(),
 				k -> newInstancePriceTerm(context, csv)));
@@ -123,26 +122,22 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	}
 
 	/**
-	 * Install a new EC2/RDS instance type. The previous entries will contains this
-	 * type at the end of this operation.
+	 * Install a new EC2/RDS instance type. The previous entries will contains this type at the end of this operation.
 	 * 
 	 * @param <T>        The instance type type.
 	 *
 	 * @param context    The current context to handle lazy sub-entities creation.
 	 * @param csv        The current CSV entry.
 	 * @param previous   The previous installed types.
-	 * @param newType    The constructor to use in case of this type was not already
-	 *                   in the previous installed types.
-	 * @param repository The repository handling the instance type entity, and used
-	 *                   when a new type need to be created.
-	 * @return Either the previous entity, either a new one. Never
-	 *         <code>null</code>.
+	 * @param newType    The constructor to use in case of this type was not already in the previous installed types.
+	 * @param repository The repository handling the instance type entity, and used when a new type need to be created.
+	 * @return Either the previous entity, either a new one. Never <code>null</code>.
 	 */
 	protected <T extends AbstractInstanceType> T installInstanceType(final UpdateContext context,
 			final AbstractAwsEc2Price csv, final Map<String, T> previous, Supplier<T> newType,
 			final BaseProvInstanceTypeRepository<T> repository) {
-		final T type = previous.computeIfAbsent(csv.getInstanceType(), k -> {
-			final T t = newType.get();
+		final var type = previous.computeIfAbsent(csv.getInstanceType(), k -> {
+			final var t = newType.get();
 			t.setNode(context.getNode());
 			t.setName(csv.getInstanceType());
 			return t;
@@ -156,7 +151,7 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 					.removeAllOccurences(new String[] { csv.getPhysicalProcessor(), csv.getClockSpeed() }, null)));
 
 			// Convert GiB to MiB, and rounded
-			final String memoryStr = StringUtils.removeEndIgnoreCase(csv.getMemory(), " GiB").replace(",", "");
+			final var memoryStr = StringUtils.removeEndIgnoreCase(csv.getMemory(), " GiB").replace(",", "");
 			type.setRam((int) Math.round(Double.parseDouble(memoryStr) * 1024d));
 
 			// Rating
@@ -172,7 +167,7 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	}
 
 	private Rate toStorage(final AbstractAwsEc2Price csv) {
-		Rate rate = getRate("storage", csv);
+		var rate = getRate("storage", csv);
 		if (!"EBS only".equals(csv.getStorage())) {
 			// Upgrade for non EBS
 			rate = Rate.values()[Math.min(rate.ordinal(), rate.ordinal() + 1)];
@@ -185,9 +180,8 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	 *
 	 * @param type The rating mapping name.
 	 * @param csv  The CSV price row.
-	 * @return The direct [class, generation, size] rate association, or the [class,
-	 *         generation] rate association, or the [class] association, of the
-	 *         explicit "default association or {@link Rate#MEDIUM} value.
+	 * @return The direct [class, generation, size] rate association, or the [class, generation] rate association, or
+	 *         the [class] association, of the explicit "default association or {@link Rate#MEDIUM} value.
 	 */
 	private Rate getRate(final String type, final AbstractAwsEc2Price csv) {
 		return getRate(type, csv, csv.getInstanceType());
@@ -199,13 +193,12 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	 * @param type The rating mapping name.
 	 * @param name The name to map.
 	 * @param csv  The CSV price row.
-	 * @return The direct [class, generation, size] rate association, or the [class,
-	 *         generation] rate association, or the [class] association, of the
-	 *         explicit "default association or {@link Rate#MEDIUM} value. Previous
+	 * @return The direct [class, generation, size] rate association, or the [class, generation] rate association, or
+	 *         the [class] association, of the explicit "default association or {@link Rate#MEDIUM} value. Previous
 	 *         generations types are downgraded.
 	 */
 	protected Rate getRate(final String type, final AbstractAwsEc2Price csv, final String name) {
-		Rate rate = getRate(type, name);
+		var rate = getRate(type, name);
 
 		// Downgrade the rate for a previous generation
 		if ("No".equals(csv.getCurrentGeneration())) {
@@ -218,12 +211,12 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	 * Build a new instance price type from the CSV line.
 	 */
 	private ProvInstancePriceTerm newInstancePriceTerm(final UpdateContext context, final AbstractAwsEc2Price csv) {
-		final ProvInstancePriceTerm term = new ProvInstancePriceTerm();
+		final var term = new ProvInstancePriceTerm();
 		term.setNode(context.getNode());
 		term.setCode(csv.getOfferTermCode());
 
 		// Build the name from the leasing, purchase option and offering class
-		final String name = StringUtils.trimToNull(RegExUtils.removeAll(
+		final var name = StringUtils.trimToNull(RegExUtils.removeAll(
 				RegExUtils.replaceAll(csv.getPurchaseOption(), "([a-z])Upfront", "$1 Upfront"), "No\\s*Upfront"));
 		term.setName(Arrays
 				.stream(new String[] { csv.getTermType(), StringUtils.replace(csv.getLeaseContractLength(), " ", ""),
@@ -231,7 +224,7 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 				.filter(Objects::nonNull).collect(Collectors.joining(", ")));
 
 		// Handle leasing
-		final Matcher matcher = LEASING_TIME.matcher(StringUtils.defaultIfBlank(csv.getLeaseContractLength(), ""));
+		final var matcher = LEASING_TIME.matcher(StringUtils.defaultIfBlank(csv.getLeaseContractLength(), ""));
 		if (matcher.find()) {
 			// Convert years to months
 			term.setPeriod(Integer.parseInt(matcher.group(1)) * 12d);
@@ -247,8 +240,7 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	 *
 	 * @param entity    The target entity to update.
 	 * @param newCost   The new cost.
-	 * @param persister The consumer used to persist the replacement. Usually a
-	 *                  repository operation.
+	 * @param persister The consumer used to persist the replacement. Usually a repository operation.
 	 */
 	protected <T extends AbstractInstanceType, P extends AbstractTermPrice<T>> void saveAsNeeded(final P entity,
 			final double newCost, final Consumer<P> persister) {
@@ -272,17 +264,17 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 			final String api, final String endpoint, final Class<T> apiClass, final BiConsumer<R, ProvLocation> mapper)
 			throws IOException {
 		log.info("AWS {} prices...", api);
-		try (CurlProcessor curl = new CurlProcessor()) {
+		try (var curl = new CurlProcessor()) {
 			// Get the remote prices stream
-			final String rawJson = StringUtils.defaultString(curl.get(endpoint), "any({\"config\":{\"regions\":[]}});");
+			final var rawJson = StringUtils.defaultString(curl.get(endpoint), "any({\"config\":{\"regions\":[]}});");
 
 			// All regions are considered
-			final int configIndex = rawJson.indexOf('{');
-			final int configCloseIndex = rawJson.lastIndexOf('}');
-			final T prices = objectMapper.readValue(rawJson.substring(configIndex, configCloseIndex + 1), apiClass);
+			final var configIndex = rawJson.indexOf('{');
+			final var configCloseIndex = rawJson.lastIndexOf('}');
+			final var prices = objectMapper.readValue(rawJson.substring(configIndex, configCloseIndex + 1), apiClass);
 
 			// Install the enabled region as needed
-			final List<R> eRegions = prices.getConfig().getRegions().stream()
+			final var eRegions = prices.getConfig().getRegions().stream()
 					.peek(r -> r.setRegion(context.getMapSpotToNewRegion().getOrDefault(r.getRegion(), r.getRegion())))
 					.filter(r -> isEnabledRegion(context, r)).collect(Collectors.toList());
 			eRegions.forEach(r -> installRegion(context, r.getRegion()));
@@ -309,8 +301,8 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	}
 
 	/**
-	 * Read the network rate mapping. File containing the mapping from the AWS
-	 * network rate to the normalized application rating.
+	 * Read the network rate mapping. File containing the mapping from the AWS network rate to the normalized
+	 * application rating.
 	 *
 	 * @see <a href="https://calculator.s3.amazonaws.com/index.html">calculator</a>
 	 * @see <a href="https://aws.amazon.com/ec2/instance-types/">instance-types</a>

@@ -113,7 +113,7 @@ public class AWS4SignerBaseTest {
 	 */
 	@Test
 	void testGetCanonicalizedResourcePathEncodingException() throws EncoderException {
-		final AWS4SignerBase signer = new AWS4SignerForAuthorizationHeader();
+		final var signer = new AWS4SignerForAuthorizationHeader();
 		final URLCodec urlCodec = Mockito.mock(URLCodec.class);
 		ReflectionTestUtils.setField(signer, "urlCodec", urlCodec);
 		Mockito.when(urlCodec.encode(ArgumentMatchers.anyString())).thenThrow(new EncoderException());
@@ -146,7 +146,7 @@ public class AWS4SignerBaseTest {
 	 */
 	@Test
 	void testGetCanonicalizedQueryStringException() throws EncoderException {
-		final AWS4SignerBase signer = new AWS4SignerForAuthorizationHeader();
+		final var signer = new AWS4SignerForAuthorizationHeader();
 		final URLCodec urlCodec = Mockito.mock(URLCodec.class);
 		ReflectionTestUtils.setField(signer, "urlCodec", urlCodec);
 		Mockito.when(urlCodec.encode(ArgumentMatchers.anyString())).thenThrow(new EncoderException());

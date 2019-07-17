@@ -26,7 +26,7 @@ public class AWS4SignatureQueryTest {
 	}
 
 	private AWS4SignatureQueryBuilder builderCommon(AWS4SignatureQueryBuilder builderParam) {
-		AWS4SignatureQueryBuilder builder = builderParam;
+		var builder = builderParam;
 		builder.toString();
 		builder = builder.path("/");
 		builder.toString();

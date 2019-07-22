@@ -88,7 +88,7 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	}
 
 	/**
-	 * Copy a CSN price entry to a price entity.
+	 * Copy a CSV price entry to a price entity.
 	 * 
 	 * @param <T>     The instance type type.
 	 *

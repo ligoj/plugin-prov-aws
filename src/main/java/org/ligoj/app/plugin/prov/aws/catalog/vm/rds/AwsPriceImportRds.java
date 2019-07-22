@@ -67,7 +67,7 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 					.collect(Collectors.toMap(ProvDatabasePrice::getCode, Function.identity())));
 			context.setPreviousStorage(spRepository.findAll(context.getNode().getId(), region.getName()).stream()
 					.collect(Collectors.toMap(ProvStoragePrice::getCode, Function.identity())));
-			installRdsPrices(context, region);
+			install(context, region);
 		});
 		context.getDatabaseTypes().clear();
 		context.getPreviousDatabase().clear();
@@ -76,31 +76,28 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 	/**
 	 * Download and install EC2 prices from AWS server.
 	 *
-	 * @param context
-	 *            The update context.
-	 * @param region
-	 *            The region to fetch.
+	 * @param context The update context.
+	 * @param region  The region to fetch.
 	 */
-	private void installRdsPrices(final UpdateContext context, final ProvLocation region) {
+	private void install(final UpdateContext context, final ProvLocation region) {
 		// Track the created instance to cache partial costs
 		context.setPartialCostRds(new HashMap<>());
-		final String endpoint = configuration.get(CONF_URL_RDS_PRICES, RDS_PRICES).replace("%s", region.getName());
+		final var endpoint = configuration.get(CONF_URL_RDS_PRICES, RDS_PRICES).replace("%s", region.getName());
 		log.info("AWS RDS OnDemand/Reserved import started for region {}@{} ...", region, endpoint);
 
 		// Get the remote prices stream
-		try (BufferedReader reader = new BufferedReader(
-				new InputStreamReader(new URI(endpoint).toURL().openStream()))) {
+		try (var reader = new BufferedReader(new InputStreamReader(new URI(endpoint).toURL().openStream()))) {
 			// Pipe to the CSV reader
-			final CsvForBeanRds csvReader = new CsvForBeanRds(reader);
+			final var csvReader = new CsvForBeanRds(reader);
 
 			// Build the AWS instance prices from the CSV
-			AwsRdsPrice csv = csvReader.read();
+			var csv = csvReader.read();
 			while (csv != null) {
 				// Complete the region human name associated to the API one
 				region.setDescription(csv.getLocation());
 
 				// Persist this price
-				installRds(context, csv, region);
+				install(context, csv, region);
 
 				// Read the next one
 				csv = csvReader.read();
@@ -118,14 +115,11 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 	/**
 	 * Install the install the database type (if needed), the instance price type (if needed) and the price.
 	 *
-	 * @param context
-	 *            The update context.
-	 * @param csv
-	 *            The current CSV entry.
-	 * @param region
-	 *            The current region.
+	 * @param context The update context.
+	 * @param csv     The current CSV entry.
+	 * @param region  The current region.
 	 */
-	private void installRds(final UpdateContext context, final AwsRdsPrice csv, final ProvLocation region) {
+	private void install(final UpdateContext context, final AwsRdsPrice csv, final ProvLocation region) {
 		// Filter type
 		if (csv.getInstanceType() != null && !isEnabledDatabase(context, csv.getInstanceType())) {
 			return;
@@ -135,7 +129,7 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 		if (UPFRONT_MODE.matcher(StringUtils.defaultString(csv.getPurchaseOption())).find()) {
 			// Up-front ALL/PARTIAL
 			final Map<String, AwsRdsPrice> partialCost = context.getPartialCostRds();
-			final String code = csv.getSku() + csv.getOfferTermCode() + region.getName();
+			final var code = toCode(csv);
 			if (partialCost.containsKey(code)) {
 				handleUpfront(context, newRdsPrice(context, csv, region), csv, partialCost.get(code), dpRepository);
 
@@ -147,19 +141,19 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 			}
 		} else if ("Database Instance".equals(csv.getFamily())) {
 			// No up-front, cost is fixed
-			final ProvDatabasePrice price = newRdsPrice(context, csv, region);
-			final double cost = csv.getPricePerUnit() * context.getHoursMonth();
+			final var price = newRdsPrice(context, csv, region);
+			final var cost = csv.getPricePerUnit() * context.getHoursMonth();
 			saveAsNeeded(price, round3Decimals(cost), p -> {
 				p.setCostPeriod(round3Decimals(cost * p.getTerm().getPeriod()));
 				dpRepository.save(p);
 			});
 		} else {
 			// Database storage
-			final ProvStorageType type = installStorageType(context, csv);
-			final ProvStoragePrice price = context.getPreviousStorage().computeIfAbsent(csv.getSku(), s -> {
+			final var type = installStorageType(context, csv);
+			final var price = context.getPreviousStorage().computeIfAbsent(csv.getSku(), code -> {
 				final ProvStoragePrice p = new ProvStoragePrice();
 				p.setType(type);
-				p.setCode(csv.getSku());
+				p.setCode(code);
 				p.setLocation(region);
 				return p;
 			});
@@ -196,8 +190,8 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 		}
 
 		// Create as needed
-		final ProvStorageType type = context.getStorageTypes().computeIfAbsent(name, n -> {
-			final ProvStorageType newType = new ProvStorageType();
+		final var type = context.getStorageTypes().computeIfAbsent(name, n -> {
+			final var newType = new ProvStorageType();
 			newType.setNode(context.getNode());
 			newType.setName(n);
 			return newType;
@@ -205,7 +199,7 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 
 		// Merge the updated statistics
 		return context.getStorageTypesMerged().computeIfAbsent(name, n -> {
-			final boolean ssd = "SSD".equals(csv.getStorage());
+			final var ssd = "SSD".equals(csv.getStorage());
 			type.setDescription(csv.getVolume());
 			type.setMinimal(toInteger(csv.getSizeMin()));
 			type.setMaximal(toInteger(csv.getSizeMax()));
@@ -223,8 +217,8 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 	 */
 	private ProvDatabasePrice newRdsPrice(final UpdateContext context, final AwsRdsPrice csv,
 			final ProvLocation region) {
-		final ProvDatabaseType type = installInstanceType(context, csv, context.getDatabaseTypes(),
-				ProvDatabaseType::new, dtRepository);
+		final var type = installInstanceType(context, csv, context.getDatabaseTypes(), ProvDatabaseType::new,
+				dtRepository);
 		return context.getPreviousDatabase().computeIfAbsent(toCode(csv), c -> {
 			final ProvDatabasePrice p = new ProvDatabasePrice();
 			copy(context, csv, region, c, p, type);

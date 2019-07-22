@@ -50,6 +50,7 @@ import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.CsvForBeanEc2;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.rds.AwsPriceImportRds;
 import org.ligoj.app.plugin.prov.catalog.AbstractImportCatalogResource;
 import org.ligoj.app.plugin.prov.catalog.ImportCatalogResource;
+import org.ligoj.app.plugin.prov.dao.ProvDatabasePriceRepository;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceRepository;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceTermRepository;
 import org.ligoj.app.plugin.prov.dao.ProvInstanceTypeRepository;
@@ -121,6 +122,9 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 	@Autowired
 	private ProvInstancePriceRepository ipRepository;
+
+	@Autowired
+	private ProvDatabasePriceRepository bpRepository;
 
 	@Autowired
 	private ProvQuoteInstanceRepository qiRepository;
@@ -255,6 +259,9 @@ class AwsPriceImportTest extends AbstractServerTest {
 		// Check the whole quote
 		final ProvQuoteInstance instance = check(quote, 449.057d, 46.667d);
 
+		// Check the v1 only RDS price is available
+		bpRepository.findByExpected("code", "000000000000_NEWJRTCKXETXF");
+
 		// Check the spot
 		final QuoteInstanceLookup spotPrice = qiResource.lookup(instance.getConfiguration().getSubscription().getId(),
 				builder().cpu(2).ram(1741).constant(true).ephemeral(true).build());
@@ -268,14 +275,17 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		Assertions.assertEquals("eu-west-1", spotPrice.getPrice().getLocation().getName());
 		Assertions.assertEquals("EU (Ireland)", spotPrice.getPrice().getLocation().getDescription());
-		checkImportStatus();
+		checkImportStatus(110);
 
 		// Install again to check the update without change
 		resetImportTask();
 		resource.install();
 		provResource.updateCost(subscription);
 		check(provResource.getConfiguration(subscription), 449.057d, 46.667d);
-		checkImportStatus();
+		checkImportStatus(110);
+
+		// Check the v1 only RDS price still available
+		bpRepository.findByExpected("code", "000000000000_NEWJRTCKXETXF");
 
 		// Now, change a price within the remote catalog
 
@@ -294,10 +304,13 @@ class AwsPriceImportTest extends AbstractServerTest {
 		mock("/v2/eu-central-1/index-rds.csv", "mock-server/aws/index-rds-empty.csv");
 
 		// Install the new catalog, update/deletion occurs
-		// Code 'HF7N6NNE7N8GDMBE' is deleted, 'NEW' is new
+		// Code 'HF7N6NNE7N8GDMBE' and '000000000000_NEW' are deleted
 		resetImportTask();
 		resource.install();
 		provResource.updateCost(subscription);
+
+		// Check the v1 only RDS price is no more available
+		Assertions.assertNull(bpRepository.findBy("code", "000000000000_NEWJRTCKXETXF"));
 
 		// Check the new price
 		final QuoteVo newQuote = provResource.getConfiguration(subscription);
@@ -340,17 +353,17 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("{Intel Xeon E5-2686 v4 (Broadwell),2.3 GHz}", type.getDescription());
 
 		// Check status
-		checkImportStatus();
+		checkImportStatus(109);
 	}
 
-	private void checkImportStatus() {
+	private void checkImportStatus(final int count) {
 		final ImportCatalogStatus status = this.resource.getImportCatalogResource().getTask("service:prov:aws");
 		Assertions.assertTrue(status.getDone() >= 9);
 		Assertions.assertEquals(16, status.getWorkload());
 		Assertions.assertEquals("efs", status.getPhase());
 		Assertions.assertEquals(DEFAULT_USER, status.getAuthor());
 		Assertions.assertEquals(77, status.getNbInstanceTypes().intValue());
-		Assertions.assertEquals(109, status.getNbInstancePrices().intValue());
+		Assertions.assertEquals(count, status.getNbInstancePrices().intValue());
 		Assertions.assertEquals(4, status.getNbLocations().intValue());
 		Assertions.assertEquals(16, status.getNbStorageTypes().intValue());
 	}

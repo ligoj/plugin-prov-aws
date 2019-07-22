@@ -24,12 +24,14 @@ import org.ligoj.app.model.Node;
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVm;
+import org.ligoj.app.plugin.prov.dao.ProvQuoteInstanceRepository;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
 import org.ligoj.app.plugin.prov.model.ProvInstanceType;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvTenancy;
 import org.ligoj.app.plugin.prov.model.VmOs;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import lombok.extern.slf4j.Slf4j;
@@ -77,6 +79,9 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	 * Mapping from AWS software to standard form.
 	 */
 	private Map<String, String> mapSoftware = new HashMap<>();
+
+	@Autowired
+	protected ProvQuoteInstanceRepository qiRepository;
 
 	@Override
 	public void install(final UpdateContext context) throws IOException, URISyntaxException {
@@ -220,7 +225,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 			}
 
 			// Purge the SKUs
-			purgeSku(context, localContext);
+			purgeSku(context, localContext, localContext.getPrevious(), ipRepository, qiRepository);
 		} catch (final IOException | URISyntaxException use) {
 			// Something goes wrong for this region, stop for this region
 			log.info("AWS EC2 OnDemand/Reserved import failed for region {}", region.getName(), use);
@@ -234,16 +239,12 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 
 	/**
 	 * Remove SKU that were present in the context and not refresh with this update.
+	 * 
+	 * @param context      The update context.
+	 * @param localContext The local update context.
 	 */
 	private void purgeSku(final UpdateContext context, final UpdateContext localContext) {
-		localContext.getPrevious().keySet().removeAll(localContext.getActualCodes());
-		if (!localContext.getPrevious().isEmpty()) {
-			log.info("Need to purge {} prices", localContext.getPrevious().size());
-			localContext.getPrevious().keySet().removeAll(qiRepository.finUsedPrices(context.getNode().getId()));
-			log.info("Need to purge unused {} prices", localContext.getPrevious().size());
-			localContext.getPrevious().values().forEach(ipRepository::delete);
-			log.info("Code purged");
-		}
+		purgeSku(context, localContext, localContext.getPrevious(), ipRepository, qiRepository);
 	}
 
 	/**
@@ -252,6 +253,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	 * @param context The update context.
 	 * @param csv     The current CSV entry.
 	 * @param region  The current region.
+	 * @param context The local update context.
 	 */
 	private void installEc2(final UpdateContext context, final AwsEc2Price csv, final ProvLocation region,
 			final UpdateContext localContext) {

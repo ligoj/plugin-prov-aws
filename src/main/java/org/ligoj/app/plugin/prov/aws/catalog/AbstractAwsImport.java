@@ -11,7 +11,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.plugin.prov.ProvResource;
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
 import org.ligoj.app.plugin.prov.catalog.AbstractImportCatalogResource;
-import org.ligoj.app.plugin.prov.dao.ProvQuoteInstanceRepository;
 import org.ligoj.app.plugin.prov.model.ImportCatalogStatus;
 import org.ligoj.bootstrap.core.INamableBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,9 +22,6 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 
 	@Autowired
 	private ProvResource provResource;
-
-	@Autowired
-	protected ProvQuoteInstanceRepository qiRepository;
 
 	/**
 	 * Configuration key used for AWS URL prices.

@@ -24,6 +24,7 @@ import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AbstractAwsEc2Price;
 import org.ligoj.app.plugin.prov.catalog.ImportCatalog;
 import org.ligoj.app.plugin.prov.dao.BaseProvInstanceTypeRepository;
+import org.ligoj.app.plugin.prov.dao.BaseProvQuoteResourceRepository;
 import org.ligoj.app.plugin.prov.dao.BaseProvTermPriceRepository;
 import org.ligoj.app.plugin.prov.model.AbstractInstanceType;
 import org.ligoj.app.plugin.prov.model.AbstractTermPrice;
@@ -32,6 +33,7 @@ import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.Rate;
 import org.ligoj.bootstrap.core.curl.CurlProcessor;
+import org.springframework.data.repository.CrudRepository;
 
 import com.hazelcast.util.function.BiConsumer;
 
@@ -315,5 +317,30 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 		initRate("cpu");
 		initRate("ram");
 		initRate("network");
+	}
+
+	/**
+	 * Remove SKU that were present in the context and not refresh with this update.
+	 * 
+	 * @param context      The update context.
+	 * @param localContext The local update context.
+	 * @param previous     The whole price context in the database. Some of them are no more available in the new
+	 *                     catalog.
+	 * @param pRepository  The price repository used to clean the related price.
+	 * @param qRepository  The quote repository to check for unused price.
+	 * @param <T>          The instance type.
+	 * @param <P>          The price type.
+	 */
+	protected <T extends AbstractInstanceType, P extends AbstractTermPrice<T>> void purgeSku(
+			final UpdateContext context, final UpdateContext localContext, Map<String, P> previous,
+			final CrudRepository<P, Integer> pRepository, final BaseProvQuoteResourceRepository<?> qRepository) {
+		previous.keySet().removeAll(localContext.getActualCodes());
+		if (!previous.isEmpty()) {
+			final var purge = previous.size();
+			previous.keySet().removeAll(qRepository.finUsedPrices(context.getNode().getId()));
+			log.info("Purge {} unused of not refresh {} prices ...", previous.size(), purge);
+			previous.values().forEach(pRepository::delete);
+			log.info("Code purged");
+		}
 	}
 }

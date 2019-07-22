@@ -148,6 +148,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 		// The previously installed instance types cache. Key is the instance name
 		context.setInstanceTypes(itRepository.findAllBy(BY_NODE, node).stream()
 				.collect(Collectors.toConcurrentMap(ProvInstanceType::getName, Function.identity())));
+		final var apiPrice = configuration.get(CONF_URL_EC2_PRICES, EC2_PRICES);
 
 		// Install the EC2 (non spot) prices
 		newStream(context.getRegions().values()).map(region -> {
@@ -156,7 +157,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 			localContext.setPrevious(ipRepository.findAll(node.getId(), region.getName()).stream()
 					.filter(p -> !p.getCode().startsWith(CODE_SPOT))
 					.collect(Collectors.toMap(ProvInstancePrice::getCode, Function.identity())));
-			installEC2Prices(context, region, localContext);
+			installEC2Prices(context, region, localContext, apiPrice);
 			return region;
 		}).reduce((region1, region2) -> {
 			nextStep(node, region2.getName(), 1);
@@ -194,10 +195,10 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	 * @param region  The region to fetch.
 	 */
 	private void installEC2Prices(final UpdateContext context, final ProvLocation region,
-			final UpdateContext localContext) {
+			final UpdateContext localContext, final String apiPrice) {
 		// Track the created instance to cache partial costs
 		localContext.setPartialCost(new HashMap<>());
-		final var endpoint = configuration.get(CONF_URL_EC2_PRICES, EC2_PRICES).replace("%s", region.getName());
+		final var endpoint = apiPrice.replace("%s", region.getName());
 		log.info("AWS EC2 OnDemand/Reserved import started for region {}@{} ...", region, endpoint);
 
 		// Get the remote prices stream

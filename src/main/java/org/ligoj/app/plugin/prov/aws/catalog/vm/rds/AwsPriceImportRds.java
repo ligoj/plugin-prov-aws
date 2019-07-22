@@ -63,9 +63,10 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 	public void install(final UpdateContext context) throws IOException, URISyntaxException {
 		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("rds"));
 		context.setDatabaseTypes(dtRepository.findAllBy(BY_NODE, context.getNode()).stream()
-				.collect(Collectors.toMap(ProvDatabaseType::getName, Function.identity())));
+				.collect(Collectors.toConcurrentMap(ProvDatabaseType::getName, Function.identity())));
 		context.setValidDatabaseType(Pattern.compile(configuration.get(CONF_DTYPE, ".*")));
-		context.getRegions().values().forEach(region -> {
+		final var apiPrice = configuration.get(CONF_URL_RDS_PRICES, RDS_PRICES);
+		newStream(context.getRegions().values()).forEach(region -> {
 			nextStep(context, region.getName(), 1);
 			// Get previous RDS storage and instance prices for this location
 			final var localContext = new UpdateContext();
@@ -73,12 +74,11 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 					.collect(Collectors.toMap(ProvDatabasePrice::getCode, Function.identity())));
 			localContext.setPreviousStorage(spRepository.findAll(context.getNode().getId(), region.getName()).stream()
 					.collect(Collectors.toMap(ProvStoragePrice::getCode, Function.identity())));
-			install(context, region, localContext);
+			install(context, region, localContext, apiPrice);
 			localContext.getPreviousDatabase().clear();
 			localContext.getPreviousStorage().clear();
 		});
 		context.getDatabaseTypes().clear();
-		context.getStorageTypes().clear();
 	}
 
 	/**
@@ -87,10 +87,11 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 	 * @param context The update context.
 	 * @param region  The region to fetch.
 	 */
-	private void install(final UpdateContext context, final ProvLocation region, final UpdateContext localContext) {
+	private void install(final UpdateContext context, final ProvLocation region, final UpdateContext localContext,
+			final String apiPrice) {
 		// Track the created instance to cache partial costs
 		localContext.setPartialCostRds(new HashMap<>());
-		final var endpoint = configuration.get(CONF_URL_RDS_PRICES, RDS_PRICES).replace("%s", region.getName());
+		final var endpoint = apiPrice.replace("%s", region.getName());
 		log.info("AWS RDS OnDemand/Reserved import started for region {}@{} ...", region, endpoint);
 
 		// Get the remote prices stream
@@ -117,8 +118,9 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 			log.info("AWS RDS OnDemand/Reserved import failed for region {}", region.getName(), use);
 		} finally {
 			// Report
-			log.info("AWS RDS OnDemand/Reserved import finished for region {} : {} instance, {} price types, {} prices",
-					region.getName(), context.getInstanceTypes().size(), context.getPriceTerms().size(),
+			log.info(
+					"AWS RDS OnDemand/Reserved import finished for region {} : {} databases, {} price types, {} prices",
+					region.getName(), context.getDatabaseTypes().size(), context.getPriceTerms().size(),
 					localContext.getActualCodes().size());
 		}
 	}

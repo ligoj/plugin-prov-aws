@@ -1,7 +1,7 @@
-name;optimized;latency;minimal;maximal;instanceType;engine;databaseType;iops;throughput;availability;durability9;description
+name;optimized;latency;minimal;maximal;instanceType;engine;databaseType;iops;throughput;availability;durability9;description;network
 gp2;IOPS;BEST;1;16384;%;%;;10000;160;;;
 io1;IOPS;BEST;4;16384;%;%;;32000;500;;;
 st1;THROUGHPUT;GOOD;500;16384;%;%;;500;500;;;
 sc1;THROUGHPUT;GOOD;500;16384;%;%;;250;250;;;
 snapshot;DURABILITY;BEST;0;;;;;;;11;;
-efs;THROUGHPUT;GOOD;0;;;;;;;99.95;;Throughput scale 10+ GB per second. Up to thousands of EC2 instances, from multiple AZs, can connect concurrently to a file system.
+efs;THROUGHPUT;GOOD;0;;;;;;;99.95;;Throughput scale 10+ GB per second. Up to thousands of EC2 instances, from multiple AZs, can connect concurrently to a file system.;2049/tcp

@@ -104,6 +104,7 @@ public class AwsPriceImportS3 extends AbstractAwsImport implements ImportCatalog
 			t.setAvailability(toPercent(csv.getAvailability()));
 			t.setDurability9(StringUtils.countMatches(StringUtils.defaultString(csv.getDurability()), '9'));
 			t.setOptimized(ProvStorageOptimized.DURABILITY);
+			t.setNetwork("443/tcp");
 			t.setLatency(name.equals("glacier") ? Rate.WORST : Rate.MEDIUM);
 			t.setDescription("{\"class\":\"" + csv.getStorageClass() + "\",\"type\":\"" + csv.getVolumeType() + "\"}");
 			stRepository.save(t);

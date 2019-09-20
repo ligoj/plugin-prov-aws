@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -232,21 +231,6 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 			term.setPeriod(Integer.parseInt(matcher.group(1)) * 12d);
 		}
 		return iptRepository.save(term);
-	}
-
-	/**
-	 * Save a price when the attached cost is different from the old one.
-	 * 
-	 * @param <T>       The price's type.
-	 * @param <P>       The instance type's type.
-	 *
-	 * @param entity    The target entity to update.
-	 * @param newCost   The new cost.
-	 * @param persister The consumer used to persist the replacement. Usually a repository operation.
-	 */
-	protected <T extends AbstractInstanceType, P extends AbstractTermPrice<T>> void saveAsNeeded(final P entity,
-			final double newCost, final Consumer<P> persister) {
-		saveAsNeeded(entity, entity.getCost(), newCost, entity::setCost, persister);
 	}
 
 	/**

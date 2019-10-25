@@ -11,7 +11,7 @@
 
 	<groupId>org.ligoj.plugin</groupId>
 	<artifactId>plugin-prov-aws</artifactId>
-	<version>1.4.8-SNAPSHOT</version>
+	<version>1.4.9-SNAPSHOT</version>
 	<packaging>jar</packaging>
 	<name>Ligoj - Plugin Provisioning - AWS</name>
 	<url>https://github.com/ligoj/plugin-prov-aws</url>
@@ -38,7 +38,7 @@
 		<dependency>
 			<groupId>org.ligoj.plugin</groupId>
 			<artifactId>plugin-prov</artifactId>
-			<version>[1.9.0,1.10.0)</version>
+			<version>[1.9.1,1.10.0)</version>
 			<scope>provided</scope>
 		</dependency>
 	</dependencies>

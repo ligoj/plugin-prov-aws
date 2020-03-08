@@ -21,7 +21,6 @@ public abstract class AbstractAwsEc2Price extends AwsCsvPrice {
 	private String instanceType;
 	private double cpu;
 	private String physicalProcessor;
-	private String clockSpeed;
 	private String memory;
 	private String tenancy;
 	private String priceUnit;

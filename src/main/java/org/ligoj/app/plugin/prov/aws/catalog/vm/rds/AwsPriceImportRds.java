@@ -248,9 +248,10 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 			final UpdateContext localContext) {
 		final var type = installInstanceType(context, csv, context.getDatabaseTypes(), ProvDatabaseType::new,
 				dtRepository);
+		final var term = installInstancePriceTerm(context, csv);
 		return localContext.getPreviousDatabase().computeIfAbsent(toCode(csv), c -> {
 			final ProvDatabasePrice p = new ProvDatabasePrice();
-			copy(context, csv, region, c, p, type);
+			copy(context, csv, region, c, p, type, term);
 			p.setEngine(StringUtils.trimToNull(csv.getEngine().toUpperCase(Locale.ENGLISH)));
 			p.setEdition(StringUtils.trimToNull(StringUtils.trimToEmpty(csv.getEdition()).toUpperCase(Locale.ENGLISH)));
 			return p;

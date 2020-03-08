@@ -36,7 +36,6 @@ public abstract class AbstractCsvForBeanEc2<P extends AbstractAwsEc2Price> exten
 		HEADERS_MAPPING.put("Instance Type", "instanceType");
 		HEADERS_MAPPING.put("vCPU", "cpu");
 		HEADERS_MAPPING.put("Physical Processor", "physicalProcessor");
-		HEADERS_MAPPING.put("Clock Speed", "clockSpeed");
 		HEADERS_MAPPING.put("Memory", "memory");
 		HEADERS_MAPPING.put("License Model", "licenseModel");
 		HEADERS_MAPPING.put("Network Performance", "networkPerformance");

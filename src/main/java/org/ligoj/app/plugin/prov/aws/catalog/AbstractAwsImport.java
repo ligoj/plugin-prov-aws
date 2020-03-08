@@ -60,6 +60,11 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 
 	@Override
 	protected int getWorkload(ImportCatalogStatus status) {
-		return status.getNbLocations() * 3 + 4; // NB region (for EC2 + Spot + RDS) + 3 (S3+EBS+EFS)
+		// NB regions * 4 (EC2 + Spot + RDS + Savings Plan prices)
+		// + 3 global prices (S3+EBS+EFS)
+		// + 1 (spot configuration)
+		// + 1 (savings plan configuration)
+		// + 1 flush
+		return status.getNbLocations() * 4 + 4 + 1;
 	}
 }

@@ -5,6 +5,7 @@ package org.ligoj.app.plugin.prov.aws.catalog.vm;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -101,15 +102,15 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	 * @param type    The instance type.
 	 */
 	protected <T extends AbstractInstanceType> void copy(final UpdateContext context, final AbstractAwsEc2Price csv,
-			final ProvLocation region, final String code, final AbstractTermPrice<T> p, final T type) {
+			final ProvLocation region, final String code, final AbstractTermPrice<T> p, final T type,
+			final ProvInstancePriceTerm term) {
 		p.setLocation(region);
 		p.setCode(code);
 		p.setLicense(StringUtils.trimToNull(csv.getLicenseModel().replace("No License required", "")
 				.replace("No license required", "").replace("License included", "")
 				.replace("Bring your own license", ProvInstancePrice.LICENSE_BYOL)));
 		p.setType(type);
-		p.setTerm(context.getPriceTerms().computeIfAbsent(csv.getOfferTermCode(),
-				k -> newInstancePriceTerm(context, csv)));
+		p.setTerm(term);
 	}
 
 	/**
@@ -148,6 +149,7 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 		if (context.getInstanceTypesMerged().add(type.getName())) {
 			type.setCpu(csv.getCpu());
 			type.setConstant(!type.getName().startsWith("t") && !type.getName().startsWith("db.t"));
+			type.setPhysical(type.getName().contains("metal"));
 			type.setProcessor(StringUtils
 					.trimToNull(RegExUtils.removeAll(csv.getPhysicalProcessor(), "(Variable|Family|\\([^)]*\\))")));
 			type.setDescription(ArrayUtils.toString(ArrayUtils
@@ -213,26 +215,45 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	/**
 	 * Build a new instance price type from the CSV line.
 	 */
-	private ProvInstancePriceTerm newInstancePriceTerm(final UpdateContext context, final AbstractAwsEc2Price csv) {
-		final var term = new ProvInstancePriceTerm();
-		term.setNode(context.getNode());
-		term.setCode(csv.getOfferTermCode());
+	protected ProvInstancePriceTerm installInstancePriceTerm(final UpdateContext context,
+			final AbstractAwsEc2Price csv) {
+		final var term = context.getPriceTerms().computeIfAbsent(csv.getOfferTermCode(), k -> {
+			final var newTerm = new ProvInstancePriceTerm();
+			newTerm.setNode(context.getNode());
+			newTerm.setCode(k);
+			return newTerm;
+		});
 
-		// Build the name from the leasing, purchase option and offering class
-		final var name = StringUtils.trimToNull(RegExUtils.removeAll(
-				RegExUtils.replaceAll(csv.getPurchaseOption(), "([a-z])Upfront", "$1 Upfront"), "No\\s*Upfront"));
-		term.setName(Arrays
-				.stream(new String[] { csv.getTermType(), StringUtils.replace(csv.getLeaseContractLength(), " ", ""),
-						name, StringUtils.trimToNull(StringUtils.remove(csv.getOfferingClass(), "standard")) })
-				.filter(Objects::nonNull).collect(Collectors.joining(", ")));
+		// Update the properties only once
+		if (context.getPriceTermsMerged().add(term.getCode())) {
 
-		// Handle leasing
-		final var matcher = LEASING_TIME.matcher(StringUtils.defaultIfBlank(csv.getLeaseContractLength(), ""));
-		if (matcher.find()) {
-			// Convert years to months
-			term.setPeriod(Integer.parseInt(matcher.group(1)) * 12d);
+			// Build the name from the leasing, purchase option and offering class
+			final var name = StringUtils.trimToNull(RegExUtils.removeAll(
+					RegExUtils.replaceAll(csv.getPurchaseOption(), "([a-z])Upfront", "$1 Upfront"), "No\\s*Upfront"));
+			term.setName(Arrays
+					.stream(new String[] { csv.getTermType(),
+							StringUtils.replace(csv.getLeaseContractLength(), " ", ""), name,
+							StringUtils.trimToNull(StringUtils.remove(csv.getOfferingClass(), "standard")) })
+					.filter(Objects::nonNull).collect(Collectors.joining(", ")));
+			term.setReservation(StringUtils.containsIgnoreCase(term.getName(), "reserved")); // ODCR not yet managed of
+			term.setConvertibleType(
+					!term.getReservation() || StringUtils.containsIgnoreCase(term.getName(), "convertible"));
+
+			// Only for OD term
+			term.setConvertibleFamily(!term.getReservation());
+			term.setConvertibleEngine(!term.getReservation());
+			term.setConvertibleOs(!term.getReservation());
+			term.setConvertibleLocation(!term.getReservation());
+
+			// Handle leasing
+			final var matcher = LEASING_TIME.matcher(StringUtils.defaultIfBlank(csv.getLeaseContractLength(), ""));
+			if (matcher.find()) {
+				// Convert years to months
+				term.setPeriod(Integer.parseInt(matcher.group(1)) * 12d);
+			}
+			iptRepository.save(term);
 		}
-		return iptRepository.save(term);
+		return term;
 	}
 
 	/**
@@ -266,7 +287,7 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 					.peek(r -> r.setRegion(context.getMapSpotToNewRegion().getOrDefault(r.getRegion(), r.getRegion())))
 					.filter(r -> isEnabledRegion(context, r)).collect(Collectors.toList());
 			eRegions.forEach(r -> installRegion(context, r.getRegion()));
-			nextStep(context, null, 0);
+			nextStep(context, null, 1);
 
 			// Install the prices for each region
 			newStream(eRegions).forEach(r -> mapper.accept(r, context.getRegions().get(r.getRegion())));
@@ -320,12 +341,16 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	protected <T extends AbstractInstanceType, P extends AbstractTermPrice<T>> void purgeSku(
 			final UpdateContext context, final UpdateContext localContext, Map<String, P> previous,
 			final CrudRepository<P, Integer> pRepository, final BaseProvQuoteResourceRepository<?> qRepository) {
-		previous.keySet().removeAll(localContext.getActualCodes());
-		if (!previous.isEmpty()) {
+		final var purgeCodes = new HashSet<>(previous.keySet());
+		purgeCodes.removeAll(localContext.getActualCodes());
+		if (!purgeCodes.isEmpty()) {
 			final var purge = previous.size();
-			previous.keySet().removeAll(qRepository.finUsedPrices(context.getNode().getId()));
-			log.info("Purge {} unused of not refresh {} prices ...", previous.size(), purge);
-			previous.values().forEach(pRepository::delete);
+			purgeCodes.removeAll(qRepository.finUsedPrices(context.getNode().getId()));
+			log.info("Purge {} unused of not refresh {} prices ...", purgeCodes.size(), purge);
+			purgeCodes.stream().map(c -> previous.get(c)).forEach(pRepository::delete);
+
+			// Remove the purged from the context
+			previous.keySet().removeAll(purgeCodes);
 			log.info("Code purged");
 		}
 	}

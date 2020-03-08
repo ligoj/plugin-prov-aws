@@ -1,0 +1,50 @@
+{
+  "version" : "20200220220300",
+  "publicationDate" : "2020-02-20T22:03:00Z",
+  "terms" : {
+    "savingsPlan" : [ {
+      "sku" : "SSTZVD8UMFZ4RSTW",
+      "description" : "1 year No Upfront c1 EC2 Instance Savings Plan in eu-west-1",
+      "leaseContractLength" : {
+        "duration" : 1
+      },
+      "rates" : [ {
+        "discountedSku" : "HB5V2X8TXQUTDZBV",
+        "discountedUsageType" : "EUW3-DedicatedUsage:c1.medium",
+        "rateCode" : "SSTZVD8UMFZ4RSTW.M2WTFX8JK6VDUNU5",
+        "discountedRate" : {
+          "price" : "0.135"
+        }
+      }, {
+        "discountedSku" : "_not_found_",
+        "discountedUsageType" : "EUW3-UnusedDed:c1.medium",
+        "rateCode" : "SSTZVD8UMFZ4RSTW.Y48XUZ9XH8NEYS8Q",
+        "discountedRate" : {
+          "price" : "6.455"
+        }
+	  }]
+    },{
+      "sku" : "8GU23DFTKP2N43SD",
+      "description" : "1 year All Upfront Compute Savings Plan",
+      "leaseContractLength" : {
+        "duration" : 1
+      },
+      "rates" : [ {
+        "discountedSku" : "HB5V2X8TXQUTDZBV",
+        "discountedUsageType" : "EUW3-BoxUsage:c1.medium",
+        "rateCode" : "8GU23DFTKP2N43SD.29QDFBY626457QNP",
+        "discountedRate" : {
+          "price" : "0.140"
+        }
+      }, {
+        "discountedSku" : "HB5V2X8TXQUTDZBV",
+        "discountedUsageType" : "EUW3-Unused:c1.medium",
+        "rateCode" : "8GU23DFTKP2N43SD.2FYQUTXHCPJH694R",
+        "discountedRate" : {
+          "price" : "0.82"
+        }
+      }]
+    }]
+  }
+}
+	 

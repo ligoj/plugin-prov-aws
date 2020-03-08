@@ -1,0 +1,10 @@
+{
+  "publicationDate" : "2020-02-20T22:03:00Z",
+  "regions" : [ {
+    "regionCode" : "eu-west-3",
+    "versionUrl" : "/savingsPlan/v1.0/aws/AWSComputeSavingsPlan/20200220220300/eu-west-3/index.json"
+  }, {
+    "regionCode" : "eu-west-1",
+    "versionUrl" : "/savingsPlan/v1.0/aws/AWSComputeSavingsPlan/20200220220300/eu-west-1/index.json"
+  }]
+}

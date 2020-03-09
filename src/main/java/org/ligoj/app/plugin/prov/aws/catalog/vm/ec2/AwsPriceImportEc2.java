@@ -167,6 +167,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 						p.setTenancy(ProvTenancy.SHARED);
 						p.setOs(op.getOs());
 						p.setLocation(region);
+						p.setPeriod(0);
 						return p;
 					});
 
@@ -386,6 +387,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 			p.setSoftware(odPrice.getSoftware());
 			p.setOs(odPrice.getOs());
 			p.setTenancy(odPrice.getTenancy());
+			p.setPeriod(term.getPeriod());
 			return p;
 		});
 	}

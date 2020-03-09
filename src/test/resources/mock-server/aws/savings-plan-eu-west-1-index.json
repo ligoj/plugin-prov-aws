@@ -10,14 +10,14 @@
       },
       "rates" : [ {
         "discountedSku" : "HB5V2X8TXQUTDZBV",
-        "discountedUsageType" : "EUW3-DedicatedUsage:c1.medium",
+        "discountedUsageType" : "EUW1-DedicatedUsage:c1.medium",
         "rateCode" : "SSTZVD8UMFZ4RSTW.M2WTFX8JK6VDUNU5",
         "discountedRate" : {
-          "price" : "0.135"
+          "price" : "0.087"
         }
       }, {
         "discountedSku" : "_not_found_",
-        "discountedUsageType" : "EUW3-UnusedDed:c1.medium",
+        "discountedUsageType" : "EUW1-UnusedDed:c1.medium",
         "rateCode" : "SSTZVD8UMFZ4RSTW.Y48XUZ9XH8NEYS8Q",
         "discountedRate" : {
           "price" : "6.455"
@@ -31,10 +31,10 @@
       },
       "rates" : [ {
         "discountedSku" : "HB5V2X8TXQUTDZBV",
-        "discountedUsageType" : "EUW3-BoxUsage:c1.medium",
+        "discountedUsageType" : "EUW1-BoxUsage:c1.medium",
         "rateCode" : "8GU23DFTKP2N43SD.29QDFBY626457QNP",
         "discountedRate" : {
-          "price" : "0.140"
+          "price" : "0.098"
         }
       }, {
         "discountedSku" : "HB5V2X8TXQUTDZBV",

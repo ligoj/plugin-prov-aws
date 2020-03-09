@@ -291,20 +291,20 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Check the EC2 savings plan
 		final var ec2SsavingsPlanPrice = qiResource.lookup(subscription,
-				builder().cpu(2).ram(1741).constant(true).ephemeral(false).usage("36monthEC2SP").build());
-		Assertions.assertEquals(98.55d, ec2SsavingsPlanPrice.getCost(), DELTA);
-		Assertions.assertEquals(98.55d, ec2SsavingsPlanPrice.getPrice().getCost(), DELTA);
-		Assertions.assertEquals(1182.6d, ec2SsavingsPlanPrice.getPrice().getCostPeriod(), DELTA);
+				builder().cpu(2).ram(1741).constant(true).usage("36monthEC2SP").build());
+		Assertions.assertEquals(63.51d, ec2SsavingsPlanPrice.getCost(), DELTA);
+		Assertions.assertEquals(63.51d, ec2SsavingsPlanPrice.getPrice().getCost(), DELTA);
+		Assertions.assertEquals(762.12d, ec2SsavingsPlanPrice.getPrice().getCostPeriod(), DELTA);
 		Assertions.assertEquals("EC2 Savings Plan, 1yr, No Upfront, c1 in eu-west-1",
 				ec2SsavingsPlanPrice.getPrice().getTerm().getName());
 		Assertions.assertEquals("c1.medium", ec2SsavingsPlanPrice.getPrice().getType().getName());
 
 		// Check the compute savings plan
 		final var cSavingsPlanPrice = qiResource.lookup(subscription,
-				builder().cpu(2).ram(1741).usage("36monthCSP").build());
-		Assertions.assertEquals(102.2d, cSavingsPlanPrice.getCost(), DELTA);
-		Assertions.assertEquals(102.2d, cSavingsPlanPrice.getPrice().getCost(), DELTA);
-		Assertions.assertEquals(1226.4d, cSavingsPlanPrice.getPrice().getCostPeriod(), DELTA);
+				builder().cpu(2).ram(1741).constant(true).usage("36monthCSP").build());
+		Assertions.assertEquals(71.54d, cSavingsPlanPrice.getCost(), DELTA);
+		Assertions.assertEquals(71.54d, cSavingsPlanPrice.getPrice().getCost(), DELTA);
+		Assertions.assertEquals(858.48d, cSavingsPlanPrice.getPrice().getCostPeriod(), DELTA);
 		Assertions.assertEquals("Compute Savings Plan, 1yr, All Upfront",
 				cSavingsPlanPrice.getPrice().getTerm().getName());
 		Assertions.assertEquals("c1.medium", cSavingsPlanPrice.getPrice().getType().getName());
@@ -783,10 +783,10 @@ class AwsPriceImportTest extends AbstractServerTest {
 		usageCSP.setDuration(36);
 		usageCSP.setConfiguration(repository.findBy("subscription.id", subscription));
 		usageCSP.setReservation(false);
-		usageCSP.setConvertibleFamily(true);
 		usageCSP.setConvertibleOs(true);
 		usageCSP.setConvertibleType(true);
 		usageCSP.setConvertibleFamily(true);
+		usageCSP.setConvertibleEngine(false);
 		usageCSP.setConvertibleLocation(true);
 		em.persist(usageCSP);
 
@@ -796,10 +796,10 @@ class AwsPriceImportTest extends AbstractServerTest {
 		usageEC2SP.setDuration(36);
 		usageEC2SP.setConfiguration(repository.findBy("subscription.id", subscription));
 		usageEC2SP.setReservation(false);
-		usageEC2SP.setConvertibleFamily(true);
 		usageEC2SP.setConvertibleOs(true);
 		usageEC2SP.setConvertibleType(true);
 		usageEC2SP.setConvertibleFamily(false);
+		usageEC2SP.setConvertibleEngine(false);
 		usageEC2SP.setConvertibleLocation(false);
 		em.persist(usageEC2SP);
 		em.flush();

@@ -111,6 +111,7 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 				.replace("Bring your own license", ProvInstancePrice.LICENSE_BYOL)));
 		p.setType(type);
 		p.setTerm(term);
+		p.setPeriod(term.getPeriod());
 	}
 
 	/**

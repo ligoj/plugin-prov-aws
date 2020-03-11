@@ -279,7 +279,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 			final var rawJson = StringUtils.defaultString(curl.get(endpoint), "{\"terms\":[]}");
 			// All regions are considered
 			objectMapper.readValue(rawJson, SavingsPlanPrice.class).getTerms().getSavingsPlan().stream().forEach(sp -> {
-				final var term = newSavingsPlanTerm(context, sp);
+				final var term = newSavingsPlanTerm(context, region, sp);
 				sp.getRates().forEach(r -> installSavingsPlanTermPrices(context, term, r, region, localContext,
 						previousOd, onDemandOfferCode));
 			});
@@ -299,7 +299,8 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	/**
 	 * Create or update the savings plan term and return it.
 	 */
-	private ProvInstancePriceTerm newSavingsPlanTerm(final UpdateContext context, final SavingsPlanTerm sp) {
+	private ProvInstancePriceTerm newSavingsPlanTerm(final UpdateContext context, final ProvLocation region,
+			final SavingsPlanTerm sp) {
 
 		final var term = context.getPriceTerms().computeIfAbsent(sp.getSku(), code -> {
 			final var t = new ProvInstancePriceTerm();
@@ -323,6 +324,9 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 				name = RegExUtils.replaceAll(name, "(\\d+) year (.*)\\s+(.+)\\s+EC2 Instance Savings Plan (.*)",
 						TERM_EC2_SP + ", $1yr, $2, $3 $4");
 				computePlan = false;
+
+				// This term is only available for a specific region
+				term.setLocation(region);
 			}
 
 			term.setName(name);

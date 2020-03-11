@@ -297,6 +297,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(762.12d, ec2SsavingsPlanPrice.getPrice().getCostPeriod(), DELTA);
 		Assertions.assertEquals("EC2 Savings Plan, 1yr, No Upfront, c1 in eu-west-1",
 				ec2SsavingsPlanPrice.getPrice().getTerm().getName());
+		Assertions.assertEquals("eu-west-1", ec2SsavingsPlanPrice.getPrice().getTerm().getLocation().getName());
 		Assertions.assertEquals("c1.medium", ec2SsavingsPlanPrice.getPrice().getType().getName());
 
 		// Check the compute savings plan
@@ -307,6 +308,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(858.48d, cSavingsPlanPrice.getPrice().getCostPeriod(), DELTA);
 		Assertions.assertEquals("Compute Savings Plan, 1yr, All Upfront",
 				cSavingsPlanPrice.getPrice().getTerm().getName());
+		Assertions.assertNull(cSavingsPlanPrice.getPrice().getTerm().getLocation());
 		Assertions.assertEquals("c1.medium", cSavingsPlanPrice.getPrice().getType().getName());
 
 		// Check the RI
@@ -315,6 +317,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(46.667d, cRIPrice.getPrice().getCost(), DELTA);
 		Assertions.assertEquals(1680.0d, cRIPrice.getPrice().getCostPeriod(), DELTA);
 		Assertions.assertEquals("Reserved, 3yr, All Upfront", cRIPrice.getPrice().getTerm().getName());
+		Assertions.assertNull(cRIPrice.getPrice().getTerm().getLocation());
 		Assertions.assertEquals("c1.medium", cRIPrice.getPrice().getType().getName());
 
 		// Install again to check the update without change

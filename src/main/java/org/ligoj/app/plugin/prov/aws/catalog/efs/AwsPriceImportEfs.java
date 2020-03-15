@@ -64,7 +64,7 @@ public class AwsPriceImportEfs extends AbstractAwsImport implements ImportCatalo
 				final ProvLocation location = getRegionByHumanName(context, csv.getLocation());
 				if (location != null) {
 					// Supported location
-					instalEfsPrice(efs, previous, csv, location);
+					instalEfsPrice(context, efs, previous, csv, location);
 					priceCounter++;
 				}
 				// Read the next one
@@ -77,8 +77,8 @@ public class AwsPriceImportEfs extends AbstractAwsImport implements ImportCatalo
 		}
 	}
 
-	private void instalEfsPrice(final ProvStorageType efs, final Map<ProvLocation, ProvStoragePrice> previous,
-			AwsCsvPrice csv, final ProvLocation location) {
+	private void instalEfsPrice(final UpdateContext context, final ProvStorageType efs,
+			final Map<ProvLocation, ProvStoragePrice> previous, AwsCsvPrice csv, final ProvLocation location) {
 		// Update the price as needed
 		final ProvStoragePrice price = previous.computeIfAbsent(location, r -> {
 			final ProvStoragePrice p = new ProvStoragePrice();
@@ -88,6 +88,6 @@ public class AwsPriceImportEfs extends AbstractAwsImport implements ImportCatalo
 			return p;
 		});
 		price.setCode(csv.getSku());
-		saveAsNeeded(price, csv.getPricePerUnit(), spRepository::save);
+		saveAsNeeded(context, price, csv.getPricePerUnit(), spRepository::save);
 	}
 }

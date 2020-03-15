@@ -55,7 +55,7 @@ public class AwsPriceImportEbs extends AbstractAwsPriceImportVm {
 							.stream().collect(Collectors.toMap(p -> p.getType().getId(), Function.identity()));
 					r.getTypes().stream().filter(t -> containsKey(context, t))
 							.forEach(t -> t.getValues().stream().filter(j -> !"perPIOPSreq".equals(j.getRate()))
-									.findFirst().ifPresent(j -> installStoragePrice(j,
+									.findFirst().ifPresent(j -> installStoragePrice(context, j,
 											context.getStorageTypes().get(t.getName()), region, previous)));
 				});
 	}
@@ -89,20 +89,18 @@ public class AwsPriceImportEbs extends AbstractAwsPriceImportVm {
 	/**
 	 * Install the EBS price using the related storage price.
 	 *
-	 * @param json
-	 *            The current JSON entry.
-	 * @param type
-	 *            The related storage type.
-	 * @param region
-	 *            The target region.
+	 * @param context The update context.
+	 * @param json    The current JSON entry.
+	 * @param type    The related storage type.
+	 * @param region  The target region.
 	 */
-	private <T extends AwsPrice> void installStoragePrice(final T json, final ProvStorageType type,
-			final ProvLocation region, final Map<Integer, ProvStoragePrice> previous) {
+	private <T extends AwsPrice> void installStoragePrice(final UpdateContext context, final T json,
+			final ProvStorageType type, final ProvLocation region, final Map<Integer, ProvStoragePrice> previous) {
 		Optional.ofNullable(json.getPrices().get("USD")).filter(NumberUtils::isParsable)
-				.ifPresent(usd -> installStoragePrice(type, region, previous, usd));
+				.ifPresent(usd -> installStoragePrice(context, type, region, previous, usd));
 	}
 
-	private void installStoragePrice(final ProvStorageType type, final ProvLocation region,
+	private void installStoragePrice(final UpdateContext context, final ProvStorageType type, final ProvLocation region,
 			final Map<Integer, ProvStoragePrice> previous, String usd) {
 		final ProvStoragePrice price = previous.computeIfAbsent(type.getId(), s -> {
 			final ProvStoragePrice p = new ProvStoragePrice();
@@ -114,6 +112,6 @@ public class AwsPriceImportEbs extends AbstractAwsPriceImportVm {
 		price.setCode(region.getName() + "-" + type.getName());
 
 		// Update the price as needed
-		saveAsNeeded(price, Double.valueOf(usd), spRepository::save);
+		saveAsNeeded(context, price, Double.valueOf(usd), spRepository::save);
 	}
 }

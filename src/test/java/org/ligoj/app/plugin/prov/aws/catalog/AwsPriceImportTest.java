@@ -61,7 +61,6 @@ import org.ligoj.app.plugin.prov.dao.ProvQuoteStorageRepository;
 import org.ligoj.app.plugin.prov.model.ImportCatalogStatus;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
-import org.ligoj.app.plugin.prov.model.ProvInstanceType;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvQuote;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
@@ -287,7 +286,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		Assertions.assertEquals("eu-west-1", spotPrice.getPrice().getLocation().getName());
 		Assertions.assertEquals("EU (Ireland)", spotPrice.getPrice().getLocation().getDescription());
-		checkImportStatus(110 + 2 /* saving plans */);
+		checkImportStatus(110 + 2 /* saving plans */, 77);
 
 		// Check the EC2 savings plan
 		final var ec2SsavingsPlanPrice = qiResource.lookup(subscription,
@@ -322,10 +321,32 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Install again to check the update without change
 		resetImportTask();
-		resource.install();
+		resource.install(false);
 		provResource.updateCost(subscription);
 		check(provResource.getConfiguration(subscription), 449.057d, 46.667d);
-		checkImportStatus(110 + 2 /* saving plans, same as previous */);
+		checkImportStatus(110 + 2 /* saving plans, same as previous */, 77);
+
+		// Install again with force mode, without price change in force mode
+		checkType();
+		resource.install(true);
+		check(provResource.getConfiguration(subscription), 449.057d, 46.667d);
+		checkType();
+		checkImportStatus(110 + 2 /* saving plans */ + 1 - 1 /* purged RDS price */ /* new RDS price */
+				- 1 /* purged EC2 price */ + 1 /* new EC2 price */, 77);
+
+		// Install again with force mode, with only specs changes in force mode
+		configure(AwsPriceImportRds.CONF_URL_RDS_PRICES, "/vs/%s/index-rds.csv");
+		mock("/vs/eu-west-1/index-rds.csv", "mock-server/aws/vs/index-rds.csv");
+		check(provResource.getConfiguration(subscription), 449.057d, 46.667d);
+		resource.install(true);
+		var dtype = this.bpRepository.findByExpected("code", "TBNHT84HARTQH8TYJRTCKXETXF").getType();
+		Assertions.assertEquals("db.m1.large.NEW", dtype.getName());
+		Assertions.assertEquals("Intel Xeon NEW", dtype.getProcessor());
+		Assertions.assertEquals("{Moderate NEW}", dtype.getDescription());
+		Assertions.assertEquals(3, dtype.getCpu());
+		Assertions.assertEquals(7782, dtype.getRam());
+		checkImportStatus(110 + 2 /* saving plans */ + 1 - 1 /* purged RDS price */ /* new RDS price */
+				- 1 /* purged EC2 price */ + 1 /* new EC2 price */, 77 + 1 /* new type */);
 
 		// Check the v1 only prices are still available
 		bpRepository.findByExpected("code", "OLD_____________JRTCKXETXF");
@@ -344,7 +365,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		// Install the new catalog, update/deletion occurs
 		// Code 'HF7N6NNE7N8GDMBE' and '000000000000_NEW' are deleted
 		resetImportTask();
-		resource.install();
+		resource.install(false);
 		provResource.updateCost(subscription);
 
 		// Check the v1 only prices are unavailable
@@ -377,7 +398,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertFalse(priceType.isEphemeral());
 		Assertions.assertEquals(36, priceType.getPeriod());
 
-		ProvInstanceType type = price.getType();
+		var type = price.getType();
 		Assertions.assertEquals("c1.medium", type.getName());
 		Assertions.assertEquals("{1 x 350,Moderate}", type.getDescription());
 
@@ -397,16 +418,25 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Check status
 		checkImportStatus(110 + 2 /* saving plans */ + 1 - 1 /* purged RDS price */ /* new RDS price */
-				- 1 /* purged EC2 price */ + 1 /* new EC2 price */);
+				- 1 /* purged EC2 price */ + 1 /* new EC2 price */, 77 + 1);
 	}
 
-	private void checkImportStatus(final int count) {
+	private void checkType() {
+		var type = this.bpRepository.findByExpected("code", "TBNHT84HARTQH8TYJRTCKXETXF").getType();
+		Assertions.assertEquals("db.m1.large", type.getName());
+		Assertions.assertEquals("Intel Xeon", type.getProcessor());
+		Assertions.assertEquals(2, type.getCpu());
+		Assertions.assertEquals("{Moderate}", type.getDescription());
+		Assertions.assertEquals(7680, type.getRam());
+	}
+
+	private void checkImportStatus(final int count, final int nbTypes) {
 		final ImportCatalogStatus status = this.resource.getImportCatalogResource().getTask("service:prov:aws");
 		Assertions.assertTrue(status.getDone() >= 9);
 		Assertions.assertEquals(21, status.getWorkload());
 		Assertions.assertEquals("efs", status.getPhase());
 		Assertions.assertEquals(DEFAULT_USER, status.getAuthor());
-		Assertions.assertEquals(77, status.getNbInstanceTypes().intValue());
+		Assertions.assertEquals(nbTypes, status.getNbInstanceTypes().intValue());
 		Assertions.assertEquals(count, status.getNbInstancePrices().intValue());
 		Assertions.assertEquals(4, status.getNbLocations().intValue());
 		Assertions.assertEquals(16, status.getNbStorageTypes().intValue());
@@ -517,7 +547,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		mock("/index-s3.csv", "mock-server/aws/index-s3-empty.csv");
 		httpServer.start();
 
-		resource.install();
+		resource.install(false);
 		em.flush();
 		em.clear();
 		Assertions.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), DELTA);
@@ -559,7 +589,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 	}
 
 	private void checkNoSavingsPlan() throws IOException, URISyntaxException {
-		resource.install();
+		resource.install(false);
 		em.flush();
 		em.clear();
 		Assertions.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), DELTA);
@@ -589,7 +619,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		patchConfigurationUrl();
 		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES, "/any.csv");
 		mockServerNoEc2();
-		resource.install();
+		resource.install(false);
 		em.flush();
 		em.clear();
 		Assertions.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), DELTA);
@@ -609,7 +639,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		Assertions.assertEquals("Premature end of CSV file, headers were not found",
 				Assertions.assertThrows(TechnicalException.class, () -> {
-					resource.install();
+					resource.install(false);
 				}).getMessage());
 	}
 
@@ -626,7 +656,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		Assertions.assertEquals("Premature end of CSV file, headers were not found",
 				Assertions.assertThrows(TechnicalException.class, () -> {
-					resource.install();
+					resource.install(false);
 				}).getMessage());
 	}
 
@@ -641,7 +671,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		Assertions.assertEquals("Premature end of CSV file, headers were not found",
 				Assertions.assertThrows(TechnicalException.class, () -> {
-					resource.install();
+					resource.install(false);
 				}).getMessage());
 	}
 
@@ -672,7 +702,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		httpServer.start();
 
 		// Check the reserved
-		resource.install();
+		resource.install(false);
 		em.flush();
 		em.clear();
 		Assertions.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), DELTA);
@@ -699,7 +729,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		// Parse error expected
 		Assertions.assertEquals("For input string: \"AAAAAA\"",
 				Assertions.assertThrows(NumberFormatException.class, () -> {
-					resource.install();
+					resource.install(false);
 				}).getMessage());
 	}
 
@@ -728,7 +758,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		httpServer.start();
 
 		// Parse error expected
-		resource.install();
+		resource.install(false);
 
 		// The unique spot could not be installed
 		Assertions.assertEquals(0, ipRepository.findAllBy("type.name", "Spot").size());
@@ -748,7 +778,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		mock("/spot.js", "mock-server/aws/spot-empty.js");
 		httpServer.start();
 
-		resource.install();
+		resource.install(false);
 		em.flush();
 		em.clear();
 		Assertions.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), DELTA);
@@ -767,7 +797,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 	 * Install and check
 	 */
 	private QuoteVo installAndConfigure() throws IOException, URISyntaxException, Exception {
-		resource.install();
+		resource.install(false);
 		em.flush();
 		em.clear();
 		Assertions.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), DELTA);

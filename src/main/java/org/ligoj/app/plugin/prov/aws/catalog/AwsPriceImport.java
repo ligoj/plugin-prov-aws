@@ -50,13 +50,12 @@ public class AwsPriceImport extends AbstractImportCatalogResource {
 	/**
 	 * Install or update prices.
 	 *
-	 * @throws IOException
-	 *             When CSV or XML files cannot be read.
-	 * @throws URISyntaxException
-	 *             When CSV or XML files cannot be read.
+	 * @param force When <code>true</code>, all cost attributes are update.
+	 * @throws IOException        When CSV or XML files cannot be read.
+	 * @throws URISyntaxException When CSV or XML files cannot be read.
 	 */
-	public void install() throws IOException, URISyntaxException {
-		final UpdateContext context = initContext(new UpdateContext(), ProvAwsPluginResource.KEY);
+	public void install(final boolean force) throws IOException, URISyntaxException {
+		final UpdateContext context = initContext(new UpdateContext(), ProvAwsPluginResource.KEY, force);
 
 		base.install(context);
 		ebs.install(context);

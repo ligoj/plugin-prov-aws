@@ -92,7 +92,8 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 		final ProvAwsPluginResource resource2 = new ProvAwsPluginResource();
 		super.applicationContext.getAutowireCapableBeanFactory().autowireBean(resource2);
 		resource2.priceImport = Mockito.mock(AwsPriceImport.class);
-		resource2.updateCatalog("service:prov:aws:account");
+		resource2.updateCatalog("service:prov:aws:account", false);
+		resource2.updateCatalog("service:prov:aws:account", true);
 	}
 
 	@Test
@@ -101,7 +102,7 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 
 		// Re-Install a new configuration
 		Assertions.assertEquals("read-only-node", Assertions.assertThrows(BusinessException.class, () -> {
-			resource.updateCatalog("service:prov:aws:account");
+			resource.updateCatalog("service:prov:aws:account", false);
 		}).getMessage());
 	}
 
@@ -125,8 +126,7 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 	/**
 	 * retrieve keys from AWS
 	 *
-	 * @throws Exception
-	 *             exception
+	 * @throws Exception exception
 	 */
 	@SuppressWarnings("unchecked")
 	@Test
@@ -156,8 +156,7 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 	/**
 	 * error when we retrieve keys from AWS
 	 *
-	 * @throws Exception
-	 *             exception
+	 * @throws Exception exception
 	 */
 	@Test
 	void getEC2KeysError() {
@@ -167,8 +166,7 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 	/**
 	 * prepare call to AWS
 	 *
-	 * @throws Exception
-	 *             exception
+	 * @throws Exception exception
 	 */
 	@Test
 	void newRequest() {

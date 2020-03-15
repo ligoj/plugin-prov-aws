@@ -24,6 +24,7 @@ import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AbstractAwsEc2Price;
 import org.ligoj.app.plugin.prov.dao.ProvQuoteDatabaseRepository;
 import org.ligoj.app.plugin.prov.model.ProvDatabasePrice;
 import org.ligoj.app.plugin.prov.model.ProvDatabaseType;
+import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvStorageOptimized;
 import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
@@ -162,7 +163,7 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 			// No up-front, cost is fixed
 			final var price = newRdsPrice(context, csv, region, localContext);
 			final var cost = csv.getPricePerUnit() * context.getHoursMonth();
-			saveAsNeeded(price, round3Decimals(cost), p -> {
+			saveAsNeeded(context, price, round3Decimals(cost), p -> {
 				p.setCostPeriod(round3Decimals(cost * p.getTerm().getPeriod()));
 				dpRepository.save(p);
 			});
@@ -178,7 +179,7 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 			});
 
 			// Update the price as needed
-			saveAsNeeded(price, csv.getPricePerUnit(), spRepository::save);
+			saveAsNeeded(context, price, csv.getPricePerUnit(), spRepository::save);
 		}
 	}
 
@@ -241,6 +242,13 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 		});
 	}
 
+	private void copy(final UpdateContext context, final AwsRdsPrice csv, final ProvLocation region,
+			final ProvDatabasePrice p, final ProvDatabaseType type, final ProvInstancePriceTerm term) {
+		super.copy(context, csv, region, p, type, term);
+		p.setEngine(StringUtils.trimToNull(csv.getEngine().toUpperCase(Locale.ENGLISH)));
+		p.setEdition(StringUtils.trimToNull(StringUtils.trimToEmpty(csv.getEdition()).toUpperCase(Locale.ENGLISH)));
+	}
+
 	/**
 	 * Install or update a RDS price
 	 */
@@ -249,13 +257,14 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 		final var type = installInstanceType(context, csv, context.getDatabaseTypes(), ProvDatabaseType::new,
 				dtRepository);
 		final var term = installInstancePriceTerm(context, csv);
-		return localContext.getPreviousDatabase().computeIfAbsent(toCode(csv), c -> {
+		final var price = localContext.getPreviousDatabase().computeIfAbsent(toCode(csv), c -> {
 			final ProvDatabasePrice p = new ProvDatabasePrice();
-			copy(context, csv, region, c, p, type, term);
-			p.setEngine(StringUtils.trimToNull(csv.getEngine().toUpperCase(Locale.ENGLISH)));
-			p.setEdition(StringUtils.trimToNull(StringUtils.trimToEmpty(csv.getEdition()).toUpperCase(Locale.ENGLISH)));
+			p.setCode(c);
 			return p;
 		});
+
+		// Update the price in force mode
+		return copyAsNeeded(context, price, p -> copy(context, csv, region, price, type, term));
 	}
 
 	@Override

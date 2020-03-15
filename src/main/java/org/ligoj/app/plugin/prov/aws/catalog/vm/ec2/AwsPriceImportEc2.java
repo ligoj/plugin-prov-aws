@@ -173,7 +173,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 
 					// Update the price as needed
 					final var cost = Double.parseDouble(op.getPrices().get("USD"));
-					saveAsNeeded(price, round3Decimals(cost * context.getHoursMonth()), p -> {
+					saveAsNeeded(context, price, round3Decimals(cost * context.getHoursMonth()), p -> {
 						p.setCostPeriod(cost);
 						ipRepository.save(p);
 					});
@@ -369,7 +369,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 		localContext.getActualCodes().add(code);
 		final var price = newSavingPlanPrice(context, odPrice, jsonPrice, term, localContext);
 		final var cost = jsonPrice.getDiscountedRate().getPrice() * context.getHoursMonth();
-		saveAsNeeded(price, round3Decimals(cost), p -> {
+		saveAsNeeded(context, price, round3Decimals(cost), p -> {
 			p.setCostPeriod(round3Decimals(cost * p.getTerm().getPeriod()));
 			ipRepository.save(p);
 		});
@@ -381,10 +381,14 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	private ProvInstancePrice newSavingPlanPrice(final UpdateContext context, final ProvInstancePrice odPrice,
 			final SavingsPlanRate jsonPrice, final ProvInstancePriceTerm term, final UpdateContext localContext) {
 		final var type = odPrice.getType();
-		return localContext.getPrevious().computeIfAbsent(jsonPrice.getRateCode(), c -> {
+		final var price = localContext.getPrevious().computeIfAbsent(jsonPrice.getRateCode(), c -> {
 			final var p = new ProvInstancePrice();
-			p.setLocation(odPrice.getLocation());
 			p.setCode(c);
+			return p;
+		});
+
+		return copyAsNeeded(context, price, p -> {
+			p.setLocation(odPrice.getLocation());
 			p.setLicense(odPrice.getLicense());
 			p.setType(type);
 			p.setTerm(term);
@@ -392,7 +396,6 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 			p.setOs(odPrice.getOs());
 			p.setTenancy(odPrice.getTenancy());
 			p.setPeriod(term.getPeriod());
-			return p;
 		});
 	}
 
@@ -492,11 +495,20 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 			// No up-front, cost is fixed
 			final var price = newEc2Price(context, csv, region, localContext);
 			final var cost = csv.getPricePerUnit() * context.getHoursMonth();
-			saveAsNeeded(price, round3Decimals(cost), p -> {
+			saveAsNeeded(context, price, round3Decimals(cost), p -> {
 				p.setCostPeriod(round3Decimals(cost * p.getTerm().getPeriod()));
 				ipRepository.save(p);
 			});
 		}
+	}
+
+	private void copy(final UpdateContext context, final AwsEc2Price csv, final ProvLocation region,
+			final ProvInstancePrice p, final ProvInstanceType type, final ProvInstancePriceTerm term) {
+		super.copy(context, csv, region, p, type, term);
+		final var software = ObjectUtils.defaultIfNull(csv.getSoftware(), "");
+		p.setSoftware(StringUtils.trimToNull(mapSoftware.computeIfAbsent(software, String::toUpperCase)));
+		p.setOs(toVmOs(csv.getOs()));
+		p.setTenancy(ProvTenancy.valueOf(StringUtils.upperCase(csv.getTenancy())));
 	}
 
 	/**
@@ -507,15 +519,14 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 		final var type = installInstanceType(context, csv, context.getInstanceTypes(), ProvInstanceType::new,
 				itRepository);
 		final var term = installInstancePriceTerm(context, csv);
-		return localContext.getPrevious().computeIfAbsent(toCode(csv), c -> {
+		final var price = localContext.getPrevious().computeIfAbsent(toCode(csv), c -> {
 			final var p = new ProvInstancePrice();
-			copy(context, csv, region, c, p, type, term);
-			final var software = ObjectUtils.defaultIfNull(csv.getSoftware(), "");
-			p.setSoftware(StringUtils.trimToNull(mapSoftware.computeIfAbsent(software, String::toUpperCase)));
-			p.setOs(toVmOs(csv.getOs()));
-			p.setTenancy(ProvTenancy.valueOf(StringUtils.upperCase(csv.getTenancy())));
+			p.setCode(c);
 			return p;
 		});
+
+		// Update the price in force mode
+		return copyAsNeeded(context, price, p -> copy(context, csv, region, price, type, term));
 	}
 
 	/**

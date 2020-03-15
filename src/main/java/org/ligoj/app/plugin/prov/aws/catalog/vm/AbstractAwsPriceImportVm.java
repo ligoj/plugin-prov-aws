@@ -81,10 +81,11 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 		// Round the computed hourly cost and save as needed
 		final var initCost = quantity.getPricePerUnit() / price.getTerm().getPeriod();
 		final var cost = hourly.getPricePerUnit() * context.getHoursMonth() + initCost;
-		saveAsNeeded(price, round3Decimals(cost), p -> {
+		saveAsNeeded(context, price, round3Decimals(cost), p -> {
 			p.setInitialCost(quantity.getPricePerUnit());
 			p.setCostPeriod(round3Decimals(
 					p.getInitialCost() + hourly.getPricePerUnit() * p.getTerm().getPeriod() * context.getHoursMonth()));
+			p.setPeriod(p.getTerm().getPeriod()); // TODO
 			repository.save(p);
 		});
 	}
@@ -97,15 +98,12 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 	 * @param context The current context to handle lazy sub-entities creation.
 	 * @param csv     The current CSV entry.
 	 * @param region  The current region.
-	 * @param code    The price code.
 	 * @param p       The target price entity.
 	 * @param type    The instance type.
 	 */
 	protected <T extends AbstractInstanceType> void copy(final UpdateContext context, final AbstractAwsEc2Price csv,
-			final ProvLocation region, final String code, final AbstractTermPrice<T> p, final T type,
-			final ProvInstancePriceTerm term) {
+			final ProvLocation region, final AbstractTermPrice<T> p, final T type, final ProvInstancePriceTerm term) {
 		p.setLocation(region);
-		p.setCode(code);
 		p.setLicense(StringUtils.trimToNull(csv.getLicenseModel().replace("No License required", "")
 				.replace("No license required", "").replace("License included", "")
 				.replace("Bring your own license", ProvInstancePrice.LICENSE_BYOL)));
@@ -152,7 +150,7 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 			type.setConstant(!type.getName().startsWith("t") && !type.getName().startsWith("db.t"));
 			type.setPhysical(type.getName().contains("metal"));
 			type.setProcessor(StringUtils
-					.trimToNull(RegExUtils.removeAll(csv.getPhysicalProcessor(), "(Variable|Family|\\([^)]*\\))")));
+					.trimToNull(RegExUtils.removeAll(csv.getPhysicalProcessor(), "(Variable|\\s*Family|\\([^)]*\\))")));
 			type.setDescription(ArrayUtils.toString(ArrayUtils
 					.removeAllOccurences(new String[] { csv.getStorage(), csv.getNetworkPerformance() }, null)));
 

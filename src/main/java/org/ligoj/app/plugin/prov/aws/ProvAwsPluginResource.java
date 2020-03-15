@@ -98,10 +98,8 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	/**
 	 * Check AWS connection and account.
 	 *
-	 * @param node
-	 *            The node identifier. May be <code>null</code>.
-	 * @param parameters
-	 *            the parameter values of the node.
+	 * @param node       The node identifier. May be <code>null</code>.
+	 * @param parameters the parameter values of the node.
 	 * @return <code>true</code> if AWS connection is up
 	 */
 	@Override
@@ -132,14 +130,14 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	 */
 	@Override
 	public void install() throws IOException, URISyntaxException {
-		priceImport.install();
+		priceImport.install(false);
 	}
 
 	@Override
-	public void updateCatalog(final String node) throws IOException, URISyntaxException {
+	public void updateCatalog(final String node, final boolean force) throws IOException, URISyntaxException {
 		// AWS catalog is shared with all instances, require tool level access
 		nodeResource.checkWritableNode(KEY);
-		priceImport.install();
+		priceImport.install(force);
 	}
 
 	@Override
@@ -150,8 +148,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	/**
 	 * Return EC2 key names.
 	 *
-	 * @param subscription
-	 *            The related subscription.
+	 * @param subscription The related subscription.
 	 * @return EC2 keys related to given subscription.
 	 */
 	@Path("ec2/keys/{subscription:\\d+}")
@@ -179,11 +176,9 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	 * Create Curl request for AWS service. Initialize default values for awsAccessKey, awsSecretKey and regionName and
 	 * compute signature.
 	 *
-	 * @param builder
-	 *            {@link AWS4SignatureQueryBuilder} initialized with values used for this call (headers, parameters,
-	 *            host, ...)
-	 * @param subscription
-	 *            Subscription's identifier.
+	 * @param builder      {@link AWS4SignatureQueryBuilder} initialized with values used for this call (headers,
+	 *                     parameters, host, ...)
+	 * @param subscription Subscription's identifier.
 	 * @return initialized request
 	 */
 	protected CurlRequest newRequest(final AWS4SignatureQueryBuilder builder, final int subscription) {
@@ -194,11 +189,9 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	 * Create Curl request for AWS service. Initialize default values for awsAccessKey, awsSecretKey and regionName and
 	 * compute signature.
 	 *
-	 * @param builder
-	 *            {@link AWS4SignatureQueryBuilder} initialized with values used for this call (headers, parameters,
-	 *            host, ...)
-	 * @param parameters
-	 *            Subscription's parameters.
+	 * @param builder    {@link AWS4SignatureQueryBuilder} initialized with values used for this call (headers,
+	 *                   parameters, host, ...)
+	 * @param parameters Subscription's parameters.
 	 * @return Initialized request.
 	 */
 	protected CurlRequest newRequest(final AWS4SignatureQueryBuilder builder, final Map<String, String> parameters) {
@@ -215,8 +208,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	/**
 	 * Return the URL from a query.
 	 *
-	 * @param query
-	 *            Source {@link AWS4SignatureQuery}
+	 * @param query Source {@link AWS4SignatureQuery}
 	 * @return The base host URL from a query.
 	 */
 	protected String toUrl(final AWS4SignatureQuery query) {
@@ -235,8 +227,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	/**
 	 * Check AWS connection and account.
 	 *
-	 * @param parameters
-	 *            Subscription parameters.
+	 * @param parameters Subscription parameters.
 	 * @return <code>true</code> if AWS connection is up
 	 */
 	private boolean validateAccess(final Map<String, String> parameters) {
@@ -252,8 +243,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	/**
 	 * Check AWS connection and account.
 	 *
-	 * @param subscription
-	 *            Subscription identifier.
+	 * @param subscription Subscription identifier.
 	 * @return <code>true</code> if AWS connection is up
 	 */
 	public boolean validateAccess(final int subscription) {

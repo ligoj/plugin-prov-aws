@@ -140,13 +140,14 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 		final var type = previous.computeIfAbsent(csv.getInstanceType(), k -> {
 			final var t = newType.get();
 			t.setNode(context.getNode());
-			t.setName(csv.getInstanceType());
+			t.setCode(csv.getInstanceType());
 			return t;
 		});
 
 		// Update the statistics only once
-		if (context.getInstanceTypesMerged().add(type.getName())) {
+		if (context.getInstanceTypesMerged().add(type.getCode())) {
 			type.setCpu(csv.getCpu());
+			type.setName(type.getCode());
 			type.setConstant(!type.getName().startsWith("t") && !type.getName().startsWith("db.t"));
 			type.setPhysical(type.getName().contains("metal"));
 			type.setProcessor(StringUtils

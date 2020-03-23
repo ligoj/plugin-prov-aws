@@ -15,10 +15,10 @@ import org.ligoj.app.model.Node;
 import org.ligoj.app.plugin.prov.aws.catalog.AwsPrice;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVm;
+import org.ligoj.app.plugin.prov.model.AbstractCodedEntity;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
-import org.ligoj.bootstrap.core.INamableBean;
 import org.springframework.stereotype.Component;
 
 /**
@@ -43,7 +43,7 @@ public class AwsPriceImportEbs extends AbstractAwsPriceImportVm {
 		// The previously installed storage types cache. Key is the storage name
 		final Node node = context.getNode();
 		context.setStorageTypes(stRepository.findAllBy(BY_NODE, context.getNode()).stream()
-				.collect(Collectors.toMap(INamableBean::getName, Function.identity())));
+				.collect(Collectors.toMap(AbstractCodedEntity::getCode, Function.identity())));
 		installStorageTypes(context);
 		context.getMapSpotToNewRegion().putAll(toMap("spot-to-new-region.json", MAP_STR));
 
@@ -65,11 +65,12 @@ public class AwsPriceImportEbs extends AbstractAwsPriceImportVm {
 			final ProvStorageType entity = context.getStorageTypes().computeIfAbsent(t.getName(), n -> {
 				final ProvStorageType newType = new ProvStorageType();
 				newType.setNode(context.getNode());
-				newType.setName(n);
+				newType.setCode(n);
 				return newType;
 			});
 
 			// Merge the storage type details
+			entity.setName(entity.getCode());
 			entity.setDescription(t.getDescription());
 			entity.setInstanceType(t.getInstanceType());
 			entity.setDatabaseType(t.getDatabaseType());

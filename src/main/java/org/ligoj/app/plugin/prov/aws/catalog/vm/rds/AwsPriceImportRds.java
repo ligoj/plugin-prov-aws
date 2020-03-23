@@ -22,6 +22,7 @@ import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVm;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AbstractAwsEc2Price;
 import org.ligoj.app.plugin.prov.dao.ProvQuoteDatabaseRepository;
+import org.ligoj.app.plugin.prov.model.AbstractCodedEntity;
 import org.ligoj.app.plugin.prov.model.ProvDatabasePrice;
 import org.ligoj.app.plugin.prov.model.ProvDatabaseType;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
@@ -64,7 +65,7 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 	public void install(final UpdateContext context) throws IOException, URISyntaxException {
 		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("rds"));
 		context.setDatabaseTypes(dtRepository.findAllBy(BY_NODE, context.getNode()).stream()
-				.collect(Collectors.toConcurrentMap(ProvDatabaseType::getName, Function.identity())));
+				.collect(Collectors.toConcurrentMap(AbstractCodedEntity::getCode, Function.identity())));
 		context.setValidDatabaseType(Pattern.compile(configuration.get(CONF_DTYPE, ".*")));
 		final var apiPrice = configuration.get(CONF_URL_RDS_PRICES, RDS_PRICES);
 		newStream(context.getRegions().values()).forEach(region -> {
@@ -223,13 +224,14 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 		final var type = context.getStorageTypes().computeIfAbsent(name, n -> {
 			final var newType = new ProvStorageType();
 			newType.setNode(context.getNode());
-			newType.setName(n);
+			newType.setCode(n);
 			return newType;
 		});
 
 		// Merge the updated statistics
 		return context.getStorageTypesMerged().computeIfAbsent(name, n -> {
 			final var ssd = "SSD".equals(csv.getStorage());
+			type.setName(type.getCode());
 			type.setDescription(csv.getVolume());
 			type.setMinimal(toInteger(csv.getSizeMin()));
 			type.setMaximal(toInteger(csv.getSizeMax()));

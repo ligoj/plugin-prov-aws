@@ -16,6 +16,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsImport;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.catalog.ImportCatalog;
+import org.ligoj.app.plugin.prov.model.AbstractCodedEntity;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvStorageOptimized;
 import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
@@ -49,12 +50,12 @@ public class AwsPriceImportS3 extends AbstractAwsImport implements ImportCatalog
 
 		// Track the created instance to cache partial costs
 		final Map<String, ProvStoragePrice> previous = spRepository.findAllBy("type.node", context.getNode()).stream()
-				.filter(p -> p.getType().getName().startsWith("s3") || "glacier".equals(p.getType().getName()))
-				.collect(Collectors.toMap(p2 -> p2.getLocation().getName() + p2.getType().getName(),
+				.filter(p -> p.getType().getCode().startsWith("s3") || "glacier".equals(p.getType().getCode()))
+				.collect(Collectors.toMap(p2 -> p2.getLocation().getName() + p2.getType().getCode(),
 						Function.identity()));
 		context.setPreviousStorage(previous);
 		context.setStorageTypes(previous.values().stream().map(ProvStoragePrice::getType).distinct()
-				.collect(Collectors.toMap(ProvStorageType::getName, Function.identity())));
+				.collect(Collectors.toMap(AbstractCodedEntity::getCode, Function.identity())));
 
 		int priceCounter = 0;
 		// Get the remote prices stream
@@ -95,12 +96,13 @@ public class AwsPriceImportS3 extends AbstractAwsImport implements ImportCatalog
 			final ProvStorageType t = context.getStorageTypes().computeIfAbsent(name, n2 -> {
 				// New storage type
 				final ProvStorageType newType = new ProvStorageType();
-				newType.setName(n2);
+				newType.setCode(n2);
 				newType.setNode(context.getNode());
 				return newType;
 			});
 
 			// Update storage details
+			t.setName(t.getCode());
 			t.setAvailability(toPercent(csv.getAvailability()));
 			t.setDurability9(StringUtils.countMatches(StringUtils.defaultString(csv.getDurability()), '9'));
 			t.setOptimized(ProvStorageOptimized.DURABILITY);

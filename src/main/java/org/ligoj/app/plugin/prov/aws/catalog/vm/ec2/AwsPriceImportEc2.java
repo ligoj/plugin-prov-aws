@@ -29,6 +29,7 @@ import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVm;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlanRate;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlanTerm;
 import org.ligoj.app.plugin.prov.dao.ProvQuoteInstanceRepository;
+import org.ligoj.app.plugin.prov.model.AbstractCodedEntity;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
 import org.ligoj.app.plugin.prov.model.ProvInstanceType;
@@ -109,8 +110,8 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	@Override
 	public void install(final UpdateContext context) throws IOException, URISyntaxException {
 		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("ec2"));
-		context.setValidOs(Pattern.compile(configuration.get(CONF_OS, ".*")));
-		context.setValidInstanceType(Pattern.compile(configuration.get(CONF_ITYPE, ".*")));
+		context.setValidOs(Pattern.compile(configuration.get(CONF_OS, ".*"), Pattern.CASE_INSENSITIVE));
+		context.setValidInstanceType(Pattern.compile(configuration.get(CONF_ITYPE, ".*"), Pattern.CASE_INSENSITIVE));
 		final ProvInstancePriceTerm spotPriceType = newSpotInstanceTerm(context.getNode());
 		context.setPriceTerms(iptRepository.findAllBy(BY_NODE, context.getNode()).stream()
 				.collect(Collectors.toConcurrentMap(ProvInstancePriceTerm::getCode, Function.identity())));
@@ -210,7 +211,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 			throws IOException {
 		// The previously installed instance types cache. Key is the instance name
 		context.setInstanceTypes(itRepository.findAllBy(BY_NODE, node).stream()
-				.collect(Collectors.toConcurrentMap(ProvInstanceType::getName, Function.identity())));
+				.collect(Collectors.toConcurrentMap(AbstractCodedEntity::getCode, Function.identity())));
 		final var apiPrice = configuration.get(CONF_URL_EC2_PRICES, EC2_PRICES);
 		final var indexes = getSavingsPlanUrls(context, configuration.get(CONF_URL_API_SAVINGS_PLAN, SAVINGS_PLAN));
 

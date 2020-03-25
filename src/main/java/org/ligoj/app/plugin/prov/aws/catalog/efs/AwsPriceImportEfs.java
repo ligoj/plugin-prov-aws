@@ -88,6 +88,6 @@ public class AwsPriceImportEfs extends AbstractAwsImport implements ImportCatalo
 			return p;
 		});
 		price.setCode(csv.getSku());
-		saveAsNeeded(context, price, csv.getPricePerUnit(), spRepository::save);
+		saveAsNeeded(context, price, csv.getPricePerUnit(), spRepository);
 	}
 }

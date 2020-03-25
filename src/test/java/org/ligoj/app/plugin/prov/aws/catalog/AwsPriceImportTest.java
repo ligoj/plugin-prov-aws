@@ -278,7 +278,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 				builder().cpu(2).ram(1741).constant(true).ephemeral(true).build());
 		Assertions.assertEquals(12.629, spotPrice.getCost(), DELTA);
 		Assertions.assertEquals(12.629d, spotPrice.getPrice().getCost(), DELTA);
-		Assertions.assertEquals(0.0173d, spotPrice.getPrice().getCostPeriod(), DELTA);
+		Assertions.assertEquals(12.629d, spotPrice.getPrice().getCostPeriod(), DELTA);
 		Assertions.assertEquals("Spot", spotPrice.getPrice().getTerm().getName());
 		Assertions.assertTrue(spotPrice.getPrice().getTerm().isEphemeral());
 		Assertions.assertEquals("r4.large", spotPrice.getPrice().getType().getName());

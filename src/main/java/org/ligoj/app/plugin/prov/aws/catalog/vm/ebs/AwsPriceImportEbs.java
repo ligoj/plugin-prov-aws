@@ -113,6 +113,6 @@ public class AwsPriceImportEbs extends AbstractAwsPriceImportVm {
 		price.setCode(region.getName() + "-" + type.getName());
 
 		// Update the price as needed
-		saveAsNeeded(context, price, Double.valueOf(usd), spRepository::save);
+		saveAsNeeded(context, price, Double.valueOf(usd), spRepository);
 	}
 }

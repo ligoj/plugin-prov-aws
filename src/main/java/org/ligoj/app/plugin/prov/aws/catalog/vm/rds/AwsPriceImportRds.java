@@ -164,10 +164,7 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 			// No up-front, cost is fixed
 			final var price = newRdsPrice(context, csv, region, localContext);
 			final var cost = csv.getPricePerUnit() * context.getHoursMonth();
-			saveAsNeeded(context, price, round3Decimals(cost), p -> {
-				p.setCostPeriod(round3Decimals(cost * p.getTerm().getPeriod()));
-				dpRepository.save(p);
-			});
+			saveAsNeeded(context, price, cost, dpRepository);
 		} else {
 			// Database storage
 			final var type = installStorageType(context, csv);
@@ -180,7 +177,7 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 			});
 
 			// Update the price as needed
-			saveAsNeeded(context, price, csv.getPricePerUnit(), spRepository::save);
+			saveAsNeeded(context, price, csv.getPricePerUnit(), spRepository);
 		}
 	}
 

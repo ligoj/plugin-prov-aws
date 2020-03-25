@@ -81,13 +81,13 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 		// Round the computed hourly cost and save as needed
 		final var initCost = quantity.getPricePerUnit() / price.getTerm().getPeriod();
 		final var cost = hourly.getPricePerUnit() * context.getHoursMonth() + initCost;
-		saveAsNeeded(context, price, round3Decimals(cost), p -> {
-			p.setInitialCost(quantity.getPricePerUnit());
-			p.setCostPeriod(round3Decimals(
-					p.getInitialCost() + hourly.getPricePerUnit() * p.getTerm().getPeriod() * context.getHoursMonth()));
-			p.setPeriod(p.getTerm().getPeriod()); // TODO
-			repository.save(p);
-		});
+		saveAsNeeded(context, price, price.getCost(), cost, (cR, c) -> {
+			price.setCost(cR);
+			price.setInitialCost(quantity.getPricePerUnit());
+			price.setCostPeriod(round3Decimals(price.getInitialCost()
+					+ hourly.getPricePerUnit() * price.getTerm().getPeriod() * context.getHoursMonth()));
+			price.setPeriod(price.getTerm().getPeriod());
+		}, repository::save);
 	}
 
 	/**

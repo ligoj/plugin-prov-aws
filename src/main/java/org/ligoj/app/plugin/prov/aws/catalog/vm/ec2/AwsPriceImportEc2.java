@@ -174,10 +174,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 
 					// Update the price as needed
 					final var cost = Double.parseDouble(op.getPrices().get("USD"));
-					saveAsNeeded(context, price, round3Decimals(cost * context.getHoursMonth()), p -> {
-						p.setCostPeriod(cost);
-						ipRepository.save(p);
-					});
+					saveAsNeeded(context, price, cost * context.getHoursMonth(), ipRepository);
 				});
 	}
 
@@ -370,10 +367,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 		localContext.getActualCodes().add(code);
 		final var price = newSavingPlanPrice(context, odPrice, jsonPrice, term, localContext);
 		final var cost = jsonPrice.getDiscountedRate().getPrice() * context.getHoursMonth();
-		saveAsNeeded(context, price, round3Decimals(cost), p -> {
-			p.setCostPeriod(round3Decimals(cost * p.getTerm().getPeriod()));
-			ipRepository.save(p);
-		});
+		saveAsNeeded(context, price, cost, ipRepository);
 	}
 
 	/**
@@ -496,10 +490,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 			// No up-front, cost is fixed
 			final var price = newEc2Price(context, csv, region, localContext);
 			final var cost = csv.getPricePerUnit() * context.getHoursMonth();
-			saveAsNeeded(context, price, round3Decimals(cost), p -> {
-				p.setCostPeriod(round3Decimals(cost * p.getTerm().getPeriod()));
-				ipRepository.save(p);
-			});
+			saveAsNeeded(context, price, cost, ipRepository);
 		}
 	}
 

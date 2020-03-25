@@ -28,10 +28,10 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 	 */
 	public static final String CONF_URL_API_PRICES = ProvAwsPluginResource.KEY + ":%s-prices-url";
 
-	protected Integer toInteger(final String value) {
+	protected Double toInteger(final String value) {
 		return Optional.ofNullable(StringUtils.trimToNull(value))
 				.map(v -> StringUtils.replaceEach(v, new String[] { "GB", "TB", " " }, new String[] { "", "", "" }))
-				.map(Integer::valueOf).map(v -> value.contains("TB") ? v * 1024 : v).orElse(null);
+				.map(Double::valueOf).map(v -> value.contains("TB") ? v * 1024 : v).orElse(null);
 	}
 
 	/**

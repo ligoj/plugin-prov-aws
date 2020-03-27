@@ -347,7 +347,7 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 			final var purge = previous.size();
 			purgeCodes.removeAll(qRepository.finUsedPrices(context.getNode().getId()));
 			log.info("Purge {} unused of not refresh {} prices ...", purgeCodes.size(), purge);
-			purgeCodes.stream().map(c -> previous.get(c)).forEach(pRepository::delete);
+			purgeCodes.stream().map(previous::get).forEach(pRepository::delete);
 
 			// Remove the purged from the context
 			previous.keySet().removeAll(purgeCodes);

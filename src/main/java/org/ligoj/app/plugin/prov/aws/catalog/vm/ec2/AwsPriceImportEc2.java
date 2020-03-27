@@ -335,7 +335,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 			term.setConvertibleOs(true);
 			term.setConvertibleEngine(false);
 			term.setDescription(sp.getDescription());
-			term.setPeriod(sp.getLeaseContractLength().getDuration() * 12);
+			term.setPeriod(Math.round(sp.getLeaseContractLength().getDuration() * 12d));
 
 			// Need this update
 			iptRepository.save(term);

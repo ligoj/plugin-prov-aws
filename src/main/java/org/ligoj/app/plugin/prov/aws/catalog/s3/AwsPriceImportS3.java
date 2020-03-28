@@ -92,15 +92,15 @@ public class AwsPriceImportS3 extends AbstractAwsImport implements ImportCatalog
 			return;
 		}
 
-		final ProvStorageType type = context.getStorageTypesMerged().computeIfAbsent(name, n -> {
-			final ProvStorageType t = context.getStorageTypes().computeIfAbsent(name, n2 -> {
-				// New storage type
-				final ProvStorageType newType = new ProvStorageType();
-				newType.setCode(n2);
-				newType.setNode(context.getNode());
-				return newType;
-			});
+		final ProvStorageType type = context.getStorageTypes().computeIfAbsent(name, n2 -> {
+			// New storage type
+			final ProvStorageType newType = new ProvStorageType();
+			newType.setCode(n2);
+			newType.setNode(context.getNode());
+			return newType;
+		});
 
+		copyAsNeeded(context, type, t -> {
 			// Update storage details
 			t.setName(t.getCode());
 			t.setAvailability(toPercent(csv.getAvailability()));
@@ -109,19 +109,19 @@ public class AwsPriceImportS3 extends AbstractAwsImport implements ImportCatalog
 			t.setNetwork("443/tcp");
 			t.setLatency(name.equals("glacier") ? Rate.WORST : Rate.MEDIUM);
 			t.setDescription("{\"class\":\"" + csv.getStorageClass() + "\",\"type\":\"" + csv.getVolumeType() + "\"}");
-			stRepository.save(t);
-			return t;
-		});
+		}, stRepository);
 
 		// Update the price as needed
 		final ProvStoragePrice price = context.getPreviousStorage().computeIfAbsent(location.getName() + name, r -> {
 			final ProvStoragePrice p = new ProvStoragePrice();
-			p.setLocation(location);
-			p.setType(type);
 			p.setCode(csv.getSku());
 			return p;
 		});
-		price.setCode(csv.getSku());
+
+		copyAsNeeded(context, price, p -> {
+			p.setLocation(location);
+			p.setType(type);
+		});
 		saveAsNeeded(context, price, csv.getPricePerUnit(), spRepository);
 	}
 }

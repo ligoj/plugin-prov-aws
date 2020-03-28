@@ -308,7 +308,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 		});
 
 		// Update the properties only once
-		if (context.getPriceTermsMerged().add(term.getCode())) {
+		return copyAsNeeded(context, term, t -> {
 			var name = sp.getDescription();
 			final boolean computePlan;
 			if (sp.getDescription().contains(TERM_COMPUTE_SP)) {
@@ -336,11 +336,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 			term.setConvertibleEngine(false);
 			term.setDescription(sp.getDescription());
 			term.setPeriod(Math.round(sp.getLeaseContractLength().getDuration() * 12d));
-
-			// Need this update
-			iptRepository.save(term);
-		}
-		return term;
+		}, iptRepository);
 	}
 
 	/**

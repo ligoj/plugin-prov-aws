@@ -226,19 +226,17 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 		});
 
 		// Merge the updated statistics
-		return context.getStorageTypesMerged().computeIfAbsent(name, n -> {
+		return copyAsNeeded(context, type, t -> {
 			final var ssd = "SSD".equals(csv.getStorage());
-			type.setName(type.getCode());
-			type.setDescription(csv.getVolume());
-			type.setMinimal(toInteger(csv.getSizeMin()));
-			type.setMaximal(toInteger(csv.getSizeMax()));
-			type.setEngine(engine == null ? null : engine.toUpperCase(Locale.ENGLISH));
-			type.setDatabaseType("%");
-			type.setOptimized(ssd ? ProvStorageOptimized.IOPS : null);
-			type.setLatency(ssd ? Rate.BEST : Rate.MEDIUM);
-			stRepository.save(type);
-			return type;
-		});
+			t.setName(type.getCode());
+			t.setDescription(csv.getVolume());
+			t.setMinimal(toInteger(csv.getSizeMin()));
+			t.setMaximal(toInteger(csv.getSizeMax()));
+			t.setEngine(engine == null ? null : engine.toUpperCase(Locale.ENGLISH));
+			t.setDatabaseType("%");
+			t.setOptimized(ssd ? ProvStorageOptimized.IOPS : null);
+			t.setLatency(ssd ? Rate.BEST : Rate.MEDIUM);
+		}, stRepository);
 	}
 
 	private void copy(final UpdateContext context, final AwsRdsPrice csv, final ProvLocation region,

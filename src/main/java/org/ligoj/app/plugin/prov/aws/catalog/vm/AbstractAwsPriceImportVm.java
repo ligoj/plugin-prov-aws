@@ -145,30 +145,26 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 		});
 
 		// Update the statistics only once
-		if (context.getInstanceTypesMerged().add(type.getCode())) {
-			type.setCpu(csv.getCpu());
-			type.setName(type.getCode());
-			type.setConstant(!type.getName().startsWith("t") && !type.getName().startsWith("db.t"));
-			type.setPhysical(type.getName().contains("metal"));
-			type.setProcessor(StringUtils
+		return copyAsNeeded(context, type, t -> {
+			t.setCpu(csv.getCpu());
+			t.setName(t.getCode());
+			t.setConstant(!t.getName().startsWith("t") && !t.getName().startsWith("db.t"));
+			t.setPhysical(t.getName().contains("metal"));
+			t.setProcessor(StringUtils
 					.trimToNull(RegExUtils.removeAll(csv.getPhysicalProcessor(), "(Variable|\\s*Family|\\([^)]*\\))")));
-			type.setDescription(ArrayUtils.toString(ArrayUtils
+			t.setDescription(ArrayUtils.toString(ArrayUtils
 					.removeAllOccurences(new String[] { csv.getStorage(), csv.getNetworkPerformance() }, null)));
 
 			// Convert GiB to MiB, and rounded
 			final var memoryStr = StringUtils.removeEndIgnoreCase(csv.getMemory(), " GiB").replace(",", "");
-			type.setRam((int) Math.round(Double.parseDouble(memoryStr) * 1024d));
+			t.setRam((int) Math.round(Double.parseDouble(memoryStr) * 1024d));
 
 			// Rating
-			type.setCpuRate(getRate("cpu", csv));
-			type.setRamRate(getRate("ram", csv));
-			type.setNetworkRate(getRate("network", csv, csv.getNetworkPerformance()));
-			type.setStorageRate(toStorage(csv));
-
-			// Need this update
-			repository.save(type);
-		}
-		return type;
+			t.setCpuRate(getRate("cpu", csv));
+			t.setRamRate(getRate("ram", csv));
+			t.setNetworkRate(getRate("network", csv, csv.getNetworkPerformance()));
+			t.setStorageRate(toStorage(csv));
+		}, repository);
 	}
 
 	private Rate toStorage(final AbstractAwsEc2Price csv) {
@@ -225,35 +221,33 @@ public abstract class AbstractAwsPriceImportVm extends AbstractAwsImport impleme
 		});
 
 		// Update the properties only once
-		if (context.getPriceTermsMerged().add(term.getCode())) {
+		return copyAsNeeded(context, term, t -> {
 
 			// Build the name from the leasing, purchase option and offering class
 			final var name = StringUtils.trimToNull(RegExUtils.removeAll(
 					RegExUtils.replaceAll(csv.getPurchaseOption(), "([a-z])Upfront", "$1 Upfront"), "No\\s*Upfront"));
-			term.setName(Arrays
+			t.setName(Arrays
 					.stream(new String[] { csv.getTermType(),
 							StringUtils.replace(csv.getLeaseContractLength(), " ", ""), name,
 							StringUtils.trimToNull(StringUtils.remove(csv.getOfferingClass(), "standard")) })
 					.filter(Objects::nonNull).collect(Collectors.joining(", ")));
-			term.setReservation(StringUtils.containsIgnoreCase(term.getName(), "reserved")); // ODCR not yet managed of
-			term.setConvertibleType(
+			t.setReservation(StringUtils.containsIgnoreCase(term.getName(), "reserved")); // ODCR not yet managed of
+			t.setConvertibleType(
 					!term.getReservation() || StringUtils.containsIgnoreCase(term.getName(), "convertible"));
 
 			// Only for OD term
-			term.setConvertibleFamily(!term.getReservation());
-			term.setConvertibleEngine(!term.getReservation());
-			term.setConvertibleOs(!term.getReservation());
-			term.setConvertibleLocation(!term.getReservation());
+			t.setConvertibleFamily(!t.getReservation());
+			t.setConvertibleEngine(!t.getReservation());
+			t.setConvertibleOs(!t.getReservation());
+			t.setConvertibleLocation(!t.getReservation());
 
 			// Handle leasing
 			final var matcher = LEASING_TIME.matcher(StringUtils.defaultIfBlank(csv.getLeaseContractLength(), ""));
 			if (matcher.find()) {
 				// Convert years to months
-				term.setPeriod(Integer.parseInt(matcher.group(1)) * 12d);
+				t.setPeriod(Integer.parseInt(matcher.group(1)) * 12d);
 			}
-			iptRepository.save(term);
-		}
-		return term;
+		}, iptRepository);
 	}
 
 	/**

@@ -236,10 +236,19 @@ public class AwsPriceImportEc2
 	}
 
 	/**
+	 * Return the rate code without SKU part of the current On Demand session.
+	 * 
+	 * @param previousOd The previous On Demand prices.
+	 * @return The rate code without SKU part of the current On Demand session. <code>null</code> when not found.
+	 */
+	protected String getOnDemandCode(final Map<String, ProvInstancePrice> previousOd) {
+		return previousOd.values().stream()
+				.filter(c -> c.getCode().indexOf('.') != -1 && TERM_ON_DEMAND.equals(c.getTerm().getName())).findFirst()
+				.map(ProvInstancePrice::getCode).map(c -> c.substring(c.indexOf('.'))).orElse(null);
+	}
+
+	/**
 	 * Download and install Savings Plan prices from AWS server.
-	 *
-	 * @param context  The update context.
-	 * @param apiPrice The JSON API price URL.
 	 */
 	private void installSavingsPlan(final LocalEc2Context context, final String endpoint,
 			final Map<String, ProvInstancePrice> previousOd) {
@@ -250,29 +259,33 @@ public class AwsPriceImportEc2
 			log.info("No Savings Plan prices on region {}", region.getName());
 			return;
 		}
-		final var od0 = previousOd.values().stream()
-				.filter(c -> c.getCode().indexOf('.') != -1 && TERM_ON_DEMAND.equals(c.getTerm().getName())).findFirst()
-				.orElse(null);
-		if (od0 == null) {
+		final var odCode2 = getOnDemandCode(previousOd);
+		if (odCode2 == null) {
 			// No OD found for SP/region
 			log.warn("No OnDemand prices on region {}, Savings Plan is ignored", region.getName());
 			return;
 		}
 		final var oldCount = context.getLocals().size();
-		final var odCode2 = od0.getCode().substring(od0.getCode().indexOf('.'));
 
 		log.info("AWS Savings Plan import started for region {}@{} ...", region, endpoint);
 		try (var curl = new CurlProcessor()) {
 			// Get the remote prices stream
 			final var rawJson = curl.get(endpoint);
-			objectMapper.readValue(rawJson, SavingsPlanPrice.class).getTerms().getSavingsPlan().stream().forEach(sp -> {
-				final var term = newSavingsPlanTerm(context, sp);
-				sp.getRates().forEach(r -> installSavingsPlanTermPrices(context, term, r, previousOd, odCode2));
-			});
+			final var skuErrors = objectMapper.readValue(rawJson, SavingsPlanPrice.class).getTerms().getSavingsPlan()
+					.stream().flatMap(sp -> {
+						final var term = newSavingsPlanTerm(context, sp);
+						return sp.getRates().stream()
+								.map(r -> installSavingsPlanTermPrices(context, term, r, previousOd, odCode2));
+					}).filter(e -> e != null).collect(Collectors.toList());
+			if (!skuErrors.isEmpty()) {
+				// At least one SKU as not been resolved
+				log.warn("AWS EC2 Savings Plan import errors for region {} with {} unresolved SKUs, first : {}",
+						region.getName(), skuErrors.size(), skuErrors.get(0));
+			}
 
 			// Purge the SKUs
 			purgePrices(context);
-		} catch (final IOException use) {
+		} catch (final IOException | IllegalArgumentException use) {
 			// Something goes wrong for this region, stop for this region
 			log.warn("AWS EC2 Savings Plan import failed for region {}", region.getName(), use);
 		} finally {
@@ -329,26 +342,26 @@ public class AwsPriceImportEc2
 
 	/**
 	 * Install the prices related to a term. The instance price type is reused from the discounted OnDemand price, and
-	 * must exist.
+	 * must exists.
 	 */
-	private void installSavingsPlanTermPrices(final LocalEc2Context context, final ProvInstancePriceTerm term,
+	private String installSavingsPlanTermPrices(final LocalEc2Context context, final ProvInstancePriceTerm term,
 			final SavingsPlanRate jsonPrice, final Map<String, ProvInstancePrice> previousOd, final String odCode2) {
 		if (jsonPrice.getDiscountedUsageType().contains("Unused")) {
 			// Ignore this this usage
-			return;
+			return null;
 		}
 
 		// Get the related OD Price
 		final var odPrice = previousOd.get(jsonPrice.getDiscountedSku() + odCode2);
 		if (odPrice == null) {
-			log.warn("No SKU {} in region {}", jsonPrice.getDiscountedSku(), context.getRegion().getName());
-			return;
+			return jsonPrice.getDiscountedSku();
 		}
 
 		// Add this code to the existing SKU codes
 		final var price = newSavingPlanPrice(context, odPrice, jsonPrice, term);
 		final var cost = jsonPrice.getDiscountedRate().getPrice() * context.getHoursMonth();
 		saveAsNeeded(context, price, cost, ipRepository);
+		return null;
 	}
 
 	/**

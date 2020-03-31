@@ -56,7 +56,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * @return <code>true</code> when this price corresponds to a reserved price with up-front part.
 	 */
 	protected boolean hasUpFront(final C csv) {
-		return TERM_RESERVED.equals(csv.getTermType()) && csv.getPurchaseOption().endsWith("front");
+		return TERM_RESERVED.equals(csv.getTermType()) && !csv.getPurchaseOption().startsWith("No ");
 	}
 
 	/**

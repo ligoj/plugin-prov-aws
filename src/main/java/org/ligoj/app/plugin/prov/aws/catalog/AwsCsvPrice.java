@@ -22,6 +22,9 @@ public class AwsCsvPrice {
 	private String termType;
 	private double pricePerUnit;
 	private String sku;
+	private String rateCode;
+	private String leaseContractLength;
+	private String purchaseOption;
 
 	/**
 	 * Related region.

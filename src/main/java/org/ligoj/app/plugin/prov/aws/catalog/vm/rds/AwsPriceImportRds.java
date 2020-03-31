@@ -9,9 +9,7 @@ import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Formatter;
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -20,13 +18,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVm;
-import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AbstractAwsEc2Price;
 import org.ligoj.app.plugin.prov.dao.ProvQuoteDatabaseRepository;
 import org.ligoj.app.plugin.prov.model.AbstractCodedEntity;
 import org.ligoj.app.plugin.prov.model.ProvDatabasePrice;
 import org.ligoj.app.plugin.prov.model.ProvDatabaseType;
-import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
-import org.ligoj.app.plugin.prov.model.ProvLocation;
+import org.ligoj.app.plugin.prov.model.ProvQuoteDatabase;
 import org.ligoj.app.plugin.prov.model.ProvStorageOptimized;
 import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
@@ -41,7 +37,8 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
+public class AwsPriceImportRds
+		extends AbstractAwsPriceImportVm<ProvDatabaseType, ProvDatabasePrice, AwsRdsPrice, ProvQuoteDatabase> {
 
 	/**
 	 * The RDS reserved and on-demand price end-point, a CSV file, accepting the region code with {@link Formatter}
@@ -71,29 +68,26 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 		newStream(context.getRegions().values()).forEach(region -> {
 			nextStep(context, region.getName(), 1);
 			// Get previous RDS storage and instance prices for this location
-			final var localContext = new UpdateContext();
-			localContext.setPreviousDatabase(dpRepository.findAll(context.getNode().getId(), region.getName()).stream()
-					.collect(Collectors.toMap(ProvDatabasePrice::getCode, Function.identity())));
+			final var localContext = new LocalRdsContext(context, dtRepository, dpRepository, qdRepository, region,
+					TERM_ON_DEMAND, TERM_RESERVED);
 			localContext.setPreviousStorage(spRepository.findAll(context.getNode().getId(), region.getName()).stream()
 					.collect(Collectors.toMap(ProvStoragePrice::getCode, Function.identity())));
-			install(context, region, localContext, apiPrice);
-			localContext.getPreviousDatabase().clear();
-			localContext.getPreviousStorage().clear();
+			install(localContext, apiPrice);
+			localContext.cleanup();
 		});
-		context.getDatabaseTypes().clear();
 	}
 
 	/**
 	 * Download and install EC2 prices from AWS server.
 	 *
-	 * @param context The update context.
-	 * @param region  The region to fetch.
+	 * @param context  The update context.
+	 * @param apiPrice The CSV API price URL.
 	 */
-	private void install(final UpdateContext context, final ProvLocation region, final UpdateContext localContext,
-			final String apiPrice) {
+	private void install(final LocalRdsContext context, final String apiPrice) {
 		// Track the created instance to cache partial costs
-		localContext.setPartialCostRds(new HashMap<>());
+		final var region = context.getRegion();
 		final var endpoint = apiPrice.replace("%s", region.getName());
+		final var oldCount = context.getLocals().size();
 		log.info("AWS RDS OnDemand/Reserved import started for region {}@{} ...", region, endpoint);
 
 		// Get the remote prices stream
@@ -104,26 +98,21 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 			// Build the AWS instance prices from the CSV
 			var csv = csvReader.read();
 			while (csv != null) {
-				// Complete the region human name associated to the API one
-				region.setDescription(csv.getLocation());
-
 				// Persist this price
-				installRds(context, csv, region, localContext);
+				installRds(context, csv);
 
 				// Read the next one
 				csv = csvReader.read();
 			}
-			// Purge the SKUs
-			purgeSku(context, localContext);
+			// Purge the rate codes
+			purgePrices(context);
 		} catch (final IOException | URISyntaxException use) {
-			// Something goes wrong for this region, stop for this region
-			log.info("AWS RDS OnDemand/Reserved import failed for region {}", region.getName(), use);
+			// Something goes wrong for this region, stop it
+			log.warn("AWS RDS OnDemand/Reserved import failed for region {}", region.getName(), use);
 		} finally {
 			// Report
-			log.info(
-					"AWS RDS OnDemand/Reserved import finished for region {} : {} databases, {} price types, {} prices",
-					region.getName(), context.getDatabaseTypes().size(), context.getPriceTerms().size(),
-					localContext.getActualCodes().size());
+			log.info("AWS RDS OnDemand/Reserved import finished for region {}: {} prices ({})", region.getName(),
+					context.getPrices().size(), String.format("%+d", context.getPrices().size() - oldCount));
 		}
 	}
 
@@ -132,47 +121,31 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 	 *
 	 * @param context The update context.
 	 * @param csv     The current CSV entry.
-	 * @param region  The current region.
-	 * @param context The local update context.
 	 */
-	private void installRds(final UpdateContext context, final AwsRdsPrice csv, final ProvLocation region,
-			final UpdateContext localContext) {
-		// Filter type
-		if (csv.getInstanceType() != null && !isEnabledDatabase(context, csv.getInstanceType())) {
-			return;
-		}
-
-		// Add this code to the existing SKU codes
-		final var code = toCode(csv);
-		localContext.getActualCodes().add(code);
-
-		// Up-front, partial or not
-		if (UPFRONT_MODE.matcher(StringUtils.defaultString(csv.getPurchaseOption())).find()) {
-			// Up-front ALL/PARTIAL
-			final Map<String, AwsRdsPrice> partialCost = localContext.getPartialCostRds();
-			if (partialCost.containsKey(code)) {
-				handleUpfront(context, newRdsPrice(context, csv, region, localContext), csv, partialCost.get(code),
-						dpRepository);
-
-				// The price is completed, cleanup
-				partialCost.remove(code);
-			} else {
-				// First time, save this entry for a future completion
-				partialCost.put(code, csv);
+	private void installRds(final LocalRdsContext context, final AwsRdsPrice csv) {
+		if ("Database Instance".equals(csv.getFamily())) {
+			// Filter type
+			if (!isEnabledDatabase(context, csv.getInstanceType())) {
+				return;
 			}
-		} else if ("Database Instance".equals(csv.getFamily())) {
+
+			// Up-front management
+			if (handleUpFront(context, csv)) {
+				return;
+			}
+
 			// No up-front, cost is fixed
-			final var price = newRdsPrice(context, csv, region, localContext);
+			final var price = newPrice(context, csv);
 			final var cost = csv.getPricePerUnit() * context.getHoursMonth();
 			saveAsNeeded(context, price, cost, dpRepository);
 		} else {
 			// Database storage
 			final var type = installStorageType(context, csv);
-			final var price = localContext.getPreviousStorage().computeIfAbsent(csv.getSku(), c -> {
-				final ProvStoragePrice p = new ProvStoragePrice();
-				p.setType(type);
+			final var price = context.getPreviousStorage().computeIfAbsent(csv.getSku(), c -> {
+				final var p = new ProvStoragePrice();
 				p.setCode(c);
-				p.setLocation(region);
+				p.setType(type);
+				p.setLocation(context.getRegion());
 				return p;
 			});
 
@@ -182,19 +155,9 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 	}
 
 	/**
-	 * Remove SKU that were present in the context and not refresh with this update.
-	 * 
-	 * @param context      The update context.
-	 * @param localContext The local update context.
-	 */
-	private void purgeSku(final UpdateContext context, final UpdateContext localContext) {
-		purgeSku(context, localContext, localContext.getPreviousDatabase(), dpRepository, qbRepository);
-	}
-
-	/**
 	 * Install the RDS storage type as needed, and return it.
 	 */
-	private final ProvStorageType installStorageType(final UpdateContext context, final AwsRdsPrice csv) {
+	private final ProvStorageType installStorageType(final LocalRdsContext context, final AwsRdsPrice csv) {
 		// RDS Storage type is composition of
 		final String name;
 		final String engine;
@@ -239,33 +202,14 @@ public class AwsPriceImportRds extends AbstractAwsPriceImportVm {
 		}, stRepository);
 	}
 
-	private void copy(final UpdateContext context, final AwsRdsPrice csv, final ProvLocation region,
-			final ProvDatabasePrice p, final ProvDatabaseType type, final ProvInstancePriceTerm term) {
-		super.copy(context, csv, region, p, type, term);
+	@Override
+	protected void copy(final AwsRdsPrice csv, final ProvDatabasePrice p) {
 		p.setEngine(StringUtils.trimToNull(csv.getEngine().toUpperCase(Locale.ENGLISH)));
 		p.setEdition(StringUtils.trimToNull(StringUtils.trimToEmpty(csv.getEdition()).toUpperCase(Locale.ENGLISH)));
 	}
 
-	/**
-	 * Install or update a RDS price
-	 */
-	private ProvDatabasePrice newRdsPrice(final UpdateContext context, final AwsRdsPrice csv, final ProvLocation region,
-			final UpdateContext localContext) {
-		final var type = installInstanceType(context, csv, context.getDatabaseTypes(), ProvDatabaseType::new,
-				dtRepository);
-		final var term = installInstancePriceTerm(context, csv);
-		final var price = localContext.getPreviousDatabase().computeIfAbsent(toCode(csv), c -> {
-			final ProvDatabasePrice p = new ProvDatabasePrice();
-			p.setCode(c);
-			return p;
-		});
-
-		// Update the price in force mode
-		return copyAsNeeded(context, price, p -> copy(context, csv, region, price, type, term));
-	}
-
 	@Override
-	protected Rate getRate(final String type, final AbstractAwsEc2Price csv, final String name) {
+	protected Rate getRate(final String type, final AwsRdsPrice csv, final String name) {
 		return super.getRate(type, csv, StringUtils.replaceOnce(name, "db\\.", ""));
 	}
 }

@@ -28,16 +28,15 @@ import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVm;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlanRate;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlanTerm;
-import org.ligoj.app.plugin.prov.dao.ProvQuoteInstanceRepository;
 import org.ligoj.app.plugin.prov.model.AbstractCodedEntity;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
 import org.ligoj.app.plugin.prov.model.ProvInstanceType;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
+import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
 import org.ligoj.app.plugin.prov.model.ProvTenancy;
 import org.ligoj.app.plugin.prov.model.VmOs;
 import org.ligoj.bootstrap.core.curl.CurlProcessor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import lombok.extern.slf4j.Slf4j;
@@ -47,14 +46,11 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
+public class AwsPriceImportEc2
+		extends AbstractAwsPriceImportVm<ProvInstanceType, ProvInstancePrice, AwsEc2Price, ProvQuoteInstance> {
 
 	private static final String TERM_SPOT_CODE = "spot-";
 	private static final String TERM_SPOT = "Spot";
-
-	private static final String TERM_RESERVED = "Reserved";
-
-	private static final String TERM_ON_DEMAND = "OnDemand";
 
 	private static final String TERM_COMPUTE_SP = "Compute Savings Plan";
 	private static final String TERM_EC2_SP = "EC2 Savings Plan";
@@ -82,7 +78,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	/**
 	 * Configuration key used for AWS URL Savings Plan prices.
 	 */
-	public static final String CONF_URL_API_SAVINGS_PLAN = ProvAwsPluginResource.KEY + ":savings-plan-prices-url";
+	public static final String CONF_URL_API_SAVINGS_PLAN = String.format(CONF_URL_API_PRICES, "savings-plan");
 
 	/**
 	 * Configuration key used for {@link #EC2_PRICES_SPOT}
@@ -104,15 +100,12 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	 */
 	private Map<String, String> mapSoftware = new HashMap<>();
 
-	@Autowired
-	protected ProvQuoteInstanceRepository qiRepository;
-
 	@Override
 	public void install(final UpdateContext context) throws IOException, URISyntaxException {
 		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("ec2"));
 		context.setValidOs(Pattern.compile(configuration.get(CONF_OS, ".*"), Pattern.CASE_INSENSITIVE));
 		context.setValidInstanceType(Pattern.compile(configuration.get(CONF_ITYPE, ".*"), Pattern.CASE_INSENSITIVE));
-		final ProvInstancePriceTerm spotPriceType = newSpotInstanceTerm(context.getNode());
+		final var spotPriceType = newSpotInstanceTerm(context.getNode());
 		context.setPriceTerms(iptRepository.findAllBy(BY_NODE, context.getNode()).stream()
 				.collect(Collectors.toConcurrentMap(ProvInstancePriceTerm::getCode, Function.identity())));
 		installEc2(context, context.getNode(), spotPriceType);
@@ -123,7 +116,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	 */
 	private ProvInstancePriceTerm newSpotInstanceTerm(final Node node) {
 		final var term = Optional.ofNullable(iptRepository.findByName(node.getId(), TERM_SPOT)).orElseGet(() -> {
-			final ProvInstancePriceTerm spotPriceType = new ProvInstancePriceTerm();
+			final var spotPriceType = new ProvInstancePriceTerm();
 			spotPriceType.setName(TERM_SPOT);
 			spotPriceType.setNode(node);
 			return spotPriceType;
@@ -148,21 +141,19 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	 * @param context       The update context.
 	 * @param json          The current JSON entry.
 	 * @param spotPriceType The related AWS Spot instance price type.
-	 * @param region        The target region.
 	 */
-	private void installSpotPrices(final UpdateContext context, final AwsEc2SpotPrice json,
-			final ProvInstancePriceTerm spotPriceType, final ProvLocation region, final UpdateContext localContext) {
+	private void installSpotPrices(final LocalEc2Context context, final AwsEc2SpotPrice json,
+			final ProvInstancePriceTerm spotPriceType) {
+		final var region = context.getRegion();
 		json.getOsPrices().stream().filter(op -> !StringUtils.startsWithIgnoreCase(op.getPrices().get("USD"), "N/A"))
 				.peek(op -> op.setOs(op.getName().equals("mswin") ? VmOs.WINDOWS : VmOs.LINUX))
 				.filter(op -> isEnabledOs(context, op.getOs())).forEach(op -> {
-					final var type = context.getInstanceTypes().get(json.getName());
+					final var type = context.getPreviousTypes().get(json.getName());
 
 					// Build the key for this spot
 					final var code = TERM_SPOT_CODE + region.getName() + "-" + type.getName() + "-" + op.getOs();
-					localContext.getActualCodes().add(code);
-					final var price = localContext.getPrevious().computeIfAbsent(code, c -> {
-						final ProvInstancePrice p = new ProvInstancePrice();
-						p.setCode(c);
+					final var price = context.getLocals().computeIfAbsent(code, c -> {
+						final var p = context.newPrice(c);
 						p.setType(type);
 						p.setTerm(spotPriceType);
 						p.setTenancy(ProvTenancy.SHARED);
@@ -214,10 +205,8 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 
 		// Install the EC2 (non spot) prices
 		newStream(context.getRegions().values()).map(region -> {
-			// Get previous prices for this location
-			final var localContext = new UpdateContext();
-			installEC2Prices(context, region, localContext, apiPrice);
-			installSavingsPlan(context, region, localContext, indexes.getOrDefault(region.getName(), ""));
+			// Install OnDemand and reserved prices
+			installEC2Prices(context, region, apiPrice, indexes);
 			return region;
 		}).reduce((region1, region2) -> {
 			nextStep(node, region2.getName(), 1);
@@ -229,9 +218,8 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 				SpotPrices.class, (r, region) -> {
 					nextStep(node, region.getName(), 1);
 					// Get previous prices for this location
-					final var localContext = new UpdateContext();
-					localContext.setPrevious(ipRepository.findAllTerms(node.getId(), region.getName(), TERM_SPOT)
-							.stream().collect(Collectors.toMap(ProvInstancePrice::getCode, Function.identity())));
+					final var localContext = new LocalEc2Context(context, itRepository, ipRepository, qiRepository,
+							region, TERM_SPOT, TERM_SPOT);
 					r.getInstanceTypes().stream().flatMap(t -> t.getSizes().stream()).filter(t -> {
 						final var availability = context.getInstanceTypes().containsKey(t.getName());
 						if (!availability) {
@@ -239,10 +227,10 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 							log.warn("Instance {} is referenced from spot but not available", t.getName());
 						}
 						return availability;
-					}).forEach(j -> installSpotPrices(context, j, spotPriceType, region, localContext));
+					}).forEach(j -> installSpotPrices(localContext, j, spotPriceType));
 
 					// Purge the SKUs
-					purgeSku(context, localContext);
+					purgePrices(localContext);
 				});
 		context.getInstanceTypes().clear();
 	}
@@ -250,55 +238,55 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	/**
 	 * Download and install Savings Plan prices from AWS server.
 	 *
-	 * @param context      The update context.
-	 * @param region       The region to fetch.
-	 * @param localContext The local update context. Partially shared with OnDemand's context.
-	 * @param apiPrice     The JSON API price URL.
+	 * @param context  The update context.
+	 * @param apiPrice The JSON API price URL.
 	 */
-	private void installSavingsPlan(final UpdateContext context, final ProvLocation region,
-			final UpdateContext localContext, final String endpoint) {
-		final var previousOd = localContext.getPrevious();
-		if (previousOd.isEmpty()) {
-			// No on demand price found, so savings plan cannot be applied
+	private void installSavingsPlan(final LocalEc2Context context, final String endpoint,
+			final Map<String, ProvInstancePrice> previousOd) {
+		final var region = context.getRegion();
+		// Install SavingPlan prices on this region
+		if (endpoint == null) {
+			// No end-point found for SP/region
+			log.info("No Savings Plan prices on region {}", region.getName());
+			return;
+		}
+		final var od0 = previousOd.values().stream()
+				.filter(c -> c.getCode().indexOf('.') != -1 && TERM_ON_DEMAND.equals(c.getTerm().getName())).findFirst()
+				.orElse(null);
+		if (od0 == null) {
+			// No OD found for SP/region
 			log.warn("No OnDemand prices on region {}, Savings Plan is ignored", region.getName());
 			return;
 		}
-		final var node = context.getNode().getId();
-		final var onDemandOfferCode = iptRepository.findByName(node, TERM_ON_DEMAND).getCode();
-		// Get the previous prices
-		localContext.setPrevious(ipRepository.findAllTerms(node, region.getName(), TERM_EC2_SP, TERM_COMPUTE_SP)
-				.stream().collect(Collectors.toMap(ProvInstancePrice::getCode, Function.identity())));
-		// Track the created instance to cache partial costs
-		localContext.getActualCodes().clear();
-		localContext.setPartialCost(new HashMap<>());
+		final var oldCount = context.getLocals().size();
+		final var odCode2 = od0.getCode().substring(od0.getCode().indexOf('.'));
+
 		log.info("AWS Savings Plan import started for region {}@{} ...", region, endpoint);
 		try (var curl = new CurlProcessor()) {
 			// Get the remote prices stream
-			final var rawJson = StringUtils.defaultString(curl.get(endpoint), "{\"terms\":[]}");
-			// All regions are considered
+			final var rawJson = curl.get(endpoint);
 			objectMapper.readValue(rawJson, SavingsPlanPrice.class).getTerms().getSavingsPlan().stream().forEach(sp -> {
-				final var term = newSavingsPlanTerm(context, region, sp);
-				sp.getRates().forEach(r -> installSavingsPlanTermPrices(context, term, r, region, localContext,
-						previousOd, onDemandOfferCode));
+				final var term = newSavingsPlanTerm(context, sp);
+				sp.getRates().forEach(r -> installSavingsPlanTermPrices(context, term, r, previousOd, odCode2));
 			});
 
 			// Purge the SKUs
-			purgeSku(context, localContext, localContext.getPrevious(), ipRepository, qiRepository);
+			purgePrices(context);
 		} catch (final IOException use) {
 			// Something goes wrong for this region, stop for this region
-			log.info("AWS EC2 Savings Plan import failed for region {}", region.getName(), use);
+			log.warn("AWS EC2 Savings Plan import failed for region {}", region.getName(), use);
 		} finally {
 			// Report
-			log.info("AWS EC2 Savings Plan import finished for region {}: {} prices", region.getName(),
-					localContext.getActualCodes().size());
+			log.info("AWS EC2 Savings Plan import finished for region {}: {} prices ({})", region.getName(),
+					context.getPrices().size(), String.format("%+d", context.getPrices().size() - oldCount));
+			context.cleanup();
 		}
 	}
 
 	/**
 	 * Create or update the savings plan term and return it.
 	 */
-	private ProvInstancePriceTerm newSavingsPlanTerm(final UpdateContext context, final ProvLocation region,
-			final SavingsPlanTerm sp) {
+	private ProvInstancePriceTerm newSavingsPlanTerm(final LocalEc2Context context, final SavingsPlanTerm sp) {
 
 		final var term = context.getPriceTerms().computeIfAbsent(sp.getSku(), code -> {
 			final var t = new ProvInstancePriceTerm();
@@ -324,7 +312,7 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 				computePlan = false;
 
 				// This term is only available for a specific region
-				term.setLocation(region);
+				term.setLocation(context.getRegion());
 			}
 
 			term.setName(name);
@@ -343,25 +331,22 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	 * Install the prices related to a term. The instance price type is reused from the discounted OnDemand price, and
 	 * must exist.
 	 */
-	private void installSavingsPlanTermPrices(final UpdateContext context, final ProvInstancePriceTerm term,
-			final SavingsPlanRate jsonPrice, final ProvLocation region, final UpdateContext localContext,
-			final Map<String, ProvInstancePrice> previousOd, final String onDemandOfferCode) {
+	private void installSavingsPlanTermPrices(final LocalEc2Context context, final ProvInstancePriceTerm term,
+			final SavingsPlanRate jsonPrice, final Map<String, ProvInstancePrice> previousOd, final String odCode2) {
 		if (jsonPrice.getDiscountedUsageType().contains("Unused")) {
 			// Ignore this this usage
 			return;
 		}
 
-		final var odPrice = previousOd.get(jsonPrice.getDiscountedSku() + onDemandOfferCode);
+		// Get the related OD Price
+		final var odPrice = previousOd.get(jsonPrice.getDiscountedSku() + odCode2);
 		if (odPrice == null) {
-			log.warn("SavingsPlan with SKU {} for OnDemand ({}), region {} has not been found", onDemandOfferCode,
-					jsonPrice.getDiscountedSku(), region.getName());
+			log.warn("No SKU {} in region {}", jsonPrice.getDiscountedSku(), context.getRegion().getName());
 			return;
 		}
 
 		// Add this code to the existing SKU codes
-		final var code = jsonPrice.getRateCode();
-		localContext.getActualCodes().add(code);
-		final var price = newSavingPlanPrice(context, odPrice, jsonPrice, term, localContext);
+		final var price = newSavingPlanPrice(context, odPrice, jsonPrice, term);
 		final var cost = jsonPrice.getDiscountedRate().getPrice() * context.getHoursMonth();
 		saveAsNeeded(context, price, cost, ipRepository);
 	}
@@ -369,17 +354,12 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	/**
 	 * Install or update a EC2 price
 	 */
-	private ProvInstancePrice newSavingPlanPrice(final UpdateContext context, final ProvInstancePrice odPrice,
-			final SavingsPlanRate jsonPrice, final ProvInstancePriceTerm term, final UpdateContext localContext) {
+	private ProvInstancePrice newSavingPlanPrice(final LocalEc2Context context, final ProvInstancePrice odPrice,
+			final SavingsPlanRate jsonPrice, final ProvInstancePriceTerm term) {
 		final var type = odPrice.getType();
-		final var price = localContext.getPrevious().computeIfAbsent(jsonPrice.getRateCode(), c -> {
-			final var p = new ProvInstancePrice();
-			p.setCode(c);
-			return p;
-		});
-
+		final var price = context.getLocals().computeIfAbsent(jsonPrice.getRateCode(), context::newPrice);
 		return copyAsNeeded(context, price, p -> {
-			p.setLocation(odPrice.getLocation());
+			p.setLocation(context.getRegion());
 			p.setLicense(odPrice.getLicense());
 			p.setType(type);
 			p.setTerm(term);
@@ -392,61 +372,57 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 
 	/**
 	 * Download and install EC2 prices from AWS server.
-	 *
-	 * @param context      The update context.
-	 * @param region       The region to fetch.
-	 * @param localContext The local update context.
-	 * @param apiPrice     The CSV API price URL.
 	 */
-	private void installEC2Prices(final UpdateContext context, final ProvLocation region,
-			final UpdateContext localContext, final String apiPrice) {
+	private void installEC2Prices(final UpdateContext gContext, final ProvLocation region, final String apiPrice,
+			final Map<String, String> indexes) {
 		// Track the created instance to cache partial costs
-		localContext.setPrevious(
-				ipRepository.findAllTerms(context.getNode().getId(), region.getName(), TERM_ON_DEMAND, TERM_RESERVED)
-						.stream().collect(Collectors.toMap(ProvInstancePrice::getCode, Function.identity())));
-		localContext.setPartialCost(new HashMap<>());
+		final var context = new LocalEc2Context(gContext, itRepository, ipRepository, qiRepository, region,
+				TERM_ON_DEMAND, TERM_RESERVED);
 		final var endpoint = apiPrice.replace("%s", region.getName());
+		final var oldCount = context.getLocals().size();
 		log.info("AWS EC2 OnDemand/Reserved import started for region {}@{} ...", region.getName(), endpoint);
 
 		// Get the remote prices stream
+		var succeed = false;
 		try (var reader = new BufferedReader(new InputStreamReader(new URI(endpoint).toURL().openStream()))) {
 			// Pipe to the CSV reader
 			final var csvReader = new CsvForBeanEc2(reader);
 
 			// Build the AWS instance prices from the CSV
-			AwsEc2Price csv = csvReader.read();
+			var csv = csvReader.read();
+			var first = true;
 			while (csv != null) {
-				// Complete the region human name associated to the API one
-				region.setDescription(csv.getLocation());
+				if (first) {
+					// Complete the region human name associated to the API one
+					region.setDescription(csv.getLocation());
+					first = false;
+				}
 
 				// Persist this price
-				installEc2(context, csv, region, localContext);
+				installEc2(context, csv);
 
 				// Read the next one
 				csv = csvReader.read();
 			}
 
 			// Purge the SKUs
-			purgeSku(context, localContext, localContext.getPrevious(), ipRepository, qiRepository);
+			purgePrices(context);
+			succeed = true;
 		} catch (final IOException | URISyntaxException use) {
 			// Something goes wrong for this region, stop for this region
-			log.info("AWS EC2 OnDemand/Reserved import failed for region {}", region.getName(), use);
+			log.warn("AWS EC2 OnDemand/Reserved import failed for region {}", region.getName(), use);
 		} finally {
 			// Report
-			log.info("AWS EC2 OnDemand/Reserved import finished for region {}: {} instance, {} price types, {} prices",
-					region.getName(), context.getInstanceTypes().size(), context.getPriceTerms().size(),
-					localContext.getActualCodes().size());
+			log.info("AWS EC2 OnDemand/Reserved import finished for region {}: {} prices ({})", region.getName(),
+					context.getPrices().size(), String.format("%+d", context.getPrices().size() - oldCount));
 		}
-	}
 
-	/**
-	 * Remove SKU that were present in the context and not refresh with this update.
-	 * 
-	 * @param context      The update context.
-	 * @param localContext The local update context.
-	 */
-	private void purgeSku(final UpdateContext context, final UpdateContext localContext) {
-		purgeSku(context, localContext, localContext.getPrevious(), ipRepository, qiRepository);
+		// Savings Plan part: only when OD succeed
+		if (succeed) {
+			installSavingsPlan(new LocalEc2Context(gContext, itRepository, ipRepository, qiRepository, region,
+					TERM_EC2_SP, TERM_COMPUTE_SP), indexes.get(region.getName()), context.getLocals());
+			context.cleanup();
+		}
 	}
 
 	/**
@@ -454,67 +430,28 @@ public class AwsPriceImportEc2 extends AbstractAwsPriceImportVm {
 	 *
 	 * @param context The update context.
 	 * @param csv     The current CSV entry.
-	 * @param region  The current region.
-	 * @param context The local update context.
 	 */
-	private void installEc2(final UpdateContext context, final AwsEc2Price csv, final ProvLocation region,
-			final UpdateContext localContext) {
+	private void installEc2(final LocalEc2Context context, final AwsEc2Price csv) {
 		// Filter OS and type
 		if (!isEnabledType(context, csv.getInstanceType()) || !isEnabledOs(context, csv.getOs())) {
 			return;
 		}
 
-		// Add this code to the existing SKU codes
-		final var code = toCode(csv);
-		localContext.getActualCodes().add(code);
-
 		// Up-front, partial or not
-		if (UPFRONT_MODE.matcher(StringUtils.defaultString(csv.getPurchaseOption())).find()) {
-			// Up-front ALL/PARTIAL
-			final var partialCost = localContext.getPartialCost();
-			if (partialCost.containsKey(code)) {
-				handleUpfront(context, newEc2Price(context, csv, region, localContext), csv, partialCost.get(code),
-						ipRepository);
-
-				// The price is completed, cleanup
-				partialCost.remove(code);
-			} else {
-				// First time, save this entry for a future completion
-				partialCost.put(code, csv);
-			}
-		} else {
+		if (!handleUpFront(context, csv)) {
 			// No up-front, cost is fixed
-			final var price = newEc2Price(context, csv, region, localContext);
+			final var price = newPrice(context, csv);
 			final var cost = csv.getPricePerUnit() * context.getHoursMonth();
 			saveAsNeeded(context, price, cost, ipRepository);
 		}
 	}
 
-	private void copy(final UpdateContext context, final AwsEc2Price csv, final ProvLocation region,
-			final ProvInstancePrice p, final ProvInstanceType type, final ProvInstancePriceTerm term) {
-		super.copy(context, csv, region, p, type, term);
+	@Override
+	protected void copy(final AwsEc2Price csv, final ProvInstancePrice p) {
 		final var software = ObjectUtils.defaultIfNull(csv.getSoftware(), "");
 		p.setSoftware(StringUtils.trimToNull(mapSoftware.computeIfAbsent(software, String::toUpperCase)));
 		p.setOs(toVmOs(csv.getOs()));
 		p.setTenancy(ProvTenancy.valueOf(StringUtils.upperCase(csv.getTenancy())));
-	}
-
-	/**
-	 * Install or update a EC2 price
-	 */
-	private ProvInstancePrice newEc2Price(final UpdateContext context, final AwsEc2Price csv, final ProvLocation region,
-			final UpdateContext localContext) {
-		final var type = installInstanceType(context, csv, context.getInstanceTypes(), ProvInstanceType::new,
-				itRepository);
-		final var term = installInstancePriceTerm(context, csv);
-		final var price = localContext.getPrevious().computeIfAbsent(toCode(csv), c -> {
-			final var p = new ProvInstancePrice();
-			p.setCode(c);
-			return p;
-		});
-
-		// Update the price in force mode
-		return copyAsNeeded(context, price, p -> copy(context, csv, region, price, type, term));
 	}
 
 	/**

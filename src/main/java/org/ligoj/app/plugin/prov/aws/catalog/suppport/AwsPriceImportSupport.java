@@ -36,15 +36,13 @@ public class AwsPriceImportSupport extends AbstractAwsImport implements ImportCa
 		// Complete the set
 		csvForBean.toBean(ProvSupportPrice.class, "csv/aws-prov-support-price.csv").forEach(t -> {
 			final ProvSupportPrice entity = previous.computeIfAbsent(t.getCode(), n -> t);
-
 			// Merge the support type details
-			entity.setCost(t.getCost());
-			entity.setLimit(t.getLimit());
-			entity.setMin(t.getMin());
-			entity.setRate(t.getRate());
-
-			sp2Repository.save(entity);
-
+			final var price = copyAsNeeded(context, entity, s -> {
+				s.setLimit(t.getLimit());
+				s.setMin(t.getMin());
+				s.setRate(t.getRate());
+			});
+			saveAsNeeded(context, price, t.getCost(), sp2Repository);
 		});
 	}
 
@@ -55,29 +53,30 @@ public class AwsPriceImportSupport extends AbstractAwsImport implements ImportCa
 
 		// Complete the set
 		csvForBean.toBean(ProvSupportType.class, "csv/aws-prov-support-type.csv").forEach(t -> {
-			final ProvSupportType entity = previous.computeIfAbsent(t.getName(), n -> t);
-
+			final ProvSupportType entity = previous.computeIfAbsent(t.getCode(), n -> t);
 			// Merge the support type details
-			entity.setDescription(t.getDescription());
-			entity.setAccessApi(t.getAccessApi());
-			entity.setAccessChat(t.getAccessChat());
-			entity.setAccessEmail(t.getAccessEmail());
-			entity.setAccessPhone(t.getAccessPhone());
-			entity.setSlaStartTime(t.getSlaStartTime());
-			entity.setSlaEndTime(t.getSlaEndTime());
-			entity.setDescription(t.getDescription());
+			copyAsNeeded(context, entity, t2 -> {
+				t2.setName(t.getCode());
+				t2.setDescription(t.getDescription());
+				t2.setAccessApi(t.getAccessApi());
+				t2.setAccessChat(t.getAccessChat());
+				t2.setAccessEmail(t.getAccessEmail());
+				t2.setAccessPhone(t.getAccessPhone());
+				t2.setSlaStartTime(t.getSlaStartTime());
+				t2.setSlaEndTime(t.getSlaEndTime());
+				t2.setDescription(t.getDescription());
 
-			entity.setSlaBusinessCriticalSystemDown(t.getSlaBusinessCriticalSystemDown());
-			entity.setSlaGeneralGuidance(t.getSlaGeneralGuidance());
-			entity.setSlaProductionSystemDown(t.getSlaProductionSystemDown());
-			entity.setSlaProductionSystemImpaired(t.getSlaProductionSystemImpaired());
-			entity.setSlaSystemImpaired(t.getSlaSystemImpaired());
-			entity.setSlaWeekEnd(t.isSlaWeekEnd());
+				t2.setSlaBusinessCriticalSystemDown(t.getSlaBusinessCriticalSystemDown());
+				t2.setSlaGeneralGuidance(t.getSlaGeneralGuidance());
+				t2.setSlaProductionSystemDown(t.getSlaProductionSystemDown());
+				t2.setSlaProductionSystemImpaired(t.getSlaProductionSystemImpaired());
+				t2.setSlaSystemImpaired(t.getSlaSystemImpaired());
+				t2.setSlaWeekEnd(t.isSlaWeekEnd());
 
-			entity.setCommitment(t.getCommitment());
-			entity.setSeats(t.getSeats());
-			entity.setLevel(t.getLevel());
-			st2Repository.save(entity);
+				t2.setCommitment(t.getCommitment());
+				t2.setSeats(t.getSeats());
+				t2.setLevel(t.getLevel());
+			}, st2Repository);
 		});
 	}
 }

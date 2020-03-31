@@ -12,9 +12,10 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.math.NumberUtils;
 import org.ligoj.app.model.Node;
+import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsImport;
 import org.ligoj.app.plugin.prov.aws.catalog.AwsPrice;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
-import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVm;
+import org.ligoj.app.plugin.prov.catalog.ImportCatalog;
 import org.ligoj.app.plugin.prov.model.AbstractCodedEntity;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
@@ -25,7 +26,7 @@ import org.springframework.stereotype.Component;
  * The provisioning EBS price service for AWS. Manage install or update of prices.
  */
 @Component
-public class AwsPriceImportEbs extends AbstractAwsPriceImportVm {
+public class AwsPriceImportEbs extends AbstractAwsImport implements ImportCatalog<UpdateContext> {
 
 	/**
 	 * The EBS prices end-point. Contains the prices for all regions.

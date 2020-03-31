@@ -64,5 +64,6 @@ public class AwsPriceImport extends AbstractImportCatalogResource {
 		s3.install(context);
 		efs.install(context);
 		support.install(context);
+		context.cleanup();
 	}
 }

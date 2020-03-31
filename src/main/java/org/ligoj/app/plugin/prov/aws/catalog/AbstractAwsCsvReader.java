@@ -41,7 +41,7 @@ public abstract class AbstractAwsCsvReader<T> extends CsvBeanReader<T> {
 	@Override
 	public T read() throws IOException {
 		// Read the raw entries to check the build/skip option
-		final List<String> rawValues = csvReaderProxy.read();
+		final var rawValues = csvReaderProxy.read();
 
 		// Build only for AWS compute instance
 		if (rawValues.isEmpty()) {

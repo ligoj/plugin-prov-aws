@@ -20,7 +20,7 @@ import org.ligoj.bootstrap.core.resource.TechnicalException;
 /**
  * Read AWS CSV input, skipping the AWS headers and non instance type rows.
  * 
- * @param <T> Te target bean type.
+ * @param <T> The target bean type.
  */
 public abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 
@@ -32,6 +32,7 @@ public abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 	private static final Map<String, String> HEADERS_MAPPING = new HashMap<>();
 	static {
 		HEADERS_MAPPING.put("SKU", "sku");
+		HEADERS_MAPPING.put("RateCode", "rateCode");
 		HEADERS_MAPPING.put("OfferTermCode", "offerTermCode");
 		HEADERS_MAPPING.put("TermType", "termType");
 		HEADERS_MAPPING.put("PricePerUnit", "pricePerUnit");
@@ -39,8 +40,8 @@ public abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 	}
 
 	/**
-	 * Build the reader parsing the CSV file from AWS to build {@link AwsEc2Price}
-	 * instances. Non AWS instances data are skipped, and headers are ignored.
+	 * Build the reader parsing the CSV file from AWS to build {@link AwsEc2Price} instances. Non AWS instances data are
+	 * skipped, and headers are ignored.
 	 *
 	 * @param reader   The original AWS CSV input.
 	 * @param mapping  The mapping table for header.
@@ -51,10 +52,10 @@ public abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 			final Class<T> beanType) throws IOException {
 
 		// Complete the standard mappings
-		final Map<String, String> mMapping = new HashMap<>(HEADERS_MAPPING);
+		final var mMapping = new HashMap<String, String>(HEADERS_MAPPING);
 		mMapping.putAll(mapping);
 
-		final CsvReader csvReader = new CsvReader(reader, ',');
+		final var csvReader = new CsvReader(reader, ',');
 
 		// Skip until the header, to be skipped too
 		List<String> values;
@@ -78,17 +79,17 @@ public abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 	/**
 	 * Do not use this, method.
 	 *
-	 * @see #read() instead
+	 * @deprecated Use #read() instead
 	 */
 	@Override
+	@Deprecated(forRemoval = false)
 	public final <B> List<B> toBean(final Class<B> beanType, final Reader input) {
 		// Disable this method
 		return Collections.emptyList();
 	}
 
 	/**
-	 * Return a list of JPA bean re ad from the given CSV input. Headers are
-	 * expected.
+	 * Return a list of JPA bean re ad from the given CSV input. Headers are expected.
 	 *
 	 * @return The bean read from the next CSV record.
 	 * @throws IOException When the CSV record cannot be read.

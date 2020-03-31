@@ -15,8 +15,6 @@ import lombok.Setter;
 @Setter
 public abstract class AbstractAwsEc2Price extends AwsCsvPrice {
 
-	private String leaseContractLength;
-	private String purchaseOption;
 	private String offeringClass;
 	private String instanceType;
 	private double cpu;

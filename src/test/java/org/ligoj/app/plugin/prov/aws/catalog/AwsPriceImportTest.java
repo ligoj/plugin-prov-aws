@@ -73,14 +73,12 @@ import org.ligoj.app.plugin.prov.model.Rate;
 import org.ligoj.app.plugin.prov.model.VmOs;
 import org.ligoj.app.plugin.prov.quote.database.ProvQuoteDatabaseResource;
 import org.ligoj.app.plugin.prov.quote.database.QuoteDatabaseEditionVo;
-import org.ligoj.app.plugin.prov.quote.database.QuoteDatabaseLookup;
 import org.ligoj.app.plugin.prov.quote.database.QuoteDatabaseQuery;
 import org.ligoj.app.plugin.prov.quote.instance.ProvQuoteInstanceResource;
 import org.ligoj.app.plugin.prov.quote.instance.QuoteInstanceEditionVo;
 import org.ligoj.app.plugin.prov.quote.instance.QuoteInstanceLookup;
 import org.ligoj.app.plugin.prov.quote.storage.ProvQuoteStorageResource;
 import org.ligoj.app.plugin.prov.quote.storage.QuoteStorageEditionVo;
-import org.ligoj.app.plugin.prov.quote.storage.QuoteStorageLookup;
 import org.ligoj.app.plugin.prov.quote.storage.QuoteStorageQuery;
 import org.ligoj.bootstrap.core.resource.TechnicalException;
 import org.ligoj.bootstrap.dao.system.SystemConfigurationRepository;
@@ -207,6 +205,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 	/**
 	 * Only for dead but necessary contracted code.
 	 */
+	@SuppressWarnings("deprecation")
 	@Test
 	void dummyCoverage() throws IOException {
 		new CsvForBeanEc2(new BufferedReader(new StringReader("SKU"))).toBean(null, (Reader) null);
@@ -216,6 +215,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 	/**
 	 * Invalid EC2 CSV header
 	 */
+	@SuppressWarnings("deprecation")
 	@Test
 	void installInvalidHeader() {
 		Assertions.assertEquals("Premature end of CSV file, headers were not found",
@@ -270,8 +270,8 @@ class AwsPriceImportTest extends AbstractServerTest {
 		final var subscription = instance.getConfiguration().getSubscription().getId();
 
 		// Check the v1 only prices
-		bpRepository.findByExpected("code", "OLD_____________JRTCKXETXF");
-		ipRepository.findByExpected("code", "OLD_____________JRTCKXETXF");
+		bpRepository.findByExpected("code", "OLD_____________.JRTCKXETXF.6YS6EN2CT7");
+		ipRepository.findByExpected("code", "OLD_____________.JRTCKXETXF.6YS6EN2CT7");
 
 		// Check the spot
 		final var spotPrice = qiResource.lookup(subscription,
@@ -286,7 +286,14 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		Assertions.assertEquals("eu-west-1", spotPrice.getPrice().getLocation().getName());
 		Assertions.assertEquals("EU (Ireland)", spotPrice.getPrice().getLocation().getDescription());
-		checkImportStatus(110 + 2 /* saving plans */, 77);
+
+		checkImportStatus(81 /* OD */ + 3 /* RI */ + 6 /* spot */ + 2 /* SP */ + 20 /* RDS */, 77);
+		Assertions.assertEquals(81, ipRepository.findAllBy("term.code", "JRTCKXETXF").size());
+		Assertions.assertEquals(3, ipRepository.findAllBy("term.code", "NQ3QZPMQV9").size()); // Reserved 3y
+		Assertions.assertEquals(6, ipRepository.findAllBy("term.code", "spot").size());
+		Assertions.assertEquals(1, ipRepository.findAllBy("term.code", "SSTZVD8UMFZ4RSTW").size()); // EC2 SP
+		Assertions.assertEquals(1, ipRepository.findAllBy("term.code", "8GU23DFTKP2N43SD").size()); // Compute SP
+		Assertions.assertEquals(20, bpRepository.findAll().size()); // RDS
 
 		// Check the EC2 savings plan
 		final var ec2SsavingsPlanPrice = qiResource.lookup(subscription,
@@ -322,35 +329,35 @@ class AwsPriceImportTest extends AbstractServerTest {
 		// Install again to check the update without change
 		resetImportTask();
 		resource.install(false);
+		checkImportStatus(112 /* same */, 77);
+		checkType();
+
 		provResource.updateCost(subscription);
 		check(provResource.getConfiguration(subscription), 449.057d, 46.667d);
-		checkImportStatus(110 + 2 /* saving plans, same as previous */, 77);
 
 		// Install again with force mode, without price change in force mode
-		checkType();
 		resource.install(true);
 		check(provResource.getConfiguration(subscription), 449.057d, 46.667d);
+		checkImportStatus(112 /* same */, 77);
 		checkType();
-		checkImportStatus(110 + 2 /* saving plans */ + 1 - 1 /* purged RDS price */ /* new RDS price */
-				- 1 /* purged EC2 price */ + 1 /* new EC2 price */, 77);
 
 		// Install again with force mode, with only specs changes in force mode
 		configure(AwsPriceImportRds.CONF_URL_RDS_PRICES, "/vs/%s/index-rds.csv");
 		mock("/vs/eu-west-1/index-rds.csv", "mock-server/aws/vs/index-rds.csv");
 		check(provResource.getConfiguration(subscription), 449.057d, 46.667d);
 		resource.install(true);
-		var dtype = this.bpRepository.findByExpected("code", "TBNHT84HARTQH8TYJRTCKXETXF").getType();
+		var dtype = this.bpRepository.findByExpected("code", "TBNHT84HARTQH8TY.JRTCKXETXF.6YS6EN2CT7").getType();
 		Assertions.assertEquals("db.m1.large.NEW", dtype.getName());
 		Assertions.assertEquals("Intel Xeon NEW", dtype.getProcessor());
 		Assertions.assertEquals("{Moderate NEW}", dtype.getDescription());
 		Assertions.assertEquals(3, dtype.getCpu());
 		Assertions.assertEquals(7782, dtype.getRam());
-		checkImportStatus(110 + 2 /* saving plans */ + 1 - 1 /* purged RDS price */ /* new RDS price */
-				- 1 /* purged EC2 price */ + 1 /* new EC2 price */, 77 + 1 /* new type */);
+		checkImportStatus(112 - 1 /* purged RDS */ + 1 /* new RDS */
+				- 1 /* purged EC2 */ + 1 /* new EC2 */, 77 + 1 /* new type */);
 
 		// Check the v1 only prices are still available
-		bpRepository.findByExpected("code", "OLD_____________JRTCKXETXF");
-		ipRepository.findByExpected("code", "OLD_____________JRTCKXETXF");
+		bpRepository.findByExpected("code", "OLD_____________.JRTCKXETXF.6YS6EN2CT7");
+		ipRepository.findByExpected("code", "OLD_____________.JRTCKXETXF.6YS6EN2CT7");
 
 		// Point to another catalog with updated prices
 		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES, "/v2/%s/index-ec2.csv");
@@ -369,12 +376,12 @@ class AwsPriceImportTest extends AbstractServerTest {
 		provResource.updateCost(subscription);
 
 		// Check the v1 only prices are unavailable
-		Assertions.assertNull(bpRepository.findBy("code", "OLD_____________JRTCKXETXF"));
-		Assertions.assertNull(ipRepository.findBy("code", "OLD_____________JRTCKXETXF"));
+		Assertions.assertNull(bpRepository.findBy("code", "OLD_____________.JRTCKXETXF.6YS6EN2CT7"));
+		Assertions.assertNull(ipRepository.findBy("code", "OLD_____________.JRTCKXETXF.6YS6EN2CT7"));
 
 		// Check the v2 only price
-		bpRepository.findByExpected("code", "NEW_____________JRTCKXETXF");
-		ipRepository.findByExpected("code", "NEW_____________JRTCKXETXF");
+		bpRepository.findByExpected("code", "NEW_____________.JRTCKXETXF.6YS6EN2CT7");
+		ipRepository.findByExpected("code", "NEW_____________.JRTCKXETXF.6YS6EN2CT7");
 
 		// Check the new price
 		final QuoteVo newQuote = provResource.getConfiguration(subscription);
@@ -422,7 +429,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 	}
 
 	private void checkType() {
-		var type = this.bpRepository.findByExpected("code", "TBNHT84HARTQH8TYJRTCKXETXF").getType();
+		var type = this.bpRepository.findByExpected("code", "TBNHT84HARTQH8TY.JRTCKXETXF.6YS6EN2CT7").getType();
 		Assertions.assertEquals("db.m1.large", type.getName());
 		Assertions.assertEquals("Intel Xeon", type.getProcessor());
 		Assertions.assertEquals(2, type.getCpu());
@@ -840,7 +847,8 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Request an instance that would not be a Spot
 		final QuoteInstanceLookup lookup = qiResource.lookup(subscription,
-				builder().cpu(2).ram(1741).constant(true).type("c1.medium").usage("36month").build());
+				builder().cpu(2).ram(1741).constant(true).usage("36month").type("c1.medium").build());
+		Assertions.assertEquals("HB5V2X8TXQUTDZBV.NQ3QZPMQV9.6YS6EN2CT7", lookup.getPrice().getCode());
 
 		final QuoteInstanceEditionVo ivo = new QuoteInstanceEditionVo();
 		ivo.setCpu(1d);
@@ -855,8 +863,9 @@ class AwsPriceImportTest extends AbstractServerTest {
 		em.clear();
 
 		// Add storage to this instance
-		final QuoteStorageLookup slookup = qsResource.lookup(subscription,
+		var slookup = qsResource.lookup(subscription,
 				QuoteStorageQuery.builder().size(5).latency(Rate.GOOD).instance(server1()).build()).get(0);
+		Assertions.assertEquals("eu-west-1-gp2", slookup.getPrice().getCode());
 		final QuoteStorageEditionVo svo = new QuoteStorageEditionVo();
 		svo.setQuoteInstance(server1());
 		svo.setSize(5);
@@ -869,13 +878,14 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("gp2", qsRepository.findOne(createStorage.getId()).getPrice().getType().getName());
 
 		// Add storage (EFS) to this quote
-		final QuoteStorageLookup efsLookpup = qsResource.lookup(subscription,
+		slookup = qsResource.lookup(subscription,
 				QuoteStorageQuery.builder().latency(Rate.GOOD).optimized(ProvStorageOptimized.THROUGHPUT).build())
 				.get(0);
+		Assertions.assertEquals("WDJR7Q9RKV87VCVK", slookup.getPrice().getCode());
 		final QuoteStorageEditionVo svo2 = new QuoteStorageEditionVo();
 		svo2.setSize(1);
 		svo2.setOptimized(ProvStorageOptimized.THROUGHPUT);
-		svo2.setType(efsLookpup.getPrice().getType().getName());
+		svo2.setType(slookup.getPrice().getType().getName());
 		svo2.setName("nfs1");
 		svo2.setSubscription(subscription);
 		final UpdatedCost createEfs = qsResource.create(svo2);
@@ -883,17 +893,18 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("efs", qsRepository.findOne(createEfs.getId()).getPrice().getType().getName());
 
 		// Add storage (S3) to this quote
-		final QuoteStorageLookup s3Lookpup = qsResource.lookup(subscription,
+		slookup = qsResource.lookup(subscription,
 				QuoteStorageQuery.builder().latency(Rate.MEDIUM).optimized(ProvStorageOptimized.DURABILITY).build())
 				.get(0);
-		final ProvStorageType type = s3Lookpup.getPrice().getType();
+		Assertions.assertEquals("QESS8VZ4CR8YK5WX", slookup.getPrice().getCode());
+		final ProvStorageType type = slookup.getPrice().getType();
 		Assertions.assertEquals(99.5d, type.getAvailability(), 0.000000001d);
 		Assertions.assertEquals(11, type.getDurability9().intValue());
 
 		final QuoteStorageEditionVo svo3 = new QuoteStorageEditionVo();
 		svo3.setSize(1);
 		svo3.setOptimized(ProvStorageOptimized.DURABILITY);
-		svo3.setType(s3Lookpup.getPrice().getType().getName());
+		svo3.setType(slookup.getPrice().getType().getName());
 		svo3.setName("my-bucket");
 		svo3.setSubscription(subscription);
 		final UpdatedCost createS3 = qsResource.create(svo3);
@@ -901,15 +912,16 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("s3-z-ia", qsRepository.findOne(createS3.getId()).getPrice().getType().getName());
 
 		// Request a database
-		final QuoteDatabaseLookup blookup1 = qbResource.lookup(subscription,
+		var blookup = qbResource.lookup(subscription,
 				QuoteDatabaseQuery.builder().cpu(4).ram(1741).constant(false).engine("MYSQL").build());
-		Assertions.assertFalse(blookup1.getPrice().getType().getConstant().booleanValue());
-		Assertions.assertNull(blookup1.getPrice().getLicense());
-		Assertions.assertEquals("MYSQL", blookup1.getPrice().getEngine());
-		Assertions.assertNull(blookup1.getPrice().getEdition());
-		Assertions.assertNull(blookup1.getPrice().getStorageEngine());
-		Assertions.assertNull(blookup1.getPrice().getInitialCost());
-		Assertions.assertEquals("OnDemand", blookup1.getPrice().getTerm().getName());
+		Assertions.assertEquals("FQ2P47XZ3KZ97A3P.JRTCKXETXF.6YS6EN2CT7", blookup.getPrice().getCode());
+		Assertions.assertFalse(blookup.getPrice().getType().getConstant().booleanValue());
+		Assertions.assertNull(blookup.getPrice().getLicense());
+		Assertions.assertEquals("MYSQL", blookup.getPrice().getEngine());
+		Assertions.assertNull(blookup.getPrice().getEdition());
+		Assertions.assertNull(blookup.getPrice().getStorageEngine());
+		Assertions.assertNull(blookup.getPrice().getInitialCost());
+		Assertions.assertEquals("OnDemand", blookup.getPrice().getTerm().getName());
 
 		final QuoteDatabaseEditionVo qb1 = new QuoteDatabaseEditionVo();
 		qb1.setCpu(4);
@@ -918,19 +930,20 @@ class AwsPriceImportTest extends AbstractServerTest {
 		qb1.setPhysical(false);
 		qb1.setEngine("MYSQL");
 		qb1.setSubscription(subscription);
-		qb1.setPrice(blookup1.getPrice().getId());
+		qb1.setPrice(blookup.getPrice().getId());
 		qb1.setName("database1");
 		final UpdatedCost createDb = qbResource.create(qb1);
 		Assertions.assertEquals("db.t2.xlarge", qbRepository.findOne(createDb.getId()).getPrice().getType().getName());
 
-		final QuoteDatabaseLookup blookup2 = qbResource.lookup(subscription, QuoteDatabaseQuery.builder().cpu(2)
-				.ram(1741).type("db.r5.large").license("BYOL").engine("ORACLE").edition("ENTERPRISE").build());
-		Assertions.assertTrue(blookup2.getPrice().getType().getConstant().booleanValue());
-		Assertions.assertEquals("BYOL", blookup2.getPrice().getLicense());
-		Assertions.assertEquals("ORACLE", blookup2.getPrice().getEngine());
-		Assertions.assertEquals("ENTERPRISE", blookup2.getPrice().getEdition());
-		Assertions.assertNull(blookup2.getPrice().getStorageEngine());
-		Assertions.assertNull(blookup2.getPrice().getInitialCost());
+		blookup = qbResource.lookup(subscription, QuoteDatabaseQuery.builder().cpu(2).ram(1741).type("db.r5.large")
+				.license("BYOL").engine("ORACLE").edition("ENTERPRISE").build());
+		Assertions.assertEquals("68NGR9GHC49W62UR.JRTCKXETXF.6YS6EN2CT7", blookup.getPrice().getCode());
+		Assertions.assertTrue(blookup.getPrice().getType().getConstant().booleanValue());
+		Assertions.assertEquals("BYOL", blookup.getPrice().getLicense());
+		Assertions.assertEquals("ORACLE", blookup.getPrice().getEngine());
+		Assertions.assertEquals("ENTERPRISE", blookup.getPrice().getEdition());
+		Assertions.assertNull(blookup.getPrice().getStorageEngine());
+		Assertions.assertNull(blookup.getPrice().getInitialCost());
 
 		final QuoteDatabaseEditionVo qb2 = new QuoteDatabaseEditionVo();
 		qb2.setCpu(2);
@@ -940,7 +953,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		qb2.setLicense("BYOL");
 		qb2.setType("db.r5.large");
 		qb2.setSubscription(subscription);
-		qb2.setPrice(blookup2.getPrice().getId());
+		qb2.setPrice(blookup.getPrice().getId());
 		qb2.setName("database2");
 		final UpdatedCost createDb2 = qbResource.create(qb2);
 		Assertions.assertEquals("db.r5.large", qbRepository.findOne(createDb2.getId()).getPrice().getType().getName());

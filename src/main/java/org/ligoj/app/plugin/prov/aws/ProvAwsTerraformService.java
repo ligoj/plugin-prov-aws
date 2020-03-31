@@ -29,7 +29,7 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.model.Project;
 import org.ligoj.app.model.Subscription;
-import org.ligoj.app.plugin.prov.model.AbstractQuoteResource;
+import org.ligoj.app.plugin.prov.model.AbstractQuote;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
 import org.ligoj.app.plugin.prov.model.ProvQuoteStorage;
@@ -180,7 +180,7 @@ public class ProvAwsTerraformService {
 		}
 	}
 
-	private ProvLocation getLocation(final AbstractQuoteResource<?> resource) {
+	private ProvLocation getLocation(final AbstractQuote<?> resource) {
 		return Objects.requireNonNullElse(resource.getLocation(), resource.getConfiguration().getLocation());
 	}
 

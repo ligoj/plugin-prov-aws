@@ -12,7 +12,7 @@
 
 [Ligoj](https://github.com/ligoj/ligoj) AWS provisioning plugin, and extending [Provisioning plugin](https://github.com/ligoj/plugin-prov)
 Provides the following features :
-- Price fetching from AWS site, including Spot
+- Price fetching from AWS price API: Spot, Savings Plan, Reserved Instance and On Demand
 - Region configuration. For now only one region at once
-- Supported services : EC2, S3 (IA, Glacier,..), EBS(SSD, HDD, ...) and EFS
+- Supported services : EC2, S3 (IA, Glacier,..), RDS (all engines), EBS(SSD, HDD, ...) and EFS
 - Terraform port 

@@ -199,7 +199,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			t.setProcessor(StringUtils
 					.trimToNull(RegExUtils.removeAll(csv.getPhysicalProcessor(), "(Variable|\\s*Family|\\([^)]*\\))")));
 			t.setDescription(ArrayUtils.toString(ArrayUtils
-					.removeAllOccurences(new String[] { csv.getStorage(), csv.getNetworkPerformance() }, null)));
+					.removeAllOccurrences(new String[] { csv.getStorage(), csv.getNetworkPerformance() }, null)));
 
 			// Convert GiB to MiB, and rounded
 			final var memoryStr = StringUtils.removeEndIgnoreCase(csv.getMemory(), " GiB").replace(",", "");

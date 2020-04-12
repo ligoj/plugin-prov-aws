@@ -4,6 +4,7 @@
 package org.ligoj.app.plugin.prov.aws;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 
@@ -231,13 +232,13 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 	@SuppressWarnings("unchecked")
 	private boolean validateAccess(int status) {
 		final var resource = newSpyResource();
-		final var mockRequest = new CurlRequest("GET", MOCK_URL, null);
+		final var mockRequest = new CurlRequest("POST", MOCK_URL, null);
 		mockRequest.setSaveResponse(true);
 		Mockito.doReturn("any").when(resource).getRegion();
 		Mockito.doReturn(mockRequest).when(resource).newRequest(ArgumentMatchers.any(AWS4SignatureQueryBuilder.class),
 				ArgumentMatchers.any(Map.class));
 
-		httpServer.stubFor(get(urlEqualTo("/mock")).willReturn(aResponse().withStatus(status)));
+		httpServer.stubFor(post(urlEqualTo("/mock")).willReturn(aResponse().withStatus(status)));
 		httpServer.start();
 		return resource.validateAccess(subscription);
 	}

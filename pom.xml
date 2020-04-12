@@ -16,6 +16,10 @@
 	<name>Ligoj - Plugin Provisioning - AWS</name>
 	<url>https://github.com/ligoj/plugin-prov-aws</url>
 
+	<properties>
+		<bootstrap.version>2.8.1</bootstrap.version>
+	</properties>
+
 	<scm>
 		<connection>scm:git:https://github.com/ligoj/plugin-prov-aws</connection>
 		<developerConnection>scm:git:https://github.com/ligoj/plugin-prov-aws</developerConnection>

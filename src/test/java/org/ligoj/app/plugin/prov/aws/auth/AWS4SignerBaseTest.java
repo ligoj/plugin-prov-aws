@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableMap;
 /**
  * Test class of {@link AWS4SignerBase}
  */
-public class AWS4SignerBaseTest {
+class AWS4SignerBaseTest {
 
 	/**
 	 * signer
@@ -114,7 +114,7 @@ public class AWS4SignerBaseTest {
 	@Test
 	void testGetCanonicalizedResourcePathEncodingException() throws EncoderException {
 		final var signer = new AWS4SignerForAuthorizationHeader();
-		final URLCodec urlCodec = Mockito.mock(URLCodec.class);
+		final var urlCodec = Mockito.mock(URLCodec.class);
 		ReflectionTestUtils.setField(signer, "urlCodec", urlCodec);
 		Mockito.when(urlCodec.encode(ArgumentMatchers.anyString())).thenThrow(new EncoderException());
 		Assertions.assertEquals("Error during resource path encoding", Assertions.assertThrows(TechnicalException.class, () -> {
@@ -147,7 +147,7 @@ public class AWS4SignerBaseTest {
 	@Test
 	void testGetCanonicalizedQueryStringException() throws EncoderException {
 		final var signer = new AWS4SignerForAuthorizationHeader();
-		final URLCodec urlCodec = Mockito.mock(URLCodec.class);
+		final var urlCodec = Mockito.mock(URLCodec.class);
 		ReflectionTestUtils.setField(signer, "urlCodec", urlCodec);
 		Mockito.when(urlCodec.encode(ArgumentMatchers.anyString())).thenThrow(new EncoderException());
 		Assertions.assertEquals("Error during parameters encoding", Assertions.assertThrows(TechnicalException.class, () -> {

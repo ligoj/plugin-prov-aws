@@ -12,11 +12,11 @@ import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery.AWS4SignatureQueryB
 /**
  * Test class of {@link AWS4SignatureQuery}
  */
-public class AWS4SignatureQueryTest {
+class AWS4SignatureQueryTest {
 
 	@Test
 	void builder() {
-		AWS4SignatureQueryBuilder builder = AWS4SignatureQuery.builder();
+		var builder = AWS4SignatureQuery.builder();
 		builder.toString();
 		builder = builderCommon(builder);
 		builder = builder.method("GET");

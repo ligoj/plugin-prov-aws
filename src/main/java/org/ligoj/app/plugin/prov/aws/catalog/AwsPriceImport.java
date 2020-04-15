@@ -55,7 +55,7 @@ public class AwsPriceImport extends AbstractImportCatalogResource {
 	 * @throws URISyntaxException When CSV or XML files cannot be read.
 	 */
 	public void install(final boolean force) throws IOException, URISyntaxException {
-		final UpdateContext context = initContext(new UpdateContext(), ProvAwsPluginResource.KEY, force);
+		final var context = initContext(new UpdateContext(), ProvAwsPluginResource.KEY, force);
 
 		base.install(context);
 		ebs.install(context);

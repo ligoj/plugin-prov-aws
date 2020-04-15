@@ -46,25 +46,25 @@ public class AwsPriceImportEfs extends AbstractAwsImport implements ImportCatalo
 		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("efs"));
 
 		// Track the created instance to cache partial costs
-		final ProvStorageType efs = stRepository.findAllBy(BY_NODE, context.getNode(), new String[] { "name" }, "efs")
+		final var efs = stRepository.findAllBy(BY_NODE, context.getNode(), new String[] { "name" }, "efs")
 				.get(0);
-		final Map<ProvLocation, ProvStoragePrice> previous = spRepository.findAllBy("type", efs).stream()
+		final var previous = spRepository.findAllBy("type", efs).stream()
 				.collect(Collectors.toMap(ProvStoragePrice::getLocation, Function.identity()));
 
-		int priceCounter = 0;
+		var priceCounter = 0;
 		// Get the remote prices stream
-		try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+		try (var reader = new BufferedReader(new InputStreamReader(
 				new URI(configuration.get(CONF_URL_EFS_PRICES, EFS_PRICES)).toURL().openStream()))) {
 			// Pipe to the CSV reader
-			final CsvForBeanEfs csvReader = new CsvForBeanEfs(reader);
+			final var csvReader = new CsvForBeanEfs(reader);
 
 			// Build the AWS instance prices from the CSV
-			AwsCsvPrice csv = csvReader.read();
+			var csv = csvReader.read();
 			while (csv != null) {
-				final ProvLocation location = getRegionByHumanName(context, csv.getLocation());
+				final var location = getRegionByHumanName(context, csv.getLocation());
 				if (location != null) {
 					// Supported location
-					instalEfsPrice(context, efs, previous, csv, location);
+					installEfsPrice(context, efs, previous, csv, location);
 					priceCounter++;
 				}
 				// Read the next one
@@ -77,11 +77,11 @@ public class AwsPriceImportEfs extends AbstractAwsImport implements ImportCatalo
 		}
 	}
 
-	private void instalEfsPrice(final UpdateContext context, final ProvStorageType efs,
-			final Map<ProvLocation, ProvStoragePrice> previous, AwsCsvPrice csv, final ProvLocation location) {
+	private void installEfsPrice(final UpdateContext context, final ProvStorageType efs,
+								 final Map<ProvLocation, ProvStoragePrice> previous, AwsCsvPrice csv, final ProvLocation location) {
 		// Update the price as needed
-		final ProvStoragePrice price = previous.computeIfAbsent(location, r -> {
-			final ProvStoragePrice p = new ProvStoragePrice();
+		final var price = previous.computeIfAbsent(location, r -> {
+			final var p = new ProvStoragePrice();
 			p.setLocation(r);
 			p.setType(efs);
 			p.setCode(csv.getSku());

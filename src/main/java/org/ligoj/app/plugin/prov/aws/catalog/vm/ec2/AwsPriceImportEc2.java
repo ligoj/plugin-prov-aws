@@ -8,11 +8,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.Formatter;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -98,7 +94,7 @@ public class AwsPriceImportEc2
 	/**
 	 * Mapping from AWS software to standard form.
 	 */
-	private Map<String, String> mapSoftware = new HashMap<>();
+	private final Map<String, String> mapSoftware = new HashMap<>();
 
 	@Override
 	public void install(final UpdateContext context) throws IOException, URISyntaxException {
@@ -276,7 +272,7 @@ public class AwsPriceImportEc2
 						final var term = newSavingsPlanTerm(context, sp);
 						return sp.getRates().stream()
 								.map(r -> installSavingsPlanTermPrices(context, term, r, previousOd, odCode2));
-					}).filter(e -> e != null).collect(Collectors.toList());
+					}).filter(Objects::nonNull).collect(Collectors.toList());
 			if (!skuErrors.isEmpty()) {
 				// At least one SKU as not been resolved
 				log.warn("AWS EC2 Savings Plan import errors for region {} with {} unresolved SKUs, first : {}",

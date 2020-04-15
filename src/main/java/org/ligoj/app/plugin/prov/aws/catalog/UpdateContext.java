@@ -21,11 +21,11 @@ public class UpdateContext extends AbstractUpdateContext {
 	 * Mapping from storage human name to API name.
 	 */
 	@Getter
-	private Map<String, String> mapStorageToApi = new HashMap<>();
+	private final Map<String, String> mapStorageToApi = new HashMap<>();
 
 	/**
 	 * Mapping from Spot region name to API name.
 	 */
 	@Getter
-	private Map<String, String> mapSpotToNewRegion = new HashMap<>();
+	private final Map<String, String> mapSpotToNewRegion = new HashMap<>();
 }

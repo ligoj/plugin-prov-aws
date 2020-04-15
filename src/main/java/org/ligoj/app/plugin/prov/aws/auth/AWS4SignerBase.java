@@ -26,7 +26,7 @@ public abstract class AWS4SignerBase {
 	protected static final String SCHEME = "AWS4";
 	protected static final String ALGORITHM = "HMAC-SHA256";
 	protected static final String TERMINATOR = "aws4_request";
-	private URLCodec urlCodec = new URLCodec();
+	private final URLCodec urlCodec = new URLCodec();
 
 	/**
 	 * Returns the canonical collection of header names that will be included in the

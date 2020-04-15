@@ -30,12 +30,12 @@ public class AwsPriceImportSupport extends AbstractAwsImport implements ImportCa
 		installSupportTypes(context);
 
 		// Fetch previous prices
-		final Map<String, ProvSupportPrice> previous = sp2Repository.findAllBy("type.node", context.getNode()).stream()
+		final var previous = sp2Repository.findAllBy("type.node", context.getNode()).stream()
 				.collect(Collectors.toMap(AbstractPrice::getCode, Function.identity()));
 
 		// Complete the set
 		csvForBean.toBean(ProvSupportPrice.class, "csv/aws-prov-support-price.csv").forEach(t -> {
-			final ProvSupportPrice entity = previous.computeIfAbsent(t.getCode(), n -> t);
+			final var entity = previous.computeIfAbsent(t.getCode(), n -> t);
 			// Merge the support type details
 			final var price = copyAsNeeded(context, entity, s -> {
 				s.setLimit(t.getLimit());
@@ -48,12 +48,12 @@ public class AwsPriceImportSupport extends AbstractAwsImport implements ImportCa
 
 	private void installSupportTypes(final UpdateContext context) throws IOException {
 		// Fetch previous prices
-		final Map<String, ProvSupportType> previous = st2Repository.findAllBy(BY_NODE, context.getNode()).stream()
+		final var previous = st2Repository.findAllBy(BY_NODE, context.getNode()).stream()
 				.collect(Collectors.toMap(INamableBean::getName, Function.identity()));
 
 		// Complete the set
 		csvForBean.toBean(ProvSupportType.class, "csv/aws-prov-support-type.csv").forEach(t -> {
-			final ProvSupportType entity = previous.computeIfAbsent(t.getCode(), n -> t);
+			final var entity = previous.computeIfAbsent(t.getCode(), n -> t);
 			// Merge the support type details
 			copyAsNeeded(context, entity, t2 -> {
 				t2.setName(t.getCode());

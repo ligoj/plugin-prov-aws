@@ -9,10 +9,10 @@
             "properties": {
                 "view": "timeSeries",
                 "metrics": [
-[ "AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", "${alb0_tg}", "LoadBalancer", "${alb0}"", { "color": "#2ca02c", "yAxis": "left", "label": "OK ${alb0_name}", "period": ${metrics_period} } ],
-[ "AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", "${alb1_tg}", "LoadBalancer", "${alb1}"", { "color": "#2ca02c", "yAxis": "left", "label": "OK ${alb1_name}", "period": ${metrics_period} } ],
-[ "AWS/ApplicationELB", "UnHealthyHostCount", "TargetGroup", "${alb0_tg}", "LoadBalancer", "${alb0}"", { "color": "#d62728", "yAxis": "right", "label": "KO ${alb0_name}", "period": ${metrics_period} } ],
-[ "AWS/ApplicationELB", "UnHealthyHostCount", "TargetGroup", "${alb1_tg}", "LoadBalancer", "${alb1}"", { "color": "#d62728", "yAxis": "right", "label": "KO ${alb1_name}", "period": ${metrics_period} } ]
+[ "AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", "${alb0_tg}", "LoadBalancer", "${alb0}", { "color": "#2ca02c", "yAxis": "left", "label": "OK ${alb0_name}", "period": ${metrics_period} } ],
+[ "AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", "${alb1_tg}", "LoadBalancer", "${alb1}", { "color": "#2ca02c", "yAxis": "left", "label": "OK ${alb1_name}", "period": ${metrics_period} } ],
+[ "AWS/ApplicationELB", "UnHealthyHostCount", "TargetGroup", "${alb0_tg}", "LoadBalancer", "${alb0}", { "color": "#d62728", "yAxis": "right", "label": "KO ${alb0_name}", "period": ${metrics_period} } ],
+[ "AWS/ApplicationELB", "UnHealthyHostCount", "TargetGroup", "${alb1_tg}", "LoadBalancer", "${alb1}", { "color": "#d62728", "yAxis": "right", "label": "KO ${alb1_name}", "period": ${metrics_period} } ]
                 ],
                 "region": "${region}",
                 "title": "Balancing",

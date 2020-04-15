@@ -147,8 +147,7 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 	private ProvAwsPluginResource newSpyResource() {
 		final var resource0 = new ProvAwsPluginResource();
 		applicationContext.getAutowireCapableBeanFactory().autowireBean(resource0);
-		final var resource = Mockito.spy(resource0);
-		return resource;
+		return Mockito.spy(resource0);
 	}
 
 	/**

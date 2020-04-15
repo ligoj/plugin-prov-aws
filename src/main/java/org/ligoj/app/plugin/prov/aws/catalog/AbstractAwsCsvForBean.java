@@ -52,7 +52,7 @@ public abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 			final Class<T> beanType) throws IOException {
 
 		// Complete the standard mappings
-		final var mMapping = new HashMap<String, String>(HEADERS_MAPPING);
+		final var mMapping = new HashMap<>(HEADERS_MAPPING);
 		mMapping.putAll(mapping);
 
 		final var csvReader = new CsvReader(reader, ',');

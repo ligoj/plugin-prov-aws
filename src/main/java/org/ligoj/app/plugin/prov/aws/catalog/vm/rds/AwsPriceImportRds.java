@@ -157,7 +157,7 @@ public class AwsPriceImportRds
 	/**
 	 * Install the RDS storage type as needed, and return it.
 	 */
-	private final ProvStorageType installStorageType(final LocalRdsContext context, final AwsRdsPrice csv) {
+	private ProvStorageType installStorageType(final LocalRdsContext context, final AwsRdsPrice csv) {
 		// RDS Storage type is composition of
 		final String name;
 		final String engine;

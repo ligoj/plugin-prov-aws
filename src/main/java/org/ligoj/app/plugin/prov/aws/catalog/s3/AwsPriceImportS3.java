@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -49,7 +48,7 @@ public class AwsPriceImportS3 extends AbstractAwsImport implements ImportCatalog
 		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("s3"));
 
 		// Track the created instance to cache partial costs
-		final Map<String, ProvStoragePrice> previous = spRepository.findAllBy("type.node", context.getNode()).stream()
+		final var previous = spRepository.findAllBy("type.node", context.getNode()).stream()
 				.filter(p -> p.getType().getCode().startsWith("s3") || "glacier".equals(p.getType().getCode()))
 				.collect(Collectors.toMap(p2 -> p2.getLocation().getName() + p2.getType().getCode(),
 						Function.identity()));
@@ -57,20 +56,20 @@ public class AwsPriceImportS3 extends AbstractAwsImport implements ImportCatalog
 		context.setStorageTypes(previous.values().stream().map(ProvStoragePrice::getType).distinct()
 				.collect(Collectors.toMap(AbstractCodedEntity::getCode, Function.identity())));
 
-		int priceCounter = 0;
+		var priceCounter = 0;
 		// Get the remote prices stream
-		try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+		try (var reader = new BufferedReader(new InputStreamReader(
 				new URI(configuration.get(CONF_URL_S3_PRICES, S3_PRICES)).toURL().openStream()))) {
 			// Pipe to the CSV reader
-			final CsvForBeanS3 csvReader = new CsvForBeanS3(reader);
+			final var csvReader = new CsvForBeanS3(reader);
 
 			// Build the AWS storage prices from the CSV
-			AwsS3Price csv = csvReader.read();
+			var csv = csvReader.read();
 			while (csv != null) {
-				final ProvLocation location = getRegionByHumanName(context, csv.getLocation());
+				final var location = getRegionByHumanName(context, csv.getLocation());
 				if (location != null) {
 					// Supported location
-					instalS3Price(context, csv, location);
+					installS3Price(context, csv, location);
 					priceCounter++;
 				}
 
@@ -84,17 +83,17 @@ public class AwsPriceImportS3 extends AbstractAwsImport implements ImportCatalog
 		}
 	}
 
-	private void instalS3Price(final UpdateContext context, final AwsS3Price csv, final ProvLocation location) {
+	private void installS3Price(final UpdateContext context, final AwsS3Price csv, final ProvLocation location) {
 		// Resolve the type
-		final String name = context.getMapStorageToApi().get(csv.getVolumeType());
+		final var name = context.getMapStorageToApi().get(csv.getVolumeType());
 		if (name == null) {
 			log.warn("Unknown storage type {}, ignored", csv.getVolumeType());
 			return;
 		}
 
-		final ProvStorageType type = context.getStorageTypes().computeIfAbsent(name, n2 -> {
+		final var type = context.getStorageTypes().computeIfAbsent(name, n2 -> {
 			// New storage type
-			final ProvStorageType newType = new ProvStorageType();
+			final var newType = new ProvStorageType();
 			newType.setCode(n2);
 			newType.setNode(context.getNode());
 			return newType;
@@ -112,8 +111,8 @@ public class AwsPriceImportS3 extends AbstractAwsImport implements ImportCatalog
 		}, stRepository);
 
 		// Update the price as needed
-		final ProvStoragePrice price = context.getPreviousStorage().computeIfAbsent(location.getName() + name, r -> {
-			final ProvStoragePrice p = new ProvStoragePrice();
+		final var price = context.getPreviousStorage().computeIfAbsent(location.getName() + name, r -> {
+			final var p = new ProvStoragePrice();
 			p.setCode(csv.getSku());
 			return p;
 		});

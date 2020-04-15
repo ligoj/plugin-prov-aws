@@ -42,7 +42,7 @@ public class AwsPriceImportEbs extends AbstractAwsImport implements ImportCatalo
 	public void install(final UpdateContext context) throws IOException, URISyntaxException {
 		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("ebs"));
 		// The previously installed storage types cache. Key is the storage name
-		final Node node = context.getNode();
+		final var node = context.getNode();
 		context.setStorageTypes(stRepository.findAllBy(BY_NODE, context.getNode()).stream()
 				.collect(Collectors.toMap(AbstractCodedEntity::getCode, Function.identity())));
 		installStorageTypes(context);
@@ -52,7 +52,7 @@ public class AwsPriceImportEbs extends AbstractAwsImport implements ImportCatalo
 		installJsonPrices(context, "ebs", configuration.get(CONF_URL_EBS_PRICES, EBS_PRICES), EbsPrices.class,
 				(r, region) -> {
 					// Get previous prices for this location
-					final Map<Integer, ProvStoragePrice> previous = spRepository.findAll(node.getId(), region.getName())
+					final var previous = spRepository.findAll(node.getId(), region.getName())
 							.stream().collect(Collectors.toMap(p -> p.getType().getId(), Function.identity()));
 					r.getTypes().stream().filter(t -> containsKey(context, t))
 							.forEach(t -> t.getValues().stream().filter(j -> !"perPIOPSreq".equals(j.getRate()))
@@ -63,8 +63,8 @@ public class AwsPriceImportEbs extends AbstractAwsImport implements ImportCatalo
 
 	private void installStorageTypes(final UpdateContext context) throws IOException {
 		csvForBean.toBean(ProvStorageType.class, "csv/aws-prov-storage-type.csv").forEach(t -> {
-			final ProvStorageType entity = context.getStorageTypes().computeIfAbsent(t.getName(), n -> {
-				final ProvStorageType newType = new ProvStorageType();
+			final var entity = context.getStorageTypes().computeIfAbsent(t.getName(), n -> {
+				final var newType = new ProvStorageType();
 				newType.setNode(context.getNode());
 				newType.setCode(n);
 				return newType;
@@ -104,8 +104,8 @@ public class AwsPriceImportEbs extends AbstractAwsImport implements ImportCatalo
 
 	private void installStoragePrice(final UpdateContext context, final ProvStorageType type, final ProvLocation region,
 			final Map<Integer, ProvStoragePrice> previous, String usd) {
-		final ProvStoragePrice price = previous.computeIfAbsent(type.getId(), s -> {
-			final ProvStoragePrice p = new ProvStoragePrice();
+		final var price = previous.computeIfAbsent(type.getId(), s -> {
+			final var p = new ProvStoragePrice();
 			p.setType(type);
 			p.setCode(region.getName() + "-" + type.getName());
 			p.setLocation(region);
@@ -114,6 +114,6 @@ public class AwsPriceImportEbs extends AbstractAwsImport implements ImportCatalo
 		price.setCode(region.getName() + "-" + type.getName());
 
 		// Update the price as needed
-		saveAsNeeded(context, price, Double.valueOf(usd), spRepository);
+		saveAsNeeded(context, price, Double.parseDouble(usd), spRepository);
 	}
 }

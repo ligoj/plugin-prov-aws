@@ -5,7 +5,6 @@ package org.ligoj.app.plugin.prov.aws.catalog.suppport;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 

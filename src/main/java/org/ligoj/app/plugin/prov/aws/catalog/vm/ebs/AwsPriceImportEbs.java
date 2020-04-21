@@ -11,7 +11,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.math.NumberUtils;
-import org.ligoj.app.model.Node;
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsImport;
 import org.ligoj.app.plugin.prov.aws.catalog.AwsPrice;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;

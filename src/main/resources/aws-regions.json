@@ -237,5 +237,15 @@
     "placement": "south",
     "latitude": 45.4627124,
     "longitude": 9.107693
+  },
+  "me-south-1": {
+    "name": "Middle East (Bahrain)",
+    "continentM49": 142,
+    "regionM49": 145,
+    "countryM49": 48,
+    "countryA2": "BH",
+    "placement": "east",
+    "latitude": 25.9406805,
+    "longitude": 50.3073962
   }
 }

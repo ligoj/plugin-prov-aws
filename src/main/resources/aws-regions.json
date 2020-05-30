@@ -203,7 +203,7 @@
     "continentM49": 150,
     "regionM49": 154,
     "countryM49": 752,
-    "countryA2": "SWE",
+    "countryA2": "SE",
     "placement": "north",
     "latitude": 59.3293,
     "longitude": 18.0686
@@ -213,7 +213,7 @@
     "continentM49": 2,
     "regionM49": 18,
     "countryM49": 710,
-    "countryA2": "ZAF",
+    "countryA2": "ZA",
     "placement": "south",
     "latitude": -33.9142688,
     "longitude": 18.0956097
@@ -223,9 +223,19 @@
     "continentM49": 142,
     "regionM49": 30,
     "countryM49": 344,
-    "countryA2": "HKG",
+    "countryA2": "HK",
     "placement": "east",
     "latitude": 22.3524825,
     "longitude": 113.8475072
+  },
+  "eu-south-1": {
+    "name": "Europe (Milan)",
+    "continentM49": 150,
+    "regionM49": 39,
+    "countryM49": 380,
+    "countryA2": "IT",
+    "placement": "south",
+    "latitude": 45.4627124,
+    "longitude": 9.107693
   }
 }

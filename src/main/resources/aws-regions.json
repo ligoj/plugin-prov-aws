@@ -247,5 +247,15 @@
     "placement": "east",
     "latitude": 25.9406805,
     "longitude": 50.3073962
+  },
+  "us-gov-east-1": {
+    "name": "GovCloud (US-East)",
+    "continentM49": 19,
+    "regionM49": 21,
+    "countryM49": 840,
+    "countryA2": "US",
+    "placement": "east",
+    "latitude": 37.6000,
+    "longitude": -78.6000
   }
 }

@@ -287,7 +287,7 @@ public class ProvAwsTerraformService {
     private String getDashboardBalancing(final Context context) throws IOException {
         final var format = toString("my-region/dashboard-widgets-area.json");
         return newMetric(context, format, CLOUD_WATCH_ELB, "TargetGroup",
-                "${alb{{i}}_tg}\", \"LoadBalancer\", \"${alb{{i}}}\"",
+                "${alb{{i}}_tg}\", \"LoadBalancer\", \"${alb{{i}}}",
                 new String[][]{{"HealthyHostCount", "2ca02c", "left", "OK ${alb{{i}}_name}"},
                         {"UnHealthyHostCount", "d62728", RIGHT, "KO ${alb{{i}}_name}"}});
     }

@@ -207,5 +207,15 @@
     "placement": "north",
     "latitude": 59.3293,
     "longitude": 18.0686
+  },
+  "af-south-1": {
+    "name": "Africa (Cape Town)",
+    "continentM49": 2,
+    "regionM49": 18,
+    "countryM49": 710,
+    "countryA2": "ZAF",
+    "placement": "south",
+    "latitude": -33.9142688,
+    "longitude": 18.0956097
   }
 }

@@ -57,6 +57,7 @@ import org.ligoj.app.plugin.prov.dao.ProvQuoteDatabaseRepository;
 import org.ligoj.app.plugin.prov.dao.ProvQuoteInstanceRepository;
 import org.ligoj.app.plugin.prov.dao.ProvQuoteRepository;
 import org.ligoj.app.plugin.prov.dao.ProvQuoteStorageRepository;
+import org.ligoj.app.plugin.prov.model.ProvBudget;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvQuote;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
@@ -270,6 +271,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		// Check the spot
 		final var spotPrice = qiResource.lookup(subscription,
 				builder().cpu(2).ram(1741).constant(true).ephemeral(true).build());
+		Assertions.assertEquals("spot-eu-west-1-r4.large-LINUX", spotPrice.getPrice().getCode());
 		Assertions.assertEquals(12.629, spotPrice.getCost(), DELTA);
 		Assertions.assertEquals(12.629d, spotPrice.getPrice().getCost(), DELTA);
 		Assertions.assertEquals(12.629d, spotPrice.getPrice().getCostPeriod(), DELTA);
@@ -292,22 +294,27 @@ class AwsPriceImportTest extends AbstractServerTest {
 		// Check the EC2 savings plan
 		final var ec2SsavingsPlanPrice = qiResource.lookup(subscription,
 				builder().cpu(2).ram(1741).constant(true).usage("36monthEC2SP").build());
+		Assertions.assertEquals("SSTZVD8UMFZ4RSTW.M2WTFX8JK6VDUNU5", ec2SsavingsPlanPrice.getPrice().getCode());
 		Assertions.assertEquals(63.51d, ec2SsavingsPlanPrice.getCost(), DELTA);
 		Assertions.assertEquals(63.51d, ec2SsavingsPlanPrice.getPrice().getCost(), DELTA);
 		Assertions.assertEquals(762.12d, ec2SsavingsPlanPrice.getPrice().getCostPeriod(), DELTA);
+		// "Compute Savings Plan, 1yr, All Upfront"
 		Assertions.assertEquals("EC2 Savings Plan, 1yr, No Upfront, c1 in eu-west-1",
 				ec2SsavingsPlanPrice.getPrice().getTerm().getName());
+		Assertions.assertFalse(ec2SsavingsPlanPrice.getPrice().getTerm().getInitialCost().booleanValue());
 		Assertions.assertEquals("eu-west-1", ec2SsavingsPlanPrice.getPrice().getTerm().getLocation().getName());
 		Assertions.assertEquals("c1.medium", ec2SsavingsPlanPrice.getPrice().getType().getName());
 
 		// Check the compute savings plan
 		final var cSavingsPlanPrice = qiResource.lookup(subscription,
 				builder().cpu(2).ram(1741).constant(true).usage("36monthCSP").build());
+		Assertions.assertEquals("8GU23DFTKP2N43SD.29QDFBY626457QNP", cSavingsPlanPrice.getPrice().getCode());
+		Assertions.assertEquals("Compute Savings Plan, 1yr, All Upfront",
+				cSavingsPlanPrice.getPrice().getTerm().getName());
 		Assertions.assertEquals(71.54d, cSavingsPlanPrice.getCost(), DELTA);
 		Assertions.assertEquals(71.54d, cSavingsPlanPrice.getPrice().getCost(), DELTA);
 		Assertions.assertEquals(858.48d, cSavingsPlanPrice.getPrice().getCostPeriod(), DELTA);
-		Assertions.assertEquals("Compute Savings Plan, 1yr, All Upfront",
-				cSavingsPlanPrice.getPrice().getTerm().getName());
+		Assertions.assertTrue(cSavingsPlanPrice.getPrice().getTerm().getInitialCost().booleanValue());
 		Assertions.assertNull(cSavingsPlanPrice.getPrice().getTerm().getLocation());
 		Assertions.assertEquals("c1.medium", cSavingsPlanPrice.getPrice().getType().getName());
 
@@ -317,6 +324,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(46.667d, cRIPrice.getPrice().getCost(), DELTA);
 		Assertions.assertEquals(1680.0d, cRIPrice.getPrice().getCostPeriod(), DELTA);
 		Assertions.assertEquals("Reserved, 3yr, All Upfront", cRIPrice.getPrice().getTerm().getName());
+		Assertions.assertTrue(cRIPrice.getPrice().getTerm().getInitialCost().booleanValue());
 		Assertions.assertNull(cRIPrice.getPrice().getTerm().getLocation());
 		Assertions.assertEquals("c1.medium", cRIPrice.getPrice().getType().getName());
 
@@ -802,6 +810,17 @@ class AwsPriceImportTest extends AbstractServerTest {
 		em.flush();
 		em.clear();
 		Assertions.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), DELTA);
+		final var quote = repository.findBy("subscription.id", subscription);
+		final var budget = new ProvBudget();
+		budget.setName("Dept1");
+		budget.setInitialCost(100000d);
+		budget.setConfiguration(quote);
+		em.persist(budget);
+		quote.setBudget(budget );
+		em.merge(quote);
+		em.flush();
+		em.clear();
+
 
 		final var usage = new ProvUsage();
 		usage.setName("36month");
@@ -914,7 +933,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("MYSQL", bLookup.getPrice().getEngine());
 		Assertions.assertNull(bLookup.getPrice().getEdition());
 		Assertions.assertNull(bLookup.getPrice().getStorageEngine());
-		Assertions.assertNull(bLookup.getPrice().getInitialCost());
+		Assertions.assertEquals(0, bLookup.getPrice().getInitialCost());
 		Assertions.assertEquals("OnDemand", bLookup.getPrice().getTerm().getName());
 
 		final var qb1 = new QuoteDatabaseEditionVo();
@@ -937,7 +956,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("ORACLE", bLookup.getPrice().getEngine());
 		Assertions.assertEquals("ENTERPRISE", bLookup.getPrice().getEdition());
 		Assertions.assertNull(bLookup.getPrice().getStorageEngine());
-		Assertions.assertNull(bLookup.getPrice().getInitialCost());
+		Assertions.assertEquals(0, bLookup.getPrice().getInitialCost());
 
 		final var qb2 = new QuoteDatabaseEditionVo();
 		qb2.setCpu(2);

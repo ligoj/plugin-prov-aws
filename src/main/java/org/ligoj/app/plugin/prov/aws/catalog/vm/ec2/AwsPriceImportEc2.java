@@ -333,6 +333,7 @@ public class AwsPriceImportEc2
 			term.setConvertibleEngine(false);
 			term.setDescription(sp.getDescription());
 			term.setPeriod(Math.round(sp.getLeaseContractLength().getDuration() * 12d));
+			term.setInitialCost(name.matches(".*(All|Partial) Upfront.*"));
 		}, iptRepository);
 	}
 

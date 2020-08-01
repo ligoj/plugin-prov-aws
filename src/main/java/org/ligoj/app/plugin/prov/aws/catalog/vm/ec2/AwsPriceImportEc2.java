@@ -8,7 +8,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Formatter;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -97,13 +102,15 @@ public class AwsPriceImportEc2
 	private final Map<String, String> mapSoftware = new HashMap<>();
 
 	@Override
-	public void install(final UpdateContext context) throws IOException, URISyntaxException {
+	public void install(final UpdateContext context) throws IOException {
 		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("ec2"));
 		context.setValidOs(Pattern.compile(configuration.get(CONF_OS, ".*"), Pattern.CASE_INSENSITIVE));
 		context.setValidInstanceType(Pattern.compile(configuration.get(CONF_ITYPE, ".*"), Pattern.CASE_INSENSITIVE));
 		final var spotPriceType = newSpotInstanceTerm(context.getNode());
 		context.setPriceTerms(iptRepository.findAllBy(BY_NODE, context.getNode()).stream()
 				.collect(Collectors.toConcurrentMap(ProvInstancePriceTerm::getCode, Function.identity())));
+		context.setInstanceTypes(itRepository.findAllBy(BY_NODE, context.getNode()).stream()
+				.collect(Collectors.toConcurrentMap(AbstractCodedEntity::getCode, Function.identity())));
 		installEc2(context, context.getNode(), spotPriceType);
 	}
 
@@ -193,9 +200,6 @@ public class AwsPriceImportEc2
 
 	private void installEc2(final UpdateContext context, final Node node, final ProvInstancePriceTerm spotPriceType)
 			throws IOException {
-		// The previously installed instance types cache. Key is the instance name
-		context.setInstanceTypes(itRepository.findAllBy(BY_NODE, node).stream()
-				.collect(Collectors.toConcurrentMap(AbstractCodedEntity::getCode, Function.identity())));
 		final var apiPrice = configuration.get(CONF_URL_EC2_PRICES, EC2_PRICES);
 		final var indexes = getSavingsPlanUrls(context, configuration.get(CONF_URL_API_SAVINGS_PLAN, SAVINGS_PLAN));
 

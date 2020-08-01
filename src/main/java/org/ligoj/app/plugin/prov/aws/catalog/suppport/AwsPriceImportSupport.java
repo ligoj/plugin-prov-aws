@@ -4,7 +4,6 @@
 package org.ligoj.app.plugin.prov.aws.catalog.suppport;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -24,7 +23,7 @@ import org.springframework.stereotype.Component;
 public class AwsPriceImportSupport extends AbstractAwsImport implements ImportCatalog<UpdateContext> {
 
 	@Override
-	public void install(final UpdateContext context) throws IOException, URISyntaxException {
+	public void install(final UpdateContext context) throws IOException {
 		// Install previous types
 		installSupportTypes(context);
 

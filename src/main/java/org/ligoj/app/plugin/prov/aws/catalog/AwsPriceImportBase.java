@@ -4,7 +4,6 @@
 package org.ligoj.app.plugin.prov.aws.catalog;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -34,7 +33,7 @@ public class AwsPriceImportBase extends AbstractAwsImport implements ImportCatal
 	};
 
 	@Override
-	public void install(final UpdateContext context) throws IOException, URISyntaxException {
+	public void install(final UpdateContext context) throws IOException {
 		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("region"));
 		context.setValidRegion(Pattern.compile(configuration.get(CONF_REGIONS, ".*")));
 		context.getMapRegionToName().putAll(toMap("aws-regions.json", MAP_LOCATION));

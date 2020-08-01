@@ -59,7 +59,7 @@ public class AwsPriceImportRds
 	protected ProvQuoteDatabaseRepository qbRepository;
 
 	@Override
-	public void install(final UpdateContext context) throws IOException, URISyntaxException {
+	public void install(final UpdateContext context) throws IOException {
 		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("rds"));
 		context.setDatabaseTypes(dtRepository.findAllBy(BY_NODE, context.getNode()).stream()
 				.collect(Collectors.toConcurrentMap(AbstractCodedEntity::getCode, Function.identity())));

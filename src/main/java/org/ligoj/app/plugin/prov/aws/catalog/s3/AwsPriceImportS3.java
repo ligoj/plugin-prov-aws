@@ -6,8 +6,7 @@ package org.ligoj.app.plugin.prov.aws.catalog.s3;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -26,7 +25,8 @@ import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * The provisioning S3 price service for AWS. Manage install or update of prices.
+ * The provisioning S3 price service for AWS. Manage install or update of
+ * prices.
  */
 @Slf4j
 @Component
@@ -43,7 +43,7 @@ public class AwsPriceImportS3 extends AbstractAwsImport implements ImportCatalog
 	public static final String CONF_URL_S3_PRICES = String.format(CONF_URL_API_PRICES, "s3");
 
 	@Override
-	public void install(final UpdateContext context) throws IOException, URISyntaxException {
+	public void install(final UpdateContext context) throws IOException {
 		log.info("AWS S3 prices ...");
 		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("s3"));
 
@@ -58,8 +58,8 @@ public class AwsPriceImportS3 extends AbstractAwsImport implements ImportCatalog
 
 		var priceCounter = 0;
 		// Get the remote prices stream
-		try (var reader = new BufferedReader(new InputStreamReader(
-				new URI(configuration.get(CONF_URL_S3_PRICES, S3_PRICES)).toURL().openStream()))) {
+		try (var reader = new BufferedReader(
+				new InputStreamReader(new URL(configuration.get(CONF_URL_S3_PRICES, S3_PRICES)).openStream()))) {
 			// Pipe to the CSV reader
 			final var csvReader = new CsvForBeanS3(reader);
 

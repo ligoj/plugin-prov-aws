@@ -4,7 +4,6 @@
 package org.ligoj.app.plugin.prov.aws.catalog.vm.ebs;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -38,7 +37,7 @@ public class AwsPriceImportEbs extends AbstractAwsImport implements ImportCatalo
 	public static final String CONF_URL_EBS_PRICES = String.format(CONF_URL_API_PRICES, "ebs");
 
 	@Override
-	public void install(final UpdateContext context) throws IOException, URISyntaxException {
+	public void install(final UpdateContext context) throws IOException {
 		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("ebs"));
 		// The previously installed storage types cache. Key is the storage name
 		final var node = context.getNode();

@@ -6,8 +6,7 @@ package org.ligoj.app.plugin.prov.aws.catalog.efs;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -24,7 +23,8 @@ import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * The provisioning EFS price service for AWS. Manage install or update of prices.
+ * The provisioning EFS price service for AWS. Manage install or update of
+ * prices.
  */
 @Slf4j
 @Component
@@ -41,20 +41,19 @@ public class AwsPriceImportEfs extends AbstractAwsImport implements ImportCatalo
 	public static final String CONF_URL_EFS_PRICES = String.format(CONF_URL_API_PRICES, "efs");
 
 	@Override
-	public void install(final UpdateContext context) throws IOException, URISyntaxException {
+	public void install(final UpdateContext context) throws IOException {
 		log.info("AWS EFS prices ...");
 		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("efs"));
 
 		// Track the created instance to cache partial costs
-		final var efs = stRepository.findAllBy(BY_NODE, context.getNode(), new String[] { "name" }, "efs")
-				.get(0);
+		final var efs = stRepository.findAllBy(BY_NODE, context.getNode(), new String[] { "name" }, "efs").get(0);
 		final var previous = spRepository.findAllBy("type", efs).stream()
 				.collect(Collectors.toMap(ProvStoragePrice::getLocation, Function.identity()));
 
 		var priceCounter = 0;
 		// Get the remote prices stream
-		try (var reader = new BufferedReader(new InputStreamReader(
-				new URI(configuration.get(CONF_URL_EFS_PRICES, EFS_PRICES)).toURL().openStream()))) {
+		try (var reader = new BufferedReader(
+				new InputStreamReader(new URL(configuration.get(CONF_URL_EFS_PRICES, EFS_PRICES)).openStream()))) {
 			// Pipe to the CSV reader
 			final var csvReader = new CsvForBeanEfs(reader);
 
@@ -78,7 +77,7 @@ public class AwsPriceImportEfs extends AbstractAwsImport implements ImportCatalo
 	}
 
 	private void installEfsPrice(final UpdateContext context, final ProvStorageType efs,
-								 final Map<ProvLocation, ProvStoragePrice> previous, AwsCsvPrice csv, final ProvLocation location) {
+			final Map<ProvLocation, ProvStoragePrice> previous, AwsCsvPrice csv, final ProvLocation location) {
 		// Update the price as needed
 		final var price = previous.computeIfAbsent(location, r -> {
 			final var p = new ProvStoragePrice();

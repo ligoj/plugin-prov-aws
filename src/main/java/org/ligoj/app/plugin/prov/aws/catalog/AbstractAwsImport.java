@@ -114,7 +114,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 			final var configCloseIndex = rawJson.lastIndexOf('}');
 			final var prices = objectMapper.readValue(rawJson.substring(configIndex, configCloseIndex + 1), apiClass);
 
-			// Install the enabled region as needed
+			// Install the enabled regions as needed
 			final var eRegions = prices.getConfig().getRegions().stream()
 					.peek(r -> r.setRegion(context.getMapSpotToNewRegion().getOrDefault(r.getRegion(), r.getRegion())))
 					.filter(r -> isEnabledRegion(context, r)).collect(Collectors.toList());

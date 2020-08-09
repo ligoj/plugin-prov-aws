@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.ligoj.api</groupId>
 		<artifactId>plugin-parent</artifactId>
-		<version>3.2.5</version>
+		<version>3.2.6</version>
 		<relativePath />
 	</parent>
 
@@ -15,10 +15,6 @@
 	<packaging>jar</packaging>
 	<name>Ligoj - Plugin Provisioning - AWS</name>
 	<url>https://github.com/ligoj/plugin-prov-aws</url>
-
-	<properties>
-		<bootstrap.version>2.8.1</bootstrap.version>
-	</properties>
 
 	<scm>
 		<connection>scm:git:https://github.com/ligoj/plugin-prov-aws</connection>

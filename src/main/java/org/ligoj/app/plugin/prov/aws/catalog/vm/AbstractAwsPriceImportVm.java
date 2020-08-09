@@ -303,7 +303,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 				t.setPeriod(Integer.parseInt(matcher.group(1)) * 12d);
 			}
 			t.setInitialCost(t.getName().matches(".*(All|Partial)\\s*Upfront.*"));
-		}, iptRepository);
+		});
 	}
 
 	/**

@@ -133,9 +133,7 @@ public class AwsPriceImportEc2
 		term.setConvertibleFamily(true);
 		term.setConvertibleLocation(true);
 		term.setReservation(false);
-		iptRepository.saveAndFlush(term);
-
-		return term;
+		return iptRepository.saveAndFlush(term);
 	}
 
 	/**
@@ -148,14 +146,14 @@ public class AwsPriceImportEc2
 	private void installSpotPrices(final LocalEc2Context context, final AwsEc2SpotPrice json,
 			final ProvInstancePriceTerm spotPriceType) {
 		final var region = context.getRegion();
+		final var type = context.getPreviousTypes().get(json.getName());
+		final var baseCode = TERM_SPOT_CODE + region.getName() + "-" + type.getName() + "-";
 		json.getOsPrices().stream().filter(op -> !StringUtils.startsWithIgnoreCase(op.getPrices().get("USD"), "N/A"))
 				.peek(op -> op.setOs(op.getName().equals("mswin") ? VmOs.WINDOWS : VmOs.LINUX))
 				.filter(op -> isEnabledOs(context, op.getOs())).forEach(op -> {
-					final var type = context.getPreviousTypes().get(json.getName());
 
 					// Build the key for this spot
-					final var code = TERM_SPOT_CODE + region.getName() + "-" + type.getName() + "-" + op.getOs();
-					final var price = context.getLocals().computeIfAbsent(code, c -> {
+					final var price = context.getLocals().computeIfAbsent(baseCode + op.getOs(), c -> {
 						final var p = context.newPrice(c);
 						p.setType(type);
 						p.setTerm(spotPriceType);
@@ -200,10 +198,10 @@ public class AwsPriceImportEc2
 
 	private void installEc2(final UpdateContext context, final Node node, final ProvInstancePriceTerm spotPriceType)
 			throws IOException {
-		final var apiPrice = configuration.get(CONF_URL_EC2_PRICES, EC2_PRICES);
-		final var indexes = getSavingsPlanUrls(context, configuration.get(CONF_URL_API_SAVINGS_PLAN, SAVINGS_PLAN));
 
 		// Install the EC2 (non spot) prices
+		final var apiPrice = configuration.get(CONF_URL_EC2_PRICES, EC2_PRICES);
+		final var indexes = getSavingsPlanUrls(context, configuration.get(CONF_URL_API_SAVINGS_PLAN, SAVINGS_PLAN));
 		newStream(context.getRegions().values()).map(region -> {
 			// Install OnDemand and reserved prices
 			installEC2Prices(context, region, apiPrice, indexes);
@@ -248,7 +246,7 @@ public class AwsPriceImportEc2
 	}
 
 	/**
-	 * Download and install Savings Plan prices from AWS server.
+	 * Download and install Savings Plan prices from AWS endpoint.
 	 */
 	private void installSavingsPlan(final LocalEc2Context context, final String endpoint,
 			final Map<String, ProvInstancePrice> previousOd) {
@@ -271,12 +269,12 @@ public class AwsPriceImportEc2
 		try (var curl = new CurlProcessor()) {
 			// Get the remote prices stream
 			final var rawJson = curl.get(endpoint);
-			final var skuErrors = objectMapper.readValue(rawJson, SavingsPlanPrice.class).getTerms().getSavingsPlan()
-					.stream().flatMap(sp -> {
-						final var term = newSavingsPlanTerm(context, sp);
-						return sp.getRates().stream()
-								.map(r -> installSavingsPlanTermPrices(context, term, r, previousOd, odCode2));
-					}).filter(Objects::nonNull).collect(Collectors.toList());
+			final var sps = objectMapper.readValue(rawJson, SavingsPlanPrice.class).getTerms().getSavingsPlan();
+			final var skuErrors = sps.stream().flatMap(sp -> {
+				final var term = newSavingsPlanTerm(context, sp);
+				return sp.getRates().stream()
+						.map(r -> installSavingsPlanTermPrices(context, term, r, previousOd, odCode2));
+			}).filter(Objects::nonNull).collect(Collectors.toList());
 			if (!skuErrors.isEmpty()) {
 				// At least one SKU as not been resolved
 				log.warn("AWS EC2 Savings Plan import errors for region {} with {} unresolved SKUs, first : {}",
@@ -338,7 +336,7 @@ public class AwsPriceImportEc2
 			term.setDescription(sp.getDescription());
 			term.setPeriod(Math.round(sp.getLeaseContractLength().getDuration() * 12d));
 			term.setInitialCost(name.matches(".*(All|Partial) Upfront.*"));
-		}, iptRepository);
+		});
 	}
 
 	/**
@@ -348,7 +346,7 @@ public class AwsPriceImportEc2
 	private String installSavingsPlanTermPrices(final LocalEc2Context context, final ProvInstancePriceTerm term,
 			final SavingsPlanRate jsonPrice, final Map<String, ProvInstancePrice> previousOd, final String odCode2) {
 		if (jsonPrice.getDiscountedUsageType().contains("Unused")) {
-			// Ignore this this usage
+			// Ignore this usage
 			return null;
 		}
 
@@ -361,7 +359,26 @@ public class AwsPriceImportEc2
 		// Add this code to the existing SKU codes
 		final var price = newSavingPlanPrice(context, odPrice, jsonPrice, term);
 		final var cost = jsonPrice.getDiscountedRate().getPrice() * context.getHoursMonth();
-		saveAsNeeded(context, price, cost, ipRepository);
+
+		// Save the price as needed with up-front computation
+		context.getPrices().add(price.getCode());
+		saveAsNeeded(context, price, price.getCost(), cost, (cR, c) -> {
+			price.setCost(cR);
+			price.setCostPeriod(round3Decimals(c * Math.max(1, term.getPeriod())));
+
+			if (!term.getInitialCost()) {
+				// No up-front
+				price.setInitialCost(0d);
+			} else if (term.getName().contains("Partial")) {
+				// Partial up-front
+				price.setInitialCost(round3Decimals(price.getCostPeriod() * 0.5d));
+			} else {
+				// All up-front
+				price.setInitialCost(price.getCostPeriod());
+			}
+		}, ipRepository::save);
+
+		// No error
 		return null;
 	}
 
@@ -388,7 +405,7 @@ public class AwsPriceImportEc2
 	 * Download and install EC2 prices from AWS server.
 	 */
 	private void installEC2Prices(final UpdateContext gContext, final ProvLocation region, final String apiPrice,
-			final Map<String, String> indexes) {
+			final Map<String, String> spIndexes) {
 		// Track the created instance to cache partial costs
 		final var context = new LocalEc2Context(gContext, itRepository, ipRepository, qiRepository, region,
 				TERM_ON_DEMAND, TERM_RESERVED);
@@ -434,7 +451,7 @@ public class AwsPriceImportEc2
 		// Savings Plan part: only when OD succeed
 		if (succeed) {
 			installSavingsPlan(new LocalEc2Context(gContext, itRepository, ipRepository, qiRepository, region,
-					TERM_EC2_SP, TERM_COMPUTE_SP), indexes.get(region.getName()), context.getLocals());
+					TERM_EC2_SP, TERM_COMPUTE_SP), spIndexes.get(region.getName()), context.getLocals());
 			context.cleanup();
 		}
 	}

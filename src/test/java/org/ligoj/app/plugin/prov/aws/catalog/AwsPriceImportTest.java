@@ -880,7 +880,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 				QuoteStorageQuery.builder().size(5).latency(Rate.GOOD).instance(server1()).build()).get(0);
 		Assertions.assertEquals("eu-west-1-gp2", sLookup.getPrice().getCode());
 		final var svo = new QuoteStorageEditionVo();
-		svo.setQuoteInstance(server1());
+		svo.setInstance(server1());
 		svo.setSize(5);
 		svo.setType(sLookup.getPrice().getType().getName());
 		svo.setName("sda1");

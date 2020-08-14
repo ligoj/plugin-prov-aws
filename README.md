@@ -1,4 +1,4 @@
-# :link: Ligoj AWS plugin [![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.ligoj.plugin/plugin-prov-aws/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.ligoj.plugin/plugin-prov-aws) [![Download](https://api.bintray.com/packages/ligoj/maven-repo/plugin-prov-aws/images/download.svg) ](https://bintray.com/ligoj/maven-repo/plugin-prov-aws/_latestVersion)
+# :link: Ligoj AWS plugin [![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.ligoj.plugin/plugin-prov-aws/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.ligoj.plugin/plugin-prov-aws)
 
 [![Build Status](https://travis-ci.org/ligoj/plugin-prov-aws.svg?branch=master)](https://travis-ci.org/ligoj/plugin-prov-aws)
 [![Build Status](https://circleci.com/gh/ligoj/plugin-prov-aws.svg?style=svg)](https://circleci.com/gh/ligoj/plugin-prov-aws)

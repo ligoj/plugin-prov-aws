@@ -14,7 +14,7 @@ import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
 /**
  * Test class of {@link AwsPriceImportEc2}
  */
-public class AwsPriceImportEc2Test {
+class AwsPriceImportEc2Test {
 
 	@Test
 	void getOnDemandCode() {

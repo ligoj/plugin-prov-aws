@@ -6,7 +6,6 @@ package org.ligoj.app.plugin.prov.aws.catalog;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -75,18 +74,6 @@ public abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 
 	protected abstract CsvBeanReader<T> newCsvReader(final Reader reader, final String[] headers,
 			final Class<T> beanType);
-
-	/**
-	 * Do not use this, method.
-	 *
-	 * @deprecated Use #read() instead
-	 */
-	@Override
-	@Deprecated(forRemoval = false)
-	public final <B> List<B> toBean(final Class<B> beanType, final Reader input) {
-		// Disable this method
-		return Collections.emptyList();
-	}
 
 	/**
 	 * Return a list of JPA bean re ad from the given CSV input. Headers are expected.

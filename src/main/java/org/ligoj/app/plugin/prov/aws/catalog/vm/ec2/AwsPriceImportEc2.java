@@ -366,7 +366,7 @@ public class AwsPriceImportEc2
 			price.setCost(cR);
 			price.setCostPeriod(round3Decimals(c * Math.max(1, term.getPeriod())));
 
-			if (!term.getInitialCost()) {
+			if (!term.getInitialCost().booleanValue()) {
 				// No up-front
 				price.setInitialCost(0d);
 			} else if (term.getName().contains("Partial")) {

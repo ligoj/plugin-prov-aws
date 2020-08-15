@@ -200,17 +200,14 @@ class AwsPriceImportTest extends AbstractServerTest {
 	/**
 	 * Only for dead but necessary contracted code.
 	 */
-	@SuppressWarnings("deprecation")
 	@Test
 	void dummyCoverage() throws IOException {
-		new CsvForBeanEc2(new BufferedReader(new StringReader("SKU"))).toBean(null, (Reader) null);
 		new AwsEc2Price().getDrop();
 	}
 
 	/**
 	 * Invalid EC2 CSV header
 	 */
-	@SuppressWarnings("deprecation")
 	@Test
 	void installInvalidHeader() {
 		Assertions.assertEquals("Premature end of CSV file, headers were not found",

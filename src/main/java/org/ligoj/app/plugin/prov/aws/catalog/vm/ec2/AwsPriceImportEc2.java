@@ -229,7 +229,7 @@ public class AwsPriceImportEc2
 	 * @param r        The spot region.
 	 */
 	@Transactional(propagation = Propagation.SUPPORTS, isolation = Isolation.READ_UNCOMMITTED)
-	protected void installSpotPrices(final UpdateContext gContext, final SpotRegion r) {
+	public void installSpotPrices(final UpdateContext gContext, final SpotRegion r) {
 		nextStep(gContext.getNode(), r.getRegion(), 1);
 		final var region = locationRepository.findByName(gContext.getNode().getId(), r.getRegion());
 
@@ -421,7 +421,7 @@ public class AwsPriceImportEc2
 	 * @param spIndexes The Savings Plan indexes.
 	 */
 	@Transactional(propagation = Propagation.SUPPORTS, isolation = Isolation.READ_UNCOMMITTED)
-	protected void installEC2Prices(final UpdateContext gContext, final ProvLocation gRegion, final String apiPrice,
+	public void installEC2Prices(final UpdateContext gContext, final ProvLocation gRegion, final String apiPrice,
 			final Map<String, String> spIndexes) {
 		final var endpoint = apiPrice.replace("%s", gRegion.getName());
 		log.info("AWS EC2 OnDemand/Reserved import started for region {}@{} ...", gRegion.getName(), endpoint);

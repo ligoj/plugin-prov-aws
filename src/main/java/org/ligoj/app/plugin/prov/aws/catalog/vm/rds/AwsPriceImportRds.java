@@ -91,7 +91,7 @@ public class AwsPriceImportRds
 	 * @param gRegion  The region for this transaction.
 	 */
 	@Transactional(propagation = Propagation.SUPPORTS, isolation = Isolation.READ_UNCOMMITTED)
-	protected void installRdsPrice(final UpdateContext gContext, final String apiPrice, final ProvLocation gRegion) {
+	public void installRdsPrice(final UpdateContext gContext, final String apiPrice, final ProvLocation gRegion) {
 		nextStep(gContext, gRegion.getName(), 1);
 		final var endpoint = apiPrice.replace("%s", gRegion.getName());
 		log.info("AWS RDS OnDemand/Reserved import started for region {}@{} ...", gRegion.getName(), endpoint);

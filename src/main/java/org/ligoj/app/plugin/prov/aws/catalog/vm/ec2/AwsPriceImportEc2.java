@@ -194,7 +194,7 @@ public class AwsPriceImportEc2
 	/**
 	 * Return the proxy of this class.
 	 * 
-	 * @returnn The proxy of this class.
+	 * @return The proxy of this class.
 	 */
 	public AwsPriceImportEc2 newProxy() {
 		return SpringUtils.getBean(AwsPriceImportEc2.class);
@@ -223,7 +223,7 @@ public class AwsPriceImportEc2
 	}
 
 	/**
-	 * Create a new transactionnal (READ_UNCOMMITTED) process for spot prices in a specific region.
+	 * Create a new transactional (READ_UNCOMMITTED) process for spot prices in a specific region.
 	 * 
 	 * @param gContext The current global context.
 	 * @param r        The spot region.
@@ -413,7 +413,7 @@ public class AwsPriceImportEc2
 	}
 
 	/**
-	 * Create a new transactionnal (READ_UNCOMMITTED) process for OnDemand/SPE prices in a specific region.
+	 * Create a new transactional (READ_UNCOMMITTED) process for OnDemand/SPE prices in a specific region.
 	 * 
 	 * @param gContext  The current global context.
 	 * @param gRegion   The EC2 region.

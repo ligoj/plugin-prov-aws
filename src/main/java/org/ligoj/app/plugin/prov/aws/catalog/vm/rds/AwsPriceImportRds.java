@@ -77,7 +77,7 @@ public class AwsPriceImportRds
 	/**
 	 * Return the proxy of this class.
 	 * 
-	 * @returnn The proxy of this class.
+	 * @return The proxy of this class.
 	 */
 	public AwsPriceImportRds newProxy() {
 		return SpringUtils.getBean(AwsPriceImportRds.class);
@@ -88,6 +88,7 @@ public class AwsPriceImportRds
 	 *
 	 * @param gContext The update context.
 	 * @param apiPrice The CSV API price URL.
+	 * @param gRegion  The region for this transaction.
 	 */
 	@Transactional(propagation = Propagation.SUPPORTS, isolation = Isolation.READ_UNCOMMITTED)
 	protected void installRdsPrice(final UpdateContext gContext, final String apiPrice, final ProvLocation gRegion) {

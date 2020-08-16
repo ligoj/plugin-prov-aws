@@ -23,8 +23,7 @@ import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * The provisioning EFS price service for AWS. Manage install or update of
- * prices.
+ * The provisioning EFS price service for AWS. Manage install or update of prices.
  */
 @Slf4j
 @Component
@@ -47,7 +46,7 @@ public class AwsPriceImportEfs extends AbstractAwsImport implements ImportCatalo
 
 		// Track the created instance to cache partial costs
 		final var efs = stRepository.findAllBy(BY_NODE, context.getNode(), new String[] { "name" }, "efs").get(0);
-		final var previous = spRepository.findAllBy("type", efs).stream()
+		final var previous = spRepository.findByTypeName(context.getNode().getId(), "efs").stream()
 				.collect(Collectors.toMap(ProvStoragePrice::getLocation, Function.identity()));
 
 		var priceCounter = 0;

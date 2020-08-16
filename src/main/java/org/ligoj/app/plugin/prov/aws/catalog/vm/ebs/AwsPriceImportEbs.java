@@ -48,8 +48,9 @@ public class AwsPriceImportEbs extends AbstractAwsImport implements ImportCatalo
 
 		// Install EBS prices
 		installJsonPrices(context, "ebs", configuration.get(CONF_URL_EBS_PRICES, EBS_PRICES), EbsPrices.class,
-				(r, region) -> {
+				r -> {
 					// Get previous prices for this location
+					final var region = locationRepository.findByName(context.getNode().getId(), r.getRegion());
 					final var previous = spRepository.findAll(node.getId(), region.getName())
 							.stream().collect(Collectors.toMap(p -> p.getType().getId(), Function.identity()));
 					r.getTypes().stream().filter(t -> containsKey(context, t))

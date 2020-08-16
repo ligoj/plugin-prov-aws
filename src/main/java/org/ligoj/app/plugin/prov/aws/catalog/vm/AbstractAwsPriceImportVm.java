@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.RegExUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.plugin.prov.aws.catalog.AbsractLocalContext;
@@ -182,12 +183,15 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * @return Either the previous entity, either a new one. Never <code>null</code>.
 	 */
 	protected T installInstanceType(final AbsractLocalContext<T, P, C, Q> context, final C csv) {
-		final var type = context.getPreviousTypes().computeIfAbsent(csv.getInstanceType(), k -> {
+		final var sharedType = context.getPreviousTypes().computeIfAbsent(csv.getInstanceType(), k -> {
 			final var t = context.newType();
 			t.setNode(context.getNode());
 			t.setCode(csv.getInstanceType());
 			return t;
 		});
+
+		final var type = context.getLocalTypes().computeIfAbsent(sharedType.getCode(),
+				code -> ObjectUtils.defaultIfNull(context.getTRepository().findBy("code", code), sharedType));
 
 		// Update the statistics only once
 		return copyAsNeeded(context, type, t -> {
@@ -268,12 +272,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 */
 	protected ProvInstancePriceTerm installInstancePriceTerm(final AbsractLocalContext<T, P, C, Q> context,
 			final C csv) {
-		final var term = context.getPriceTerms().computeIfAbsent(csv.getOfferTermCode(), k -> {
-			final var newTerm = new ProvInstancePriceTerm();
-			newTerm.setNode(context.getNode());
-			newTerm.setCode(k);
-			return newTerm;
-		});
+		final var term = getLocalTerm(context, csv.getOfferTermCode());
 
 		// Update the properties only once
 		return copyAsNeeded(context, term, t -> {
@@ -304,6 +303,19 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			}
 			t.setInitialCost(t.getName().matches(".*(All|Partial)\\s*Upfront.*"));
 		});
+	}
+
+	protected ProvInstancePriceTerm getLocalTerm(final AbsractLocalContext<T, P, C, Q> context, final String code) {
+		final var sharedTerm = context.getPriceTerms().computeIfAbsent(code, k -> {
+			final var newTerm = new ProvInstancePriceTerm();
+			newTerm.setNode(context.getNode());
+			newTerm.setCode(k);
+			return newTerm;
+		});
+
+		final var term = context.getLocalPriceTerms().computeIfAbsent(sharedTerm.getCode(),
+				c -> ObjectUtils.defaultIfNull(iptRepository.findBy("code", c), sharedTerm));
+		return term;
 	}
 
 	/**

@@ -25,8 +25,7 @@ import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * The provisioning S3 price service for AWS. Manage install or update of
- * prices.
+ * The provisioning S3 price service for AWS. Manage install or update of prices.
  */
 @Slf4j
 @Component
@@ -48,7 +47,7 @@ public class AwsPriceImportS3 extends AbstractAwsImport implements ImportCatalog
 		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("s3"));
 
 		// Track the created instance to cache partial costs
-		final var previous = spRepository.findAllBy("type.node", context.getNode()).stream()
+		final var previous = spRepository.findByLocation(context.getNode().getId(), null).stream()
 				.filter(p -> p.getType().getCode().startsWith("s3") || "glacier".equals(p.getType().getCode()))
 				.collect(Collectors.toMap(p2 -> p2.getLocation().getName() + p2.getType().getCode(),
 						Function.identity()));

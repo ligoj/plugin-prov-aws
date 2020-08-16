@@ -22,13 +22,18 @@ import org.ligoj.app.plugin.prov.dao.ProvQuoteDatabaseRepository;
 import org.ligoj.app.plugin.prov.model.AbstractCodedEntity;
 import org.ligoj.app.plugin.prov.model.ProvDatabasePrice;
 import org.ligoj.app.plugin.prov.model.ProvDatabaseType;
+import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvQuoteDatabase;
 import org.ligoj.app.plugin.prov.model.ProvStorageOptimized;
 import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.model.Rate;
+import org.ligoj.bootstrap.core.SpringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -65,30 +70,39 @@ public class AwsPriceImportRds
 				.collect(Collectors.toConcurrentMap(AbstractCodedEntity::getCode, Function.identity())));
 		context.setValidDatabaseType(Pattern.compile(configuration.get(CONF_DTYPE, ".*")));
 		final var apiPrice = configuration.get(CONF_URL_RDS_PRICES, RDS_PRICES);
-		newStream(context.getRegions().values()).forEach(region -> {
-			nextStep(context, region.getName(), 1);
-			// Get previous RDS storage and instance prices for this location
-			final var localContext = new LocalRdsContext(context, dtRepository, dpRepository, qdRepository, region,
-					TERM_ON_DEMAND, TERM_RESERVED);
-			localContext.setPreviousStorage(spRepository.findAll(context.getNode().getId(), region.getName()).stream()
-					.collect(Collectors.toMap(ProvStoragePrice::getCode, Function.identity())));
-			install(localContext, apiPrice);
-			localContext.cleanup();
-		});
+		newStream(context.getRegions().values()).filter(region -> isEnabledRegion(context, region))
+				.forEach(region -> newProxy().installRdsPrice(context, apiPrice, region));
+	}
+
+	/**
+	 * Return the proxy of this class.
+	 * 
+	 * @returnn The proxy of this class.
+	 */
+	public AwsPriceImportRds newProxy() {
+		return SpringUtils.getBean(AwsPriceImportRds.class);
 	}
 
 	/**
 	 * Download and install EC2 prices from AWS server.
 	 *
-	 * @param context  The update context.
+	 * @param gContext The update context.
 	 * @param apiPrice The CSV API price URL.
 	 */
-	private void install(final LocalRdsContext context, final String apiPrice) {
+	@Transactional(propagation = Propagation.SUPPORTS, isolation = Isolation.READ_UNCOMMITTED)
+	protected void installRdsPrice(final UpdateContext gContext, final String apiPrice, final ProvLocation gRegion) {
+		nextStep(gContext, gRegion.getName(), 1);
+		final var endpoint = apiPrice.replace("%s", gRegion.getName());
+		log.info("AWS RDS OnDemand/Reserved import started for region {}@{} ...", gRegion.getName(), endpoint);
+		final var region = locationRepository.findOne(gRegion.getId());
+
+		// Get previous RDS storage and instance prices for this location
+		final var context = new LocalRdsContext(gContext, iptRepository, dtRepository, dpRepository, qdRepository,
+				region, TERM_ON_DEMAND, TERM_RESERVED);
+		context.setPreviousStorage(spRepository.findByLocation(context.getNode().getId(), region.getName()).stream()
+				.collect(Collectors.toMap(ProvStoragePrice::getCode, Function.identity())));
 		// Track the created instance to cache partial costs
-		final var region = context.getRegion();
-		final var endpoint = apiPrice.replace("%s", region.getName());
 		final var oldCount = context.getLocals().size();
-		log.info("AWS RDS OnDemand/Reserved import started for region {}@{} ...", region, endpoint);
 
 		// Get the remote prices stream
 		try (var reader = new BufferedReader(new InputStreamReader(new URI(endpoint).toURL().openStream()))) {
@@ -114,6 +128,7 @@ public class AwsPriceImportRds
 			log.info("AWS RDS OnDemand/Reserved import finished for region {}: {} prices ({})", region.getName(),
 					context.getPrices().size(), String.format("%+d", context.getPrices().size() - oldCount));
 		}
+		context.cleanup();
 	}
 
 	/**

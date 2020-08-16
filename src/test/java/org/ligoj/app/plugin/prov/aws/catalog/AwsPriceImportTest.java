@@ -159,11 +159,22 @@ class AwsPriceImportTest extends AbstractServerTest {
 		applicationContext.getAutowireCapableBeanFactory().autowireBean(helper);
 		this.resource = initCatalog(helper, new AwsPriceImport());
 		this.resource.setBase(initCatalog(helper, new AwsPriceImportBase()));
-		this.resource.setEc2(initCatalog(helper, new AwsPriceImportEc2()));
+		this.resource.setEc2(initCatalog(helper, new AwsPriceImportEc2() {
+			@Override
+			public AwsPriceImportEc2 newProxy() {
+				return this;
+			}
+
+		}));
 		this.resource.setEbs(initCatalog(helper, new AwsPriceImportEbs()));
 		this.resource.setS3(initCatalog(helper, new AwsPriceImportS3()));
 		this.resource.setEfs(initCatalog(helper, new AwsPriceImportEfs()));
-		this.resource.setRds(initCatalog(helper, new AwsPriceImportRds()));
+		this.resource.setRds(initCatalog(helper, new AwsPriceImportRds() {
+			@Override
+			public AwsPriceImportRds newProxy() {
+				return this;
+			}
+		}));
 		this.resource.setSupport(initCatalog(helper, new AwsPriceImportSupport()));
 		configuration.put(ProvResource.USE_PARALLEL, "0");
 
@@ -203,6 +214,8 @@ class AwsPriceImportTest extends AbstractServerTest {
 	@Test
 	void dummyCoverage() throws IOException {
 		new AwsEc2Price().getDrop();
+		new AwsPriceImportEc2().newProxy();
+		new AwsPriceImportRds().newProxy();
 	}
 
 	/**
@@ -602,7 +615,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Only OD+RI prices have been imported
 		Assertions.assertEquals(74, itRepository.findAll().size());
-		Assertions.assertEquals(3, iptRepository.findAll().size()); // RI3y, OD, SPOT
+		Assertions.assertEquals(2, iptRepository.findAll().size()); // RI3y, OD
 	}
 
 	private void mockOnlyEc2() throws IOException {
@@ -813,11 +826,10 @@ class AwsPriceImportTest extends AbstractServerTest {
 		budget.setInitialCost(100000d);
 		budget.setConfiguration(quote);
 		em.persist(budget);
-		quote.setBudget(budget );
+		quote.setBudget(budget);
 		em.merge(quote);
 		em.flush();
 		em.clear();
-
 
 		final var usage = new ProvUsage();
 		usage.setName("36month");

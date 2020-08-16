@@ -6,6 +6,7 @@ package org.ligoj.app.plugin.prov.aws.catalog;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -14,12 +15,9 @@ import org.ligoj.app.plugin.prov.ProvResource;
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
 import org.ligoj.app.plugin.prov.catalog.AbstractImportCatalogResource;
 import org.ligoj.app.plugin.prov.model.ImportCatalogStatus;
-import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.bootstrap.core.INamableBean;
 import org.ligoj.bootstrap.core.curl.CurlProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import com.hazelcast.util.function.BiConsumer;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -102,7 +100,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 	 * @throws IOException When JSON content cannot be parsed.
 	 */
 	protected <R extends AwsRegionPrices, J extends AwsPrices<R>> void installJsonPrices(final UpdateContext context,
-			final String api, final String endpoint, final Class<J> apiClass, final BiConsumer<R, ProvLocation> mapper)
+			final String api, final String endpoint, final Class<J> apiClass, final Consumer<R> mapper)
 			throws IOException {
 		log.info("AWS {} prices...", api);
 		try (var curl = new CurlProcessor()) {
@@ -122,7 +120,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 			nextStep(context, null, 1);
 
 			// Install the prices for each region
-			newStream(eRegions).forEach(r -> mapper.accept(r, context.getRegions().get(r.getRegion())));
+			newStream(eRegions).forEach(r -> mapper.accept(r));
 		} finally {
 			// Report
 			log.info("AWS {} import finished", api);

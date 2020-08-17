@@ -219,7 +219,6 @@ public class AwsPriceImportEc2
 				SpotPrices.class, r -> {
 					newProxy().installSpotPrices(context, r);
 				});
-		context.getInstanceTypes().clear();
 	}
 
 	/**
@@ -238,14 +237,14 @@ public class AwsPriceImportEc2
 				region, TERM_SPOT, TERM_SPOT);
 		final var spotPriceType = newSpotInstanceTerm(context);
 		r.getInstanceTypes().stream().flatMap(t -> t.getSizes().stream())
-				.filter(t -> isEnabledType(gContext, t.getName())).filter(t -> {
-					final var availability = gContext.getInstanceTypes().containsKey(t.getName());
-					if (!availability) {
+				.filter(t -> isEnabledType(gContext, t.getName())).forEach(t -> {
+					if (context.getLocalTypes().containsKey(t.getName())) {
+						installSpotPrices(context, t, spotPriceType);
+					} else {
 						// Unavailable instances type of spot are ignored
 						log.warn("Instance {} is referenced from spot but not available", t.getName());
 					}
-					return availability;
-				}).forEach(j -> installSpotPrices(context, j, spotPriceType));
+				});
 
 		// Purge the SKUs
 		purgePrices(context);

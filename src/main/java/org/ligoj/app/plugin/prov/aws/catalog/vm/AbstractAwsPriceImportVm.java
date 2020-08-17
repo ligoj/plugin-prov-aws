@@ -126,14 +126,14 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * 
 	 * @param context The current context to handle lazy sub-entities creation.
 	 * @param csv     The current CSV entry.
+	 * @return The new updated price entity.
 	 */
 	protected P newPrice(final AbsractLocalContext<T, P, C, Q> context, final C csv) {
-		final var type = installInstanceType(context, csv);
-		final var term = installInstancePriceTerm(context, csv);
 		final var price = context.getLocals().computeIfAbsent(csv.getRateCode(), context::newPrice);
 
 		// Update the price in force mode
-		return copyAsNeeded(context, price, p -> copy(context, csv, price, type, term));
+		return copyAsNeeded(context, price, p -> copy(context, csv, price, installInstanceType(context, csv),
+				installInstancePriceTerm(context, csv)));
 	}
 
 	/**

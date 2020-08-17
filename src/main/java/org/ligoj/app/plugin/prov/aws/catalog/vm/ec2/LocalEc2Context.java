@@ -16,11 +16,6 @@ import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
 
 /**
  * Context used to perform catalog update.
- * 
- * @param <T> The instance type's type.
- * @param <P> The price's type.
- * @param <C> The CSV price type.
- * @param <Q> The quote type.
  */
 public class LocalEc2Context
 		extends AbsractLocalContext<ProvInstanceType, ProvInstancePrice, AwsEc2Price, ProvQuoteInstance> {

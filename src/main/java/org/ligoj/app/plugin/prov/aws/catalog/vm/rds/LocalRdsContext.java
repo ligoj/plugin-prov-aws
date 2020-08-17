@@ -16,11 +16,6 @@ import org.ligoj.app.plugin.prov.model.ProvQuoteDatabase;
 
 /**
  * Context used to perform catalog update.
- * 
- * @param <T> The instance type's type.
- * @param <P> The price's type.
- * @param <C> The CSV price type.
- * @param <Q> The quote type.
  */
 public class LocalRdsContext
 		extends AbsractLocalContext<ProvDatabaseType, ProvDatabasePrice, AwsRdsPrice, ProvQuoteDatabase> {

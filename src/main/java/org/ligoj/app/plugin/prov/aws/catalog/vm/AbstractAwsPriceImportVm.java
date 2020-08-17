@@ -268,7 +268,11 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	}
 
 	/**
-	 * Build a new instance price type from the CSV line.
+	 * Build a new instance price term from the CSV line.
+	 * 
+	 * @param context The local update context.
+	 * @param csv     The CSV price row.
+	 * @return The updated {@link ProvInstancePriceTerm} corresponding to the CSV row.
 	 */
 	protected ProvInstancePriceTerm installInstancePriceTerm(final AbsractLocalContext<T, P, C, Q> context,
 			final C csv) {

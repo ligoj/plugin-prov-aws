@@ -26,8 +26,7 @@ public abstract class AbstractAwsCsvReader<T> extends CsvBeanReader<T> {
 	/**
 	 * Build a CSV reader to build {@link AwsEc2Price} objects.
 	 *
-	 * @param reader   The CSV input, without headers and starting from the first
-	 *                 raw.
+	 * @param reader   The CSV input, without headers and starting from the first raw.
 	 * @param headers  The header used to parse the CSV file.
 	 * @param beanType The target bean type.
 	 */
@@ -41,24 +40,22 @@ public abstract class AbstractAwsCsvReader<T> extends CsvBeanReader<T> {
 	@Override
 	public T read() throws IOException {
 		// Read the raw entries to check the build/skip option
-		final var rawValues = csvReaderProxy.read();
-
-		// Build only for AWS compute instance
-		if (rawValues.isEmpty()) {
-			// EOF
-			return null;
-		}
-		if (isValidRaw(rawValues)) {
-			return build(rawValues, null);
-		}
-
-		// Skip this entry
-		return read();
+		do {
+			final var rawValues = csvReaderProxy.read();
+			// Build only for AWS compute instance
+			if (rawValues.isEmpty()) {
+				// EOF
+				return null;
+			}
+			if (isValidRaw(rawValues)) {
+				return build(rawValues, null);
+			}
+			// Skip this entry
+		} while (true);
 	}
 
 	/**
-	 * Check the given raw is valid to build an AWS Price. When invalid, the record
-	 * is dropped.
+	 * Check the given raw is valid to build an AWS Price. When invalid, the record is dropped.
 	 *
 	 * @param rawValues The column of the current record.
 	 * @return <code>true</code> when this record can be used to build a bean.

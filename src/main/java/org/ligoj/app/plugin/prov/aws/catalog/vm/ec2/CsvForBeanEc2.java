@@ -46,11 +46,18 @@ public class CsvForBeanEc2 extends AbstractCsvForBeanEc2<AwsEc2Price> {
 		// Only Tenancy compliant : no "host"/"NA"
 		// No dedicated host for now
 		// CapacityStatus = 'Used'
+		/*
 		return rawValues.size() > 48
-				&& ("Compute Instance".equals(rawValues.get(14))
-						|| "Compute Instance (bare metal)".equals(rawValues.get(14)))
-				&& !"NA".equals(rawValues.get(35)) && !"Host".equals(rawValues.get(35)) // Tenancy
-				&& "Used".equals(StringUtils.defaultIfBlank(rawValues.get(48), "Used"));
+			&& ("Compute Instance".equals(rawValues.get(14))
+					|| "Compute Instance (bare metal)".equals(rawValues.get(14)))
+			&& !"NA".equals(rawValues.get(35)) && !"Host".equals(rawValues.get(35)) // Tenancy
+			&& "Used".equals(StringUtils.defaultIfBlank(rawValues.get(48), "Used"));
+*/
+		return rawValues.size() > 49
+				&& ("Compute Instance".equals(rawValues.get(15))
+						|| "Compute Instance (bare metal)".equals(rawValues.get(15)))
+				&& !"NA".equals(rawValues.get(35)) && !"Host".equals(rawValues.get(36)) // Tenancy
+				&& "Used".equals(StringUtils.defaultIfBlank(rawValues.get(49), "Used"));
 	}
 
 }

@@ -3,7 +3,7 @@
  */
 package org.ligoj.app.plugin.prov.aws.catalog.vm.rds;
 
-import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AbstractAwsEc2Price;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsVmPrice;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -13,7 +13,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class AwsRdsPrice extends AbstractAwsEc2Price {
+public class AwsRdsPrice extends AbstractAwsVmPrice {
 
 	private String engine;
 	private String edition;

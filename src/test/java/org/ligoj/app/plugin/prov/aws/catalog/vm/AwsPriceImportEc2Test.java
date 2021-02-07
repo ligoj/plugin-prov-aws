@@ -1,13 +1,14 @@
 /*
  * Licensed under MIT (https://github.com/ligoj/ligoj/blob/master/LICENSE)
  */
-package org.ligoj.app.plugin.prov.aws.catalog.vm.ec2;
+package org.ligoj.app.plugin.prov.aws.catalog.vm;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AwsPriceImportEc2;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
 

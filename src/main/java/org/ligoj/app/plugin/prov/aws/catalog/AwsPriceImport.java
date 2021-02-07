@@ -12,6 +12,7 @@ import org.ligoj.app.plugin.prov.aws.catalog.s3.AwsPriceImportS3;
 import org.ligoj.app.plugin.prov.aws.catalog.suppport.AwsPriceImportSupport;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ebs.AwsPriceImportEbs;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AwsPriceImportEc2;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.fargate.AwsPriceImportFargate;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.rds.AwsPriceImportRds;
 import org.ligoj.app.plugin.prov.catalog.AbstractImportCatalogResource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,9 @@ public class AwsPriceImport extends AbstractImportCatalogResource {
 
 	@Autowired
 	private AwsPriceImportEc2 ec2;
+	
+	@Autowired
+	private AwsPriceImportFargate fargate;
 
 	@Autowired
 	private AwsPriceImportRds rds;
@@ -63,6 +67,7 @@ public class AwsPriceImport extends AbstractImportCatalogResource {
 		rds.install(context);
 		s3.install(context);
 		efs.install(context);
+		fargate.install(context);
 		support.install(context);
 		context.cleanup();
 	}

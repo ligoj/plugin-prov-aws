@@ -1,7 +1,7 @@
 /*
  * Licensed under MIT (https://github.com/ligoj/ligoj/blob/master/LICENSE)
  */
-package org.ligoj.app.plugin.prov.aws.catalog.vm.ec2;
+package org.ligoj.app.plugin.prov.aws.catalog.vm;
 
 import org.ligoj.app.plugin.prov.aws.catalog.AwsCsvPrice;
 
@@ -13,7 +13,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public abstract class AbstractAwsEc2Price extends AwsCsvPrice {
+public abstract class AbstractAwsVmPrice extends AwsCsvPrice {
 
 	private String offeringClass;
 	private String instanceType;

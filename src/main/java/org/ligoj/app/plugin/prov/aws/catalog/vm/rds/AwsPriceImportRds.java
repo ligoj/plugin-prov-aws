@@ -18,6 +18,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVm;
+import org.ligoj.app.plugin.prov.catalog.AbstractUpdateContext;
 import org.ligoj.app.plugin.prov.dao.ProvQuoteDatabaseRepository;
 import org.ligoj.app.plugin.prov.model.AbstractCodedEntity;
 import org.ligoj.app.plugin.prov.model.ProvDatabasePrice;
@@ -42,8 +43,8 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-public class AwsPriceImportRds
-		extends AbstractAwsPriceImportVm<ProvDatabaseType, ProvDatabasePrice, AwsRdsPrice, ProvQuoteDatabase> {
+public class AwsPriceImportRds extends
+		AbstractAwsPriceImportVm<ProvDatabaseType, ProvDatabasePrice, AwsRdsPrice, ProvQuoteDatabase, LocalRdsContext> {
 
 	/**
 	 * The RDS reserved and on-demand price end-point, a CSV file, accepting the region code with {@link Formatter}
@@ -98,8 +99,7 @@ public class AwsPriceImportRds
 		final var region = locationRepository.findOne(gRegion.getId());
 
 		// Get previous RDS storage and instance prices for this location
-		final var context = new LocalRdsContext(gContext, iptRepository, dtRepository, dpRepository, qdRepository,
-				region, TERM_ON_DEMAND, TERM_RESERVED);
+		final var context = newContext(gContext, region, TERM_ON_DEMAND, TERM_RESERVED);
 		context.setPreviousStorage(spRepository.findByLocation(context.getNode().getId(), region.getName()).stream()
 				.collect(Collectors.toMap(ProvStoragePrice::getCode, Function.identity())));
 		// Track the created instance to cache partial costs
@@ -141,12 +141,12 @@ public class AwsPriceImportRds
 	private void installRds(final LocalRdsContext context, final AwsRdsPrice csv) {
 		if ("Database Instance".equals(csv.getFamily())) {
 			// Filter type
-			if (!isEnabledDatabase(context, csv.getInstanceType())) {
+			if (!isEnabledType(context, csv.getInstanceType())) {
 				return;
 			}
 
 			// Up-front management
-			if (handleUpFront(context, csv)) {
+			if (handlePartialCost(context, csv)) {
 				return;
 			}
 
@@ -227,5 +227,17 @@ public class AwsPriceImportRds
 	@Override
 	protected Rate getRate(final String type, final AwsRdsPrice csv, final String name) {
 		return super.getRate(type, csv, StringUtils.replaceOnce(name, "db\\.", ""));
+	}
+
+	@Override
+	protected LocalRdsContext newContext(final UpdateContext gContext, final ProvLocation region, final String term1,
+			final String term2) {
+		return new LocalRdsContext(gContext, iptRepository, dtRepository, dpRepository, qdRepository, region, term1,
+				term2);
+	}
+
+	@Override
+	protected boolean isEnabledType(final AbstractUpdateContext context, final String type) {
+		return isEnabledDatabaseType(context, type);
 	}
 }

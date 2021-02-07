@@ -28,4 +28,10 @@ public class UpdateContext extends AbstractUpdateContext {
 	 */
 	@Getter
 	private final Map<String, String> mapSpotToNewRegion = new HashMap<>();
+
+	/**
+	 * Mapping from Spot region name to API name.
+	 */
+	@Getter
+	private final Map<String, String> savingsPlanUrls = new HashMap<>();
 }

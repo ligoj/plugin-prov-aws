@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AbstractAwsEc2Price;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsVmPrice;
 import org.ligoj.app.plugin.prov.catalog.AbstractUpdateContext;
 import org.ligoj.app.plugin.prov.dao.BaseProvInstanceTypeRepository;
 import org.ligoj.app.plugin.prov.dao.BaseProvQuoteRepository;
@@ -32,7 +32,7 @@ import lombok.Setter;
  * @param <C> The CSV price type.
  * @param <Q> The quote type.
  */
-public abstract class AbsractLocalContext<T extends AbstractInstanceType, P extends AbstractTermPrice<T>, C extends AbstractAwsEc2Price, Q extends AbstractQuoteVm<P>>
+public abstract class AbsractLocalContext<T extends AbstractInstanceType, P extends AbstractTermPrice<T>, C extends AbstractAwsVmPrice, Q extends AbstractQuoteVm<P>>
 		extends AbstractUpdateContext {
 
 	@Getter

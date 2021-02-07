@@ -46,9 +46,12 @@ import org.ligoj.app.plugin.prov.aws.catalog.vm.ebs.AwsPriceImportEbs;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AwsEc2Price;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AwsPriceImportEc2;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.CsvForBeanEc2;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.fargate.AwsPriceImportFargate;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.rds.AwsPriceImportRds;
 import org.ligoj.app.plugin.prov.catalog.AbstractImportCatalogResource;
 import org.ligoj.app.plugin.prov.catalog.ImportCatalogResource;
+import org.ligoj.app.plugin.prov.dao.ProvContainerPriceRepository;
+import org.ligoj.app.plugin.prov.dao.ProvContainerTypeRepository;
 import org.ligoj.app.plugin.prov.dao.ProvDatabasePriceRepository;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceRepository;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceTermRepository;
@@ -67,6 +70,8 @@ import org.ligoj.app.plugin.prov.model.ProvTenancy;
 import org.ligoj.app.plugin.prov.model.ProvUsage;
 import org.ligoj.app.plugin.prov.model.Rate;
 import org.ligoj.app.plugin.prov.model.VmOs;
+import org.ligoj.app.plugin.prov.quote.container.ProvQuoteContainerResource;
+import org.ligoj.app.plugin.prov.quote.container.QuoteContainerQuery;
 import org.ligoj.app.plugin.prov.quote.database.ProvQuoteDatabaseResource;
 import org.ligoj.app.plugin.prov.quote.database.QuoteDatabaseEditionVo;
 import org.ligoj.app.plugin.prov.quote.database.QuoteDatabaseQuery;
@@ -104,6 +109,9 @@ class AwsPriceImportTest extends AbstractServerTest {
 	private ProvQuoteInstanceResource qiResource;
 
 	@Autowired
+	private ProvQuoteContainerResource qcResource;
+
+	@Autowired
 	private ProvQuoteDatabaseResource qbResource;
 
 	@Autowired
@@ -114,6 +122,9 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 	@Autowired
 	private ProvInstancePriceRepository ipRepository;
+
+	@Autowired
+	private ProvContainerPriceRepository cpRepository;
 
 	@Autowired
 	private ProvDatabasePriceRepository bpRepository;
@@ -132,6 +143,9 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 	@Autowired
 	private ProvInstanceTypeRepository itRepository;
+
+	@Autowired
+	private ProvContainerTypeRepository ctRepository;
 
 	@Autowired
 	private ConfigurationResource configuration;
@@ -162,6 +176,13 @@ class AwsPriceImportTest extends AbstractServerTest {
 		this.resource.setEc2(initCatalog(helper, new AwsPriceImportEc2() {
 			@Override
 			public AwsPriceImportEc2 newProxy() {
+				return this;
+			}
+
+		}));
+		this.resource.setFargate(initCatalog(helper, new AwsPriceImportFargate() {
+			@Override
+			public AwsPriceImportFargate newProxy() {
 				return this;
 			}
 
@@ -248,6 +269,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		clearAllCache();
 
 		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES, "/%s/index-ec2.csv");
+		configure(AwsPriceImportFargate.CONF_URL_FARGATE_PRICES, "/%s/index-fargate.csv");
 		configure(AwsPriceImportRds.CONF_URL_RDS_PRICES, "/%s/index-rds.csv");
 
 		mock("/eu-west-1/index-ec2.csv", "mock-server/aws/index-ec2.csv");
@@ -255,6 +277,12 @@ class AwsPriceImportTest extends AbstractServerTest {
 		mock("/us-west-2/index-ec2.csv", "mock-server/aws/index-ec2-empty.csv");
 		mock("/us-east-1/index-ec2.csv", "mock-server/aws/index-ec2-empty.csv");
 		mock("/eu-central-1/index-ec2.csv", "mock-server/aws/index-ec2-empty.csv");
+
+		mock("/eu-west-1/index-fargate.csv", "mock-server/aws/index-fargate.csv");
+		mock("/eu-west-2/index-fargate.csv", "mock-server/aws/index-fargate-empty.csv");
+		mock("/us-west-2/index-fargate.csv", "mock-server/aws/index-fargate-empty.csv");
+		mock("/us-east-1/index-fargate.csv", "mock-server/aws/index-fargate-empty.csv");
+		mock("/eu-central-1/index-fargate.csv", "mock-server/aws/index-fargate-empty.csv");
 
 		mock("/eu-west-1/index-rds.csv", "mock-server/aws/index-rds.csv");
 		mock("/eu-west-2/index-rds.csv", "mock-server/aws/index-rds-empty.csv");
@@ -293,29 +321,34 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("eu-west-1", spotPrice.getPrice().getLocation().getName());
 		Assertions.assertEquals("EU (Ireland)", spotPrice.getPrice().getLocation().getDescription());
 
-		checkImportStatus(81 /* OD */ + 3 /* RI */ + 6 /* spot */ + 2 /* SP */ + 20 /* RDS */, 77);
-		Assertions.assertEquals(81, ipRepository.findAllBy("term.code", "JRTCKXETXF").size());
-		Assertions.assertEquals(3, ipRepository.findAllBy("term.code", "NQ3QZPMQV9").size()); // Reserved 3y
-		Assertions.assertEquals(6, ipRepository.findAllBy("term.code", "spot").size());
+		Assertions.assertEquals(81, ipRepository.findAllBy("term.code", "JRTCKXETXF").size()); // EC2 OD
+		Assertions.assertEquals(3, ipRepository.findAllBy("term.code", "NQ3QZPMQV9").size()); // EC2 Reserved 3y
+		Assertions.assertEquals(6, ipRepository.findAllBy("term.code", "spot").size()); // EC2 Spot
 		Assertions.assertEquals(1, ipRepository.findAllBy("term.code", "SSTZVD8UMFZ4RSTW").size()); // EC2 SP
 		Assertions.assertEquals(1, ipRepository.findAllBy("term.code", "8GU23DFTKP2N43SD").size()); // Compute SP
+		Assertions.assertEquals(50, cpRepository.findAllBy("term.code", "JRTCKXETXF").size()); // Fargate OD
+		Assertions.assertEquals(50, cpRepository.findAllBy("term.code", "ZGC49G7XS8QA54BQ").size()); // Fargate Compute SP
+		Assertions.assertEquals(100, cpRepository.findAllBy("term.code", "spot").size()); // Fargate Spot x 2 regions
 		Assertions.assertEquals(20, bpRepository.findAll().size()); // RDS
 
-		// Check the EC2 savings plan
+		Assertions.assertEquals(50, ctRepository.findAll().size()); // Fargate type
+
+		checkImportStatus(81 /* OD */ + 3 /* RI */ + 6 /* spot */ + 2 /* SP */ + 20 /* RDS */ + 200 /* Fargate */ , 77 + 50 /* Fargate */ );
+
+		// Check EC2 savings plan
 		final var ec2SsavingsPlanPrice = qiResource.lookup(subscription,
 				builder().cpu(2).ram(1741).constant(true).usage("36monthEC2SP").build());
 		Assertions.assertEquals("SSTZVD8UMFZ4RSTW.M2WTFX8JK6VDUNU5", ec2SsavingsPlanPrice.getPrice().getCode());
 		Assertions.assertEquals(63.51d, ec2SsavingsPlanPrice.getCost(), DELTA);
 		Assertions.assertEquals(63.51d, ec2SsavingsPlanPrice.getPrice().getCost(), DELTA);
 		Assertions.assertEquals(762.12d, ec2SsavingsPlanPrice.getPrice().getCostPeriod(), DELTA);
-		// "Compute Savings Plan, 1yr, All Upfront"
 		Assertions.assertEquals("EC2 Savings Plan, 1yr, No Upfront, c1 in eu-west-1",
 				ec2SsavingsPlanPrice.getPrice().getTerm().getName());
 		Assertions.assertFalse(ec2SsavingsPlanPrice.getPrice().getTerm().getInitialCost().booleanValue());
 		Assertions.assertEquals("eu-west-1", ec2SsavingsPlanPrice.getPrice().getTerm().getLocation().getName());
 		Assertions.assertEquals("c1.medium", ec2SsavingsPlanPrice.getPrice().getType().getName());
 
-		// Check the compute savings plan
+		// Check Compute savings plan for EC2
 		final var cSavingsPlanPrice = qiResource.lookup(subscription,
 				builder().cpu(2).ram(1741).constant(true).usage("36monthCSP").build());
 		Assertions.assertEquals("8GU23DFTKP2N43SD.29QDFBY626457QNP", cSavingsPlanPrice.getPrice().getCode());
@@ -328,7 +361,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertNull(cSavingsPlanPrice.getPrice().getTerm().getLocation());
 		Assertions.assertEquals("c1.medium", cSavingsPlanPrice.getPrice().getType().getName());
 
-		// Check the RI
+		// Check EC2 RI
 		final var cRIPrice = qiResource.lookup(subscription, builder().cpu(2).ram(1741).usage("36month").build());
 		Assertions.assertEquals(46.667d, cRIPrice.getCost(), DELTA);
 		Assertions.assertEquals(46.667d, cRIPrice.getPrice().getCost(), DELTA);
@@ -338,10 +371,42 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertNull(cRIPrice.getPrice().getTerm().getLocation());
 		Assertions.assertEquals("c1.medium", cRIPrice.getPrice().getType().getName());
 
+		// Check Fargate OnDemand
+		final var cPrice = qcResource.lookup(subscription, QuoteContainerQuery.builder().cpu(2).ram(1741).build());
+		Assertions.assertEquals(72.08d, cPrice.getCost(), DELTA);
+		Assertions.assertEquals(72.08d, cPrice.getPrice().getCost(), DELTA);
+		Assertions.assertEquals(72.08d, cPrice.getPrice().getCostPeriod(), DELTA);
+		Assertions.assertEquals("OnDemand", cPrice.getPrice().getTerm().getName());
+		Assertions.assertEquals("K4EXFQ5YFQCP98EN.JRTCKXETXF.6YS6EN2CT7|2.0|4.0", cPrice.getPrice().getCode());
+		Assertions.assertEquals("fargate-2.0-4.0", cPrice.getPrice().getType().getName());
+
+		// Check Fargate Saving Plan
+		final var cSPPrice = qcResource.lookup(subscription,
+				QuoteContainerQuery.builder().cpu(2).ram(1741).usage("36monthCSP").build());
+		Assertions.assertEquals(43.248d, cSPPrice.getCost(), DELTA);
+		Assertions.assertEquals(43.248d, cSPPrice.getPrice().getCost(), DELTA);
+		Assertions.assertEquals(1556.932d, cSPPrice.getPrice().getCostPeriod(), DELTA);
+		Assertions.assertEquals("ZGC49G7XS8QA54BQ.UP5ETC3QSW2QZGEY|2.0|4.0", cSPPrice.getPrice().getCode());
+		Assertions.assertEquals("Compute Savings Plan, 3yr, No Upfront", cSPPrice.getPrice().getTerm().getName());
+		Assertions.assertFalse(cSPPrice.getPrice().getTerm().getInitialCost().booleanValue());
+		Assertions.assertNull(cSPPrice.getPrice().getTerm().getLocation());
+		Assertions.assertEquals("fargate-2.0-4.0", cSPPrice.getPrice().getType().getName());
+
+		// Check Fargate Spot
+		final var cSPrice = qcResource.lookup(subscription,
+				QuoteContainerQuery.builder().cpu(2).ram(1741).ephemeral(true).build());
+		Assertions.assertEquals(24.566d, cSPrice.getCost(), DELTA);
+		Assertions.assertEquals(24.566d, cSPrice.getPrice().getCost(), DELTA);
+		Assertions.assertEquals(24.566d, cSPrice.getPrice().getCostPeriod(), DELTA);
+		Assertions.assertEquals("Spot", cSPrice.getPrice().getTerm().getName());
+		Assertions.assertFalse(cSPrice.getPrice().getTerm().getInitialCost().booleanValue());
+		Assertions.assertNull(cSPrice.getPrice().getTerm().getLocation());
+		Assertions.assertEquals("fargate-2.0-4.0", cSPrice.getPrice().getType().getName());
+
 		// Install again to check the update without change
 		resetImportTask();
 		resource.install(false);
-		checkImportStatus(112 /* same */, 77);
+		checkImportStatus(312 /* same */, 77 + 50 /* Fargate */);
 		checkType();
 
 		provResource.updateCost(subscription);
@@ -350,7 +415,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		// Install again with force mode, without price change in force mode
 		resource.install(true);
 		check(provResource.getConfiguration(subscription), 449.057d, 46.667d);
-		checkImportStatus(112 /* same */, 77);
+		checkImportStatus(312 /* same */, 77 + 50 /* Fargate */);
 		checkType();
 
 		// Install again with force mode, with only specs changes in force mode
@@ -364,8 +429,8 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("{Moderate NEW}", dtype.getDescription());
 		Assertions.assertEquals(3, dtype.getCpu());
 		Assertions.assertEquals(7782, dtype.getRam());
-		checkImportStatus(112 - 1 /* purged RDS */ + 1 /* new RDS */
-				- 1 /* purged EC2 */ + 1 /* new EC2 */, 77 + 1 /* new type */);
+		checkImportStatus(312 - 1 /* purged RDS */ + 1 /* new RDS */
+				- 1 /* purged EC2 */ + 1 /* new EC2 */, 77 + 50 /* Fargate */ + 1 /* new type */);
 
 		// Check the v1 only prices are still available
 		bpRepository.findByExpected("code", "OLD_____________.JRTCKXETXF.6YS6EN2CT7");
@@ -373,12 +438,15 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Point to another catalog with updated prices
 		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES, "/v2/%s/index-ec2.csv");
+		configure(AwsPriceImportFargate.CONF_URL_FARGATE_PRICES, "/v2/%s/index-fargate.csv");
 		configure(AwsPriceImportRds.CONF_URL_RDS_PRICES, "/v2/%s/index-rds.csv");
 		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES_SPOT, "/v2/spot.js");
+		configure(AwsPriceImportFargate.CONF_URL_FARGATE_PRICES_SPOT, "/v2/spot-fargate.json");
 		configure(AwsPriceImportEbs.CONF_URL_EBS_PRICES, "/v2/pricing-ebs.js");
 		configure(AwsPriceImportEfs.CONF_URL_EFS_PRICES, "/v2/index-efs.csv");
 		configure(AwsPriceImportS3.CONF_URL_S3_PRICES, "/v2/index-s3.csv");
 		mock("/v2/eu-west-1/index-ec2.csv", "mock-server/aws/v2/index-ec2.csv");
+		mock("/v2/eu-west-1/index-fargate.csv", "mock-server/aws/v2/index-fargate.csv");
 		mock("/v2/eu-west-1/index-rds.csv", "mock-server/aws/v2/index-rds.csv");
 
 		// Install the new catalog, update/deletion occurs
@@ -436,8 +504,8 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("{EBS only,20 Gigabit}", type.getDescription());
 
 		// Check status
-		checkImportStatus(110 + 2 /* saving plans */ + 1 - 1 /* purged RDS price */ /* new RDS price */
-				- 1 /* purged EC2 price */ + 1 /* new EC2 price */, 77 + 1);
+		checkImportStatus(310 + 2 /* saving plans */ + 1 - 1 /* purged RDS price */ /* new RDS price */
+				- 1 /* purged EC2 price */ + 1 /* new EC2 price */, 77 + 50 /* Fargate */ + 1);
 	}
 
 	private void checkType() {
@@ -452,8 +520,8 @@ class AwsPriceImportTest extends AbstractServerTest {
 	private void checkImportStatus(final int count, final int nbTypes) {
 		final var status = this.resource.getImportCatalogResource().getTask("service:prov:aws");
 		Assertions.assertTrue(status.getDone() >= 9);
-		Assertions.assertEquals(21, status.getWorkload());
-		Assertions.assertEquals("efs", status.getPhase());
+		Assertions.assertEquals(34, status.getWorkload());
+		Assertions.assertEquals("support", status.getPhase());
 		Assertions.assertEquals(DEFAULT_USER, status.getAuthor());
 		Assertions.assertEquals(nbTypes, status.getNbInstanceTypes().intValue());
 		Assertions.assertEquals(count, status.getNbInstancePrices().intValue());
@@ -464,9 +532,10 @@ class AwsPriceImportTest extends AbstractServerTest {
 	private void mockServer() throws IOException {
 		patchConfigurationUrl();
 		mock("/index-ec2.csv", "mock-server/aws/index-ec2.csv");
-
+		mock("/index-fargate.csv", "mock-server/aws/index-fargate.csv");
 		mock("/index-rds.csv", "mock-server/aws/index-rds.csv");
 		mock("/spot.js", "mock-server/aws/spot.js");
+		mock("/spot-fargate.json", "mock-server/aws/spot-fargate.json");
 		mock("/pricing-ebs.js", "mock-server/aws/pricing-ebs.js");
 		mock("/index-efs.csv", "mock-server/aws/index-efs.csv");
 		mock("/index-s3.csv", "mock-server/aws/index-s3.csv");
@@ -477,8 +546,10 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Another catalog version
 		mock("/v2/index-ec2.csv", "mock-server/aws/v2/index-ec2.csv");
+		mock("/v2/index-fargate.csv", "mock-server/aws/v2/index-fargate.csv");
 		mock("/v2/index-rds.csv", "mock-server/aws/v2/index-rds.csv");
 		mock("/v2/spot.js", "mock-server/aws/v2/spot.js");
+		mock("/v2/spot-fargate.json", "mock-server/aws/v2/spot-fargate.json");
 		mock("/v2/pricing-ebs.js", "mock-server/aws/v2/pricing-ebs.js");
 		mock("/v2/index-efs.csv", "mock-server/aws/v2/index-efs.csv");
 		mock("/v2/index-s3.csv", "mock-server/aws/v2/index-s3.csv");
@@ -559,7 +630,9 @@ class AwsPriceImportTest extends AbstractServerTest {
 		patchConfigurationUrl();
 
 		mock("/index-ec2.csv", "mock-server/aws/index-ec2-empty.csv");
+		mock("/index-fargate.csv", "mock-server/aws/index-fargate-empty.csv");
 		mock("/spot.js", "mock-server/aws/spot-empty.js");
+		mock("/spot-fargate.json", "mock-server/aws/spot-fargate-empty.json");
 		mock("/pricing-ebs.js", "mock-server/aws/pricing-ebs.js");
 		mock("/index-rds.csv", "mock-server/aws/index-rds-empty.csv");
 		mock("/index-efs.csv", "mock-server/aws/index-efs-empty.csv");
@@ -620,7 +693,9 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 	private void mockOnlyEc2() throws IOException {
 		mock("/index-ec2.csv", "mock-server/aws/index-ec2.csv");
+		mock("/index-fargate.csv", "mock-server/aws/index-fargate.csv");
 		mock("/spot.js", "mock-server/aws/spot-empty.js");
+		mock("/spot-fargate.json", "mock-server/aws/spot-fargate-empty.json");
 		mock("/pricing-ebs.js", "mock-server/aws/pricing-ebs.js");
 		mock("/index-rds.csv", "mock-server/aws/index-rds-empty.csv");
 		mock("/index-efs.csv", "mock-server/aws/index-efs-empty.csv");
@@ -648,6 +723,23 @@ class AwsPriceImportTest extends AbstractServerTest {
 	}
 
 	/**
+	 * Unable to retrieve the EC2 CSV file
+	 */
+	@Test
+	void installFargateCsvNotFound() throws Exception {
+		patchConfigurationUrl();
+		configure(AwsPriceImportFargate.CONF_URL_FARGATE_PRICES, "/any.csv");
+		mockServerNoFargate();
+		resource.install(false);
+		em.flush();
+		em.clear();
+		Assertions.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), DELTA);
+
+		// No instance imported
+		Assertions.assertEquals(0, itRepository.findAll().size());
+	}
+
+	/**
 	 * Invalid EC2 CSV file
 	 */
 	@Test
@@ -655,6 +747,21 @@ class AwsPriceImportTest extends AbstractServerTest {
 		patchConfigurationUrl();
 		mock("/index-ec2.csv", "mock-server/aws/index-header-not-found.csv");
 		mockServerNoEc2();
+
+		Assertions.assertEquals("Premature end of CSV file, headers were not found",
+				Assertions.assertThrows(TechnicalException.class, () -> {
+					resource.install(false);
+				}).getMessage());
+	}
+
+	/**
+	 * Invalid EC2 CSV file
+	 */
+	@Test
+	void installFargateCsvInvalidHeader() throws Exception {
+		patchConfigurationUrl();
+		mock("/index-fargate.csv", "mock-server/aws/index-header-not-found.csv");
+		mockServerNoFargate();
 
 		Assertions.assertEquals("Premature end of CSV file, headers were not found",
 				Assertions.assertThrows(TechnicalException.class, () -> {
@@ -702,18 +809,35 @@ class AwsPriceImportTest extends AbstractServerTest {
 		httpServer.start();
 	}
 
+	private void mockServerNoFargate() throws IOException {
+		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES, "/index-ec2.csv");
+		configure(AwsPriceImportFargate.CONF_URL_FARGATE_PRICES, "/index-fargate.csv");
+		configure(AwsPriceImportFargate.CONF_URL_FARGATE_PRICES_SPOT, "/spot-fargate.json");
+		mock("/index-ec2.csv", "mock-server/aws/index-ec2-empty.csv");
+		mock("/spot.js", "mock-server/aws/spot-empty.js");
+		mock("/spot-fargate.json", "mock-server/aws/spot-fargate.json");
+		mock("/pricing-ebs.js", "mock-server/aws/pricing-ebs.js");
+		mock("/index-efs.csv", "mock-server/aws/index-efs.csv");
+		mock("/index-s3.csv", "mock-server/aws/index-s3.csv");
+		httpServer.start();
+	}
+
 	/**
 	 * Reserved prices are available but not the spot instances.
 	 */
 	@Test
 	void installSpotEmpty() throws Exception {
 		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES, "/index-ec2.csv");
+		configure(AwsPriceImportFargate.CONF_URL_FARGATE_PRICES, "/index-fargate.csv");
+		configure(AwsPriceImportFargate.CONF_URL_FARGATE_PRICES_SPOT, "/spot-fargate.json");
 		configure(AwsPriceImportRds.CONF_URL_RDS_PRICES, "/index-rds.csv");
 		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES_SPOT, "/any.js");
 		configure(AwsPriceImportS3.CONF_URL_S3_PRICES, "/index-s3.csv");
 		configure(AwsPriceImportEbs.CONF_URL_EBS_PRICES, "/any.js");
 		configure(AwsPriceImportEfs.CONF_URL_EFS_PRICES, "/index-efs.csv");
 		mock("/index-ec2.csv", "mock-server/aws/index-ec2-empty.csv");
+		mock("/index-fargate.csv", "mock-server/aws/index-fargate-empty.csv");
+		mock("/spot-fargate.json", "mock-server/aws/spot-fargate-empty.json");
 		mock("/region_index.json", "mock-server/aws/region_index-empty.json");
 		mock("/index-rds.csv", "mock-server/aws/index-rds-empty.csv");
 		mock("/index-s3.csv", "mock-server/aws/index-s3-empty.csv");
@@ -752,9 +876,30 @@ class AwsPriceImportTest extends AbstractServerTest {
 				}).getMessage());
 	}
 
+	/**
+	 * Reserved prices are valid, but not the spot instances.
+	 */
+	@Test
+	void installFargateSpotError() throws Exception {
+		patchConfigurationUrl();
+		mock("/index-ec2.csv", "mock-server/aws/index-ec2.csv");
+		mock("/region_index.json", "mock-server/aws/region_index-empty.json");
+		mock("/index-rds.csv", "mock-server/aws/index-rds.csv");
+		mock("/spot.js", "mock-server/aws/spot-error.js");
+		httpServer.start();
+
+		// Parse error expected
+		Assertions.assertEquals("For input string: \"AAAAAA\"",
+				Assertions.assertThrows(NumberFormatException.class, () -> {
+					resource.install(false);
+				}).getMessage());
+	}
+
 	private void patchConfigurationUrl() {
 		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES, "/index-ec2.csv");
 		configure(AwsPriceImportEc2.CONF_URL_API_SAVINGS_PLAN, "/region_index.json");
+		configure(AwsPriceImportFargate.CONF_URL_FARGATE_PRICES, "/index-fargate.csv");
+		configure(AwsPriceImportFargate.CONF_URL_FARGATE_PRICES_SPOT, "/spot-fargate.json");
 		configure(AwsPriceImportRds.CONF_URL_RDS_PRICES, "/index-rds.csv");
 		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES_SPOT, "/spot.js");
 		configure(AwsPriceImportEbs.CONF_URL_EBS_PRICES, "/pricing-ebs.js");

@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsCsvForBean;
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsCsvReader;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsVmPrice;
 import org.ligoj.bootstrap.core.csv.CsvBeanReader;
 
 /**
@@ -22,7 +23,7 @@ import org.ligoj.bootstrap.core.csv.CsvBeanReader;
  * 
  * @param <P> Target EC2 price type.
  */
-public abstract class AbstractCsvForBeanEc2<P extends AbstractAwsEc2Price> extends AbstractAwsCsvForBean<P> {
+public abstract class AbstractCsvForBeanEc2<P extends AbstractAwsVmPrice> extends AbstractAwsCsvForBean<P> {
 
 	/**
 	 * EC2 CSV Mapping to Java bean property

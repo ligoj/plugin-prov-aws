@@ -24,6 +24,7 @@ public class AwsPriceImportSupport extends AbstractAwsImport implements ImportCa
 
 	@Override
 	public void install(final UpdateContext context) throws IOException {
+		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("support"));
 		// Install previous types
 		installSupportTypes(context);
 
@@ -42,6 +43,7 @@ public class AwsPriceImportSupport extends AbstractAwsImport implements ImportCa
 			});
 			saveAsNeeded(context, price, t.getCost(), sp2Repository);
 		});
+		nextStep(context, null, 1);
 	}
 
 	private void installSupportTypes(final UpdateContext context) throws IOException {

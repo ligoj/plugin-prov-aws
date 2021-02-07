@@ -1,0 +1,43 @@
+{
+    "metadata": {
+        "copyright": "Copyright 2019 Amazon.com, Inc. or its affiliates. All rights reserved.",
+        "disclaimer": "This file is intended for use only on aws.amazon.com. We do not guarantee its availability or accuracy.",
+        "format:version": "1.0",
+        "source:version": "20190730194642"
+    },
+    "prices": [
+        {
+            "id": "4c865a7f-ff23-466f-a7bc-9daaa7d1eee2",
+            "unit": "vCPU-Hours",
+            "price": {
+                "USD": "0.01458"
+            },
+            "attributes": {
+                "aws:region": "us-east-1",
+                "aws:label": "per vCPU per hour"
+            }
+        },
+        {
+            "id": "f09cc16b-7c5a-4327-b8a9-bcb5a7f75d9c",
+            "unit": "vCPU-Hours",
+            "price": {
+                "USD": "0.01379631"
+            },
+            "attributes": {
+                "aws:region": "eu-west-1",
+                "aws:label": "per vCPU per hour"
+            }
+        },
+        {
+            "id": "570115e9-42a6-479a-b1fd-4afafbf95ce2",
+            "unit": "GB-Hours",
+            "price": {
+                "USD": "0.00151494"
+            },
+            "attributes": {
+                "aws:region": "eu-west-1",
+                "aws:label": "per GB per hour"
+            }
+        }
+    ]
+}

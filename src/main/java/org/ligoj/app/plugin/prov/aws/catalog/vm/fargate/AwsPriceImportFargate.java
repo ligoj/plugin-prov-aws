@@ -304,7 +304,7 @@ public class AwsPriceImportFargate extends
 
 	@Override
 	protected boolean isEnabledType(final AbstractUpdateContext context, final String type) {
-		return isEnabledContainerType(context, type);
+		return true;
 	}
 
 	@Override

@@ -95,14 +95,10 @@ public abstract class AbstractAwsPriceImportVmOs<T extends AbstractInstanceType,
 				// Read the next one
 				csv = csvReader.read();
 			}
-			log.info("# installEC2Prices END0");
 			context.getPRepository().flush();
-
-			log.info("# installEC2Prices END1");
 
 			// Purge the SKUs
 			purgePrices(context);
-			log.info("# installEC2Prices END2");
 			succeed = true;
 		} catch (final IOException | URISyntaxException use) {
 			// Something goes wrong for this region, stop for this region

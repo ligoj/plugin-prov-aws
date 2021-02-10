@@ -71,7 +71,7 @@ public class AwsPriceImportFargate extends
 			0.25d, new double[] { 0.5d, 1d, 2d },
 			// | 0.50 | [1-4]
 			0.5d, new double[] { 1d, 2d, 3d, 4d },
-			// | 2.00 | [4-16]
+			// | 1.00 | [2-8]
 			1d, DoubleStream.iterate(2, n -> n <= 8, n -> n + 1).toArray(),
 			// | 2.00 | [4-16]
 			2d, DoubleStream.iterate(4, n -> n <= 16, n -> n + 1).limit(16).toArray(),

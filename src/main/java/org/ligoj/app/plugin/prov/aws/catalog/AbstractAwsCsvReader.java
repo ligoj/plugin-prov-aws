@@ -30,7 +30,7 @@ public abstract class AbstractAwsCsvReader<T> extends CsvBeanReader<T> {
 	 * @param headers  The header used to parse the CSV file.
 	 * @param beanType The target bean type.
 	 */
-	public AbstractAwsCsvReader(final Reader reader, final String[] headers, final Class<T> beanType) {
+	protected AbstractAwsCsvReader(final Reader reader, final String[] headers, final Class<T> beanType) {
 		super(reader, beanType, headers);
 
 		// Makes visible this entry

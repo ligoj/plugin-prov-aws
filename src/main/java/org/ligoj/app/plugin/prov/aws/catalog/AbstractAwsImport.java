@@ -121,7 +121,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 			nextStep(context, null, 1);
 
 			// Install the prices for each region
-			newStream(eRegions).forEach(r -> mapper.accept(r));
+			newStream(eRegions).forEach(mapper::accept);
 		} finally {
 			// Report
 			log.info("AWS {} import finished", api);

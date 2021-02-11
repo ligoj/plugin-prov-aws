@@ -9,3 +9,4 @@ sep=,
 "UP5ETC3QSW2QZGEY","JRTCKXETXF","UP5ETC3QSW2QZGEY.JRTCKXETXF.6YS6EN2CT7","OnDemand","AWS Fargate - Memory  - EU (Ireland)","2020-12-01","0","Inf","hours","0.0044450000","USD","Compute","AmazonECS","EU (Ireland)","AWS Region","Shared","EU-Fargate-GB-Hours","","","perGB","Amazon EC2 Container Service"
 "KV6ZSE8RSRYWJZVH","JRTCKXETXF","KV6ZSE8RSRYWJZVH.JRTCKXETXF.6YS6EN2CT7","OnDemand","USD 0.0 per GB-Hours for ECS-EC2-GB-Hours in EU (Ireland)","2020-12-01","0","Inf","GB-Hours","0.0000000000","USD","Compute Metering","AmazonECS","EU (Ireland)","AWS Region","","EU-ECS-EC2-GB-Hours","","","perGB","Amazon EC2 Container Service"
 "K4EXFQ5YFQCP98EN","JRTCKXETXF","K4EXFQ5YFQCP98EN.JRTCKXETXF.6YS6EN2CT7","OnDemand","AWS Fargate - vCPU  - EU (Ireland)","2020-12-01","0","Inf","hours","0.0404800000","USD","Compute","AmazonECS","EU (Ireland)","AWS Region","Shared","EU-Fargate-vCPU-Hours:perCPU","","perCPU","","Amazon EC2 Container Service"
+"INVALID"

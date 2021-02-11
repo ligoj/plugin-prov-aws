@@ -18,6 +18,9 @@ public class SavingsPlanIndex {
 
 	private SavingsPlanUrl[] regions;
 
+	/**
+	 * Regional index.
+	 */
 	@Getter
 	@Setter
 	@JsonIgnoreProperties(ignoreUnknown = true)

@@ -100,9 +100,8 @@ public class AwsPriceImportEc2 extends
 		});
 
 		// Install the SPOT EC2 prices
-		installJsonPrices(context, api + "-spot", apiSpotPrice, SpotPrices.class, r -> {
-			newProxy().installSpotPrices(context, r);
-		});
+		installJsonPrices(context, api + "-spot", apiSpotPrice, SpotPrices.class,
+				r -> newProxy().installSpotPrices(context, r));
 	}
 
 	@Override
@@ -149,7 +148,7 @@ public class AwsPriceImportEc2 extends
 			final ProvInstancePriceTerm spotPriceType) {
 		final var region = context.getRegion();
 		final var type = context.getLocalTypes().get(json.getName());
-		final var baseCode = TERM_SPOT_CODE + "-" +region.getName() + "-" + type.getName() + "-";
+		final var baseCode = TERM_SPOT_CODE + "-" + region.getName() + "-" + type.getName() + "-";
 		json.getOsPrices().stream().filter(op -> !StringUtils.startsWithIgnoreCase(op.getPrices().get("USD"), "N/A"))
 				.peek(op -> op.setOs(op.getName().equals("mswin") ? VmOs.WINDOWS : VmOs.LINUX))
 				.filter(op -> isEnabledOs(context, op.getOs())).forEach(op -> {
@@ -188,15 +187,6 @@ public class AwsPriceImportEc2 extends
 	@Override
 	protected void copySavingsPlan(final ProvInstancePrice odPrice, final ProvInstancePrice p) {
 		super.copySavingsPlan(odPrice, p);
-		p.setSoftware(odPrice.getSoftware());
-		p.setTenancy(odPrice.getTenancy());
-	}
-
-	/**
-	 * Install or update a EC2 price
-	 */
-	protected void newSavingPlanPrice(final ProvInstancePrice p, final ProvInstancePrice odPrice) {
-		super.newSavingPlanPrice(p, odPrice);
 		p.setSoftware(odPrice.getSoftware());
 		p.setTenancy(odPrice.getTenancy());
 	}

@@ -10,7 +10,6 @@ import static org.ligoj.app.plugin.prov.quote.instance.QuoteInstanceQuery.builde
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.Reader;
 import java.io.StringReader;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URISyntaxException;
@@ -237,17 +236,17 @@ class AwsPriceImportTest extends AbstractServerTest {
 		new AwsEc2Price().getDrop();
 		new AwsPriceImportEc2().newProxy();
 		new AwsPriceImportRds().newProxy();
+		new AwsPriceImportFargate().newProxy();
 	}
 
 	/**
 	 * Invalid EC2 CSV header
 	 */
 	@Test
-	void installInvalidHeader() {
+	void installInvalidHeader() throws IOException {
+		final var reader = new BufferedReader(new StringReader("any"));
 		Assertions.assertEquals("Premature end of CSV file, headers were not found",
-				Assertions.assertThrows(TechnicalException.class, () -> {
-					new CsvForBeanEc2(new BufferedReader(new StringReader("any"))).toBean(null, (Reader) null);
-				}).getMessage());
+				Assertions.assertThrows(TechnicalException.class, () -> new CsvForBeanEc2(reader)).getMessage());
 	}
 
 	void mock(final String url, final String file) throws IOException {
@@ -327,13 +326,15 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(1, ipRepository.findAllBy("term.code", "SSTZVD8UMFZ4RSTW").size()); // EC2 SP
 		Assertions.assertEquals(1, ipRepository.findAllBy("term.code", "8GU23DFTKP2N43SD").size()); // Compute SP
 		Assertions.assertEquals(50, cpRepository.findAllBy("term.code", "JRTCKXETXF").size()); // Fargate OD
-		Assertions.assertEquals(50, cpRepository.findAllBy("term.code", "ZGC49G7XS8QA54BQ").size()); // Fargate Compute SP
+		Assertions.assertEquals(50, cpRepository.findAllBy("term.code", "ZGC49G7XS8QA54BQ").size()); // Fargate Compute
+																										// SP
 		Assertions.assertEquals(100, cpRepository.findAllBy("term.code", "spot").size()); // Fargate Spot x 2 regions
 		Assertions.assertEquals(20, bpRepository.findAll().size()); // RDS
 
 		Assertions.assertEquals(50, ctRepository.findAll().size()); // Fargate type
 
-		checkImportStatus(81 /* OD */ + 3 /* RI */ + 6 /* spot */ + 2 /* SP */ + 20 /* RDS */ + 200 /* Fargate */ , 77 + 50 /* Fargate */ );
+		checkImportStatus(81 /* OD */ + 3 /* RI */ + 6 /* spot */ + 2 /* SP */ + 20 /* RDS */ + 200 /* Fargate */ ,
+				77 + 50 /* Fargate */ );
 
 		// Check EC2 savings plan
 		final var ec2SsavingsPlanPrice = qiResource.lookup(subscription,

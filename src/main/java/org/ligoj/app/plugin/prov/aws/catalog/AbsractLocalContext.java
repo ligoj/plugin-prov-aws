@@ -139,6 +139,7 @@ public abstract class AbsractLocalContext<T extends AbstractInstanceType, P exte
 	/**
 	 * Release pointers.
 	 */
+	@Override
 	public void cleanup() {
 		this.locals.clear();
 		this.partialCost.clear();

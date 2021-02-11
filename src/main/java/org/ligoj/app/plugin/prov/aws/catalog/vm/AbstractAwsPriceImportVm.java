@@ -342,9 +342,8 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			return newTerm;
 		});
 
-		final var term = context.getLocalPriceTerms().computeIfAbsent(sharedTerm.getCode(),
+		return context.getLocalPriceTerms().computeIfAbsent(sharedTerm.getCode(),
 				c -> ObjectUtils.defaultIfNull(iptRepository.findBy("code", c), sharedTerm));
-		return term;
 	}
 
 	/**
@@ -595,15 +594,16 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			p.setType(type);
 			p.setTerm(term);
 			p.setPeriod(term.getPeriod());
-			newSavingPlanPrice(p, odPrice);
+			newSavingPlanPrice(odPrice, p);
 		});
 	}
 
 	/**
 	 * Install or update a EC2 price
 	 */
-	protected void newSavingPlanPrice(final P p, final P odPrice) {
+	protected void newSavingPlanPrice(final P odPrice, final P p) {
 		p.setLicense(odPrice.getLicense());
+		copySavingsPlan(odPrice, p);
 	}
 
 }

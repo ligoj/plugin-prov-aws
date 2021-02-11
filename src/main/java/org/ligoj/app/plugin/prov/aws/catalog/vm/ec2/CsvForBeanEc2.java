@@ -43,13 +43,12 @@ public class CsvForBeanEc2 extends AbstractCsvForBeanEc2<AwsEc2Price> {
 	@Override
 	public boolean isValidRaw(final List<String> rawValues) {
 		// Only Compute instance [bare metal] for now
-		// Only Tenancy compliant : no "host"/"NA"
-		// No dedicated host for now
+		// Only Tenancy compliant : no "host"
 		// CapacityStatus = 'Used'
 		return rawValues.size() > 49
 				&& ("Compute Instance".equals(rawValues.get(15))
 						|| "Compute Instance (bare metal)".equals(rawValues.get(15)))
-				&& !"NA".equals(rawValues.get(35)) && !"Host".equals(rawValues.get(36)) // Tenancy
+				&& !"Host".equals(rawValues.get(36)) // // No dedicated Host
 				&& "Used".equals(StringUtils.defaultIfBlank(rawValues.get(49), "Used"));
 	}
 

@@ -146,6 +146,9 @@ public class AwsPriceImportFargate extends
 		return true;
 	}
 
+	/**
+	 * Create a rate code based on the original rate code and resource configuration.
+	 */
 	private String toPriceCode(final String rateCode, final double cpu, final double ram) {
 		return rateCode + "|" + cpu + "|" + ram;
 	}
@@ -154,8 +157,6 @@ public class AwsPriceImportFargate extends
 			final double ram) {
 		final var code = toPriceCode(csv.getRateCode(), cpu, ram);
 		final var price = context.getLocals().computeIfAbsent(code, context::newPrice);
-
-		// Update the price in force mode
 		return copyAsNeeded(context, price, p -> copy(context, csv, p, installInstanceType(context, cpu, ram),
 				installInstancePriceTerm(context, csv)));
 	}
@@ -269,14 +270,13 @@ public class AwsPriceImportFargate extends
 			final Set<SpotPrice> prices) {
 		log.info("AWS Fargate Spot prices@{}...", region.getName());
 		nextStep(gContext.getNode(), region.getName(), 1);
-		// final var region = locationRepository.findByName(gContext.getNode().getId(), r.getRegion());
 		final var costRam = findSpotCost(region, prices, "GB-Hours");
 		final var costCpu = findSpotCost(region, prices, "vCPU-Hours");
 
 		// Get previous prices for this location
 		final var context = newContext(gContext, region, TERM_SPOT, TERM_SPOT);
 
-		// INstall the spot term as needed
+		// Install the spot term as needed
 		final var term = newSpotInstanceTerm(context);
 
 		final var csvCpu = new AwsFargatePrice();
@@ -292,9 +292,7 @@ public class AwsPriceImportFargate extends
 	private void installFargatePrice(final LocalFargateContext context, final AwsFargatePrice csvCpu,
 			final String ramRateCode, final double costRam, final double costCpu) {
 		CPU_TO_RAM.forEach((cpu, ramGbA) -> {
-			csvCpu.setCostCpu(costCpu);
 			Arrays.stream(ramGbA).forEach(ram -> {
-				csvCpu.setCostRam(costRam);
 				final var price = newPrice(context, csvCpu, cpu, ram);
 				final var cost = (costCpu * cpu + ram * costRam) * context.getHoursMonth();
 				saveAsNeeded(context, price, cost, context.getPRepository());

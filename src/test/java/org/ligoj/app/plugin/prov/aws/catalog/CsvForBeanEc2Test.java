@@ -17,38 +17,36 @@ import org.springframework.core.io.ClassPathResource;
  */
 class CsvForBeanEc2Test {
 
+	private void assertReadNull(final String file) throws IOException {
+		final BufferedReader reader = new BufferedReader(
+				new InputStreamReader(new ClassPathResource(file).getInputStream()));
+		Assertions.assertNull(new CsvForBeanEc2(reader).read());
+	}
+
 	@Test
 	void readNotCompute() throws IOException {
-		final BufferedReader reader = new BufferedReader(new InputStreamReader(
-				new ClassPathResource("mock-server/aws/index-small-not-compute.csv").getInputStream()));
-		Assertions.assertNull(new CsvForBeanEc2(reader).read());
+		assertReadNull("mock-server/aws/index-ec2-small-not-compute.csv");
 	}
 
 	@Test
 	void readTooFewData() throws IOException {
-		final BufferedReader reader = new BufferedReader(new InputStreamReader(
-				new ClassPathResource("mock-server/aws/index-small-too-few.csv").getInputStream()));
-		Assertions.assertNull(new CsvForBeanEc2(reader).read());
+		assertReadNull("mock-server/aws/index-ec2-small-too-few.csv");
 	}
 
 	@Test
 	void readDedicatedHost() throws IOException {
-		final BufferedReader reader = new BufferedReader(new InputStreamReader(
-				new ClassPathResource("mock-server/aws/index-small-dedicated-host.csv").getInputStream()));
-		Assertions.assertNull(new CsvForBeanEc2(reader).read());
+		assertReadNull("mock-server/aws/index-ec2-small-dedicated-host.csv");
 	}
 
 	@Test
 	void readNotUsed() throws IOException {
-		final BufferedReader reader = new BufferedReader(new InputStreamReader(
-				new ClassPathResource("mock-server/aws/index-small-not-used.csv").getInputStream()));
-		Assertions.assertNull(new CsvForBeanEc2(reader).read());
+		assertReadNull("mock-server/aws/index-ec2-small-not-used.csv");
 	}
 
 	@Test
 	void readNAOs() throws IOException {
 		final BufferedReader reader = new BufferedReader(new InputStreamReader(
-				new ClassPathResource("mock-server/aws/index-small-compute.csv").getInputStream()));
+				new ClassPathResource("mock-server/aws/index-ec2-small-compute.csv").getInputStream()));
 		CsvForBeanEc2 beanEc2 = new CsvForBeanEc2(reader);
 		Assertions.assertEquals("HB5V2X8TXQUTDZBV", beanEc2.read().getSku());
 		Assertions.assertEquals("HB5V2X8TXQUTDZBW", beanEc2.read().getSku());
@@ -57,7 +55,7 @@ class CsvForBeanEc2Test {
 	@Test
 	void read() throws IOException {
 		final BufferedReader reader = new BufferedReader(
-				new InputStreamReader(new ClassPathResource("mock-server/aws/index-small-ok.csv").getInputStream()));
+				new InputStreamReader(new ClassPathResource("mock-server/aws/index-ec2-small-ok.csv").getInputStream()));
 		Assertions.assertNotNull(new CsvForBeanEc2(reader).read());
 	}
 }

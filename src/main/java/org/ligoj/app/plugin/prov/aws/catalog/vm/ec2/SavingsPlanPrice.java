@@ -20,6 +20,9 @@ public class SavingsPlanPrice {
 
 	private SavingsPlanTerms terms;
 
+	/**
+	 * Term definition
+	 */
 	@Getter
 	@Setter
 	@JsonIgnoreProperties(ignoreUnknown = true)
@@ -27,6 +30,9 @@ public class SavingsPlanPrice {
 		private Collection<SavingsPlanTerm> savingsPlan;
 	}
 
+	/**
+	 * Rates
+	 */
 	@Getter
 	@Setter
 	@JsonIgnoreProperties(ignoreUnknown = true)
@@ -36,7 +42,10 @@ public class SavingsPlanPrice {
 		private SavingsPlanLease leaseContractLength;
 		private Collection<SavingsPlanRate> rates;
 	}
-
+	
+	/**
+	 * Lease duration.
+	 */
 	@Getter
 	@Setter
 	@JsonIgnoreProperties(ignoreUnknown = true)
@@ -44,6 +53,9 @@ public class SavingsPlanPrice {
 		private int duration;
 	}
 
+	/**
+	 * Rate details.
+	 */
 	@Getter
 	@Setter
 	@JsonIgnoreProperties(ignoreUnknown = true)
@@ -54,6 +66,9 @@ public class SavingsPlanPrice {
 		private SavingsPlanDRate discountedRate;
 	}
 
+	/**
+	 * Actual USD price.
+	 */
 	@Getter
 	@Setter
 	@JsonIgnoreProperties(ignoreUnknown = true)

@@ -53,7 +53,7 @@ public abstract class AbstractCsvForBeanEc2<P extends AbstractAwsVmPrice> extend
 	 * @param type    Target EC2 price class.
 	 * @throws IOException When CSV content cannot be read.
 	 */
-	public AbstractCsvForBeanEc2(final BufferedReader reader, Map<String, String> mapping, final Class<P> type)
+	protected AbstractCsvForBeanEc2(final BufferedReader reader, Map<String, String> mapping, final Class<P> type)
 			throws IOException {
 		super(reader, Stream.of(HEADERS_MAPPING, mapping).flatMap(m -> m.entrySet().stream())
 				.collect(Collectors.toMap(Entry::getKey, Entry::getValue)), type);

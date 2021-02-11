@@ -37,18 +37,13 @@ public abstract class AbstractAwsPriceImportVmOs<T extends AbstractInstanceType,
 		extends AbstractAwsPriceImportVm<T, P, C, Q, X> {
 
 	@Override
-	protected void newSavingPlanPrice(final P p, final P odPrice) {
-		super.newSavingPlanPrice(p, odPrice);
-		p.setOs(odPrice.getOs());
-	}
-
-	@Override
 	protected void copy(final C csv, final P p) {
 		p.setOs(toVmOs(csv.getOs()));
 	}
 
 	@Override
 	protected void copySavingsPlan(final P odPrice, final P p) {
+		super.copySavingsPlan(odPrice, p);
 		p.setOs(odPrice.getOs());
 	}
 

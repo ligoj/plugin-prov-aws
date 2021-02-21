@@ -31,6 +31,8 @@ import lombok.extern.slf4j.Slf4j;
  * @param <P> The price's type.
  * @param <C> The JSON price type.
  * @param <Q> The quote type.
+ * @param <R> The CSV bean reader type.
+ * @param <X> The context type.
  */
 @Slf4j
 public abstract class AbstractAwsPriceImportVmOs<T extends AbstractInstanceType, P extends AbstractTermPriceVmOs<T>, C extends AbstractAwsVmOsPrice, Q extends AbstractQuoteVmOs<P>, X extends AbsractLocalContext<T, P, C, Q>, R extends AbstractCsvForBeanEc2<C>>
@@ -47,6 +49,13 @@ public abstract class AbstractAwsPriceImportVmOs<T extends AbstractInstanceType,
 		p.setOs(odPrice.getOs());
 	}
 
+	/**
+	 * Return a CSV price reader instance.
+	 * 
+	 * @param reader The input stream reader.
+	 * @return A CSV price reader instance
+	 * @throws IOException When the content cannot be read.
+	 */
 	protected abstract R newReader(BufferedReader reader) throws IOException;
 
 	/**

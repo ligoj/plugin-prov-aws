@@ -44,6 +44,12 @@ import lombok.extern.slf4j.Slf4j;
 public class AwsPriceImportFargate extends
 		AbstractAwsPriceImportVmOs<ProvContainerType, ProvContainerPrice, AwsFargatePrice, ProvQuoteContainer, LocalFargateContext, CsvForBeanFargate> {
 
+	private static final String VCPU_HOURS = "vCPU-Hours";
+
+	private static final String VCPU_HOURS_PER = VCPU_HOURS + ":perCPU";
+
+	private static final String GB_HOURS = "GB-Hours";
+
 	/**
 	 * The EC2 reserved and on-demand price end-point, a CSV file, accepting the region code with {@link Formatter}
 	 */
@@ -55,14 +61,19 @@ public class AwsPriceImportFargate extends
 	private static final String FARGATE_PRICES_SPOT = "https://dftu77xade0tc.cloudfront.net/fargate-spot-prices.json";
 
 	/**
+	 * The API name.
+	 */
+	private static final String API_NAME = "fargate";
+
+	/**
 	 * Configuration key used for {@link #FARGATE_PRICES}
 	 */
-	public static final String CONF_URL_FARGATE_PRICES = String.format(CONF_URL_API_PRICES, "fargate");
+	public static final String CONF_URL_FARGATE_PRICES = String.format(CONF_URL_API_PRICES, API_NAME);
 
 	/**
 	 * Configuration key used for {@link #EC2_PRICES_SPOT}
 	 */
-	public static final String CONF_URL_FARGATE_PRICES_SPOT = String.format(CONF_URL_API_PRICES, "fargate-spot");
+	public static final String CONF_URL_FARGATE_PRICES_SPOT = String.format(CONF_URL_API_PRICES, API_NAME + "-spot");
 
 	private static final Map<Double, double[]> CPU_TO_RAM = Map.of(
 			// | .CPU | Memory Values |
@@ -80,9 +91,8 @@ public class AwsPriceImportFargate extends
 
 	@Override
 	public void install(final UpdateContext context) throws IOException {
-		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("fargate"));
-		installFargate(context, context.getNode(), "fargate",
-				configuration.get(CONF_URL_FARGATE_PRICES, FARGATE_PRICES),
+		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase(API_NAME));
+		installFargate(context, context.getNode(), API_NAME, configuration.get(CONF_URL_FARGATE_PRICES, FARGATE_PRICES),
 				configuration.get(CONF_URL_FARGATE_PRICES_SPOT, FARGATE_PRICES_SPOT));
 	}
 
@@ -110,8 +120,8 @@ public class AwsPriceImportFargate extends
 			final Collection<SavingsPlanRate> rates) {
 		final var fargatePrices = rates.stream().filter(r -> r.getDiscountedUsageType().contains("Fargate"))
 				.collect(Collectors.toList());
-		final var rateCpu = findSavingsPlanCost(fargatePrices, "vCPU-Hours:perCPU");
-		final var rateRam = findSavingsPlanCost(fargatePrices, "GB-Hours");
+		final var rateRam = findSavingsPlanCost(fargatePrices, GB_HOURS);
+		final var rateCpu = findSavingsPlanCost(fargatePrices, VCPU_HOURS_PER);
 		if (ObjectUtils.allNotNull(rateCpu, rateRam)) {
 			installSavingsPlanPrices(context, term, rateCpu, rateRam, previousOd, odCode);
 		}
@@ -136,12 +146,12 @@ public class AwsPriceImportFargate extends
 		context.getPartialCost().put(csv.getUsageType().replaceFirst(".*Fargate-", ""), csv);
 		if (context.getPartialCost().size() == 2) {
 			// All parts are read
-			final var csvRam = context.getPartialCost().get("GB-Hours");
-			final var csvCpu = context.getPartialCost().get("vCPU-Hours:perCPU");
+			final var csvRam = context.getPartialCost().get(GB_HOURS);
+			final var csvCpu = context.getPartialCost().get(VCPU_HOURS_PER);
 			final var costRam = csvRam.getPricePerUnit();
 			final var costCpu = csvCpu.getPricePerUnit();
 			context.getPrices().add(csvCpu.getSku());
-			installFargatePrice(context, csvCpu, csvRam.getRateCode(), costRam, costCpu);
+			installFargatePrice(context, csvCpu, costRam, costCpu);
 		}
 		return true;
 	}
@@ -168,7 +178,7 @@ public class AwsPriceImportFargate extends
 
 	protected ProvContainerType installInstanceType(final LocalFargateContext context, final double cpu,
 			final double ramGb) {
-		final var sharedType = context.getPreviousTypes().computeIfAbsent("fargate-" + cpu + "-" + ramGb, code -> {
+		final var sharedType = context.getPreviousTypes().computeIfAbsent(API_NAME + "-" + cpu + "-" + ramGb, code -> {
 			final var t = context.newType();
 			t.setNode(context.getNode());
 			t.setCode(code);
@@ -266,12 +276,12 @@ public class AwsPriceImportFargate extends
 		return cost;
 	}
 
-	public void installSpotPrices(final UpdateContext gContext, final ProvLocation region,
+	private void installSpotPrices(final UpdateContext gContext, final ProvLocation region,
 			final Set<SpotPrice> prices) {
 		log.info("AWS Fargate Spot prices@{}...", region.getName());
 		nextStep(gContext.getNode(), region.getName(), 1);
-		final var costRam = findSpotCost(region, prices, "GB-Hours");
-		final var costCpu = findSpotCost(region, prices, "vCPU-Hours");
+		final var costRam = findSpotCost(region, prices, GB_HOURS);
+		final var costCpu = findSpotCost(region, prices, VCPU_HOURS);
 
 		// Get previous prices for this location
 		final var context = newContext(gContext, region, TERM_SPOT, TERM_SPOT);
@@ -282,22 +292,20 @@ public class AwsPriceImportFargate extends
 		final var csvCpu = new AwsFargatePrice();
 		csvCpu.setTermType(term.getName());
 		csvCpu.setOfferTermCode(term.getCode());
-		csvCpu.setRateCode(term.getCode() + "." + region.getName() + ".fargate");
-		installFargatePrice(context, csvCpu, null, costRam, costCpu);
+		csvCpu.setRateCode(term.getCode() + "." + region.getName() + "." + API_NAME);
+		installFargatePrice(context, csvCpu, costRam, costCpu);
 
 		// Purge the SKUs
 		purgePrices(context);
 	}
 
 	private void installFargatePrice(final LocalFargateContext context, final AwsFargatePrice csvCpu,
-			final String ramRateCode, final double costRam, final double costCpu) {
-		CPU_TO_RAM.forEach((cpu, ramGbA) -> {
-			Arrays.stream(ramGbA).forEach(ram -> {
-				final var price = newPrice(context, csvCpu, cpu, ram);
-				final var cost = (costCpu * cpu + ram * costRam) * context.getHoursMonth();
-				saveAsNeeded(context, price, cost, context.getPRepository());
-			});
-		});
+			final double costRam, final double costCpu) {
+		CPU_TO_RAM.forEach((cpu, ramGbA) -> Arrays.stream(ramGbA).forEach(ram -> {
+			final var price = newPrice(context, csvCpu, cpu, ram);
+			final var cost = (costCpu * cpu + ram * costRam) * context.getHoursMonth();
+			saveAsNeeded(context, price, cost, context.getPRepository());
+		}));
 	}
 
 	@Override

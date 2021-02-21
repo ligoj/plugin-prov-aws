@@ -44,6 +44,7 @@ import lombok.extern.slf4j.Slf4j;
  * @param <P> The price's type.
  * @param <C> The JSON price type.
  * @param <Q> The quote type.
+ * @param <X> The context type.
  */
 @Slf4j
 public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P extends AbstractTermPrice<T>, C extends AbstractAwsVmPrice, Q extends AbstractQuoteVm<P>, X extends AbsractLocalContext<T, P, C, Q>>

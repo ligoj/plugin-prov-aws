@@ -32,7 +32,7 @@ public class AwsPriceImport extends AbstractImportCatalogResource {
 
 	@Autowired
 	private AwsPriceImportEc2 ec2;
-	
+
 	@Autowired
 	private AwsPriceImportFargate fargate;
 

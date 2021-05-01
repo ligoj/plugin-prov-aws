@@ -21,7 +21,7 @@ import lombok.Setter;
 @Setter
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class EbsRegion extends AwsRegionPrices {
-	
+
 	/**
 	 * EBS types and corresponding prices
 	 */

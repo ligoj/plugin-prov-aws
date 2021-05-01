@@ -18,7 +18,7 @@ import org.ligoj.bootstrap.core.resource.TechnicalException;
 
 /**
  * Read AWS CSV input, skipping the AWS headers and non instance type rows.
- * 
+ *
  * @param <T> The target bean type.
  */
 public abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {

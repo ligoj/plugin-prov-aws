@@ -42,7 +42,7 @@ public class SavingsPlanPrice {
 		private SavingsPlanLease leaseContractLength;
 		private Collection<SavingsPlanRate> rates;
 	}
-	
+
 	/**
 	 * Lease duration.
 	 */

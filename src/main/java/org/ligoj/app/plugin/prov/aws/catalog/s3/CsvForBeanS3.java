@@ -32,11 +32,9 @@ public class CsvForBeanS3 extends AbstractAwsCsvForBean<AwsS3Price> {
 
 	/**
 	 * Build the reader parsing the CSV file from AWS to build {@link AwsS3Price} objects.
-	 * 
-	 * @param reader
-	 *            The original AWS CSV input.
-	 * @throws IOException
-	 *             When no valid CSV header can be found.
+	 *
+	 * @param reader The original AWS CSV input.
+	 * @throws IOException When no valid CSV header can be found.
 	 */
 	public CsvForBeanS3(final BufferedReader reader) throws IOException {
 		super(reader, HEADERS_MAPPING, AwsS3Price.class);

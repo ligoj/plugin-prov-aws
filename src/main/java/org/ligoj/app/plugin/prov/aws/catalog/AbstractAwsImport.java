@@ -43,7 +43,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 
 	/**
 	 * Return a parallel stream if allowed.
-	 * 
+	 *
 	 * @param <T>        The stream item type.
 	 * @param collection The collection to stream.
 	 * @return The parallel or sequential stream.
@@ -54,7 +54,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 
 	/**
 	 * Convert the JSON name to the API name and check this storage is exists
-	 * 
+	 *
 	 * @param <T>     The storage type.
 	 * @param context The update context.
 	 * @param storage The storage to evaluate.
@@ -67,7 +67,8 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 
 	@Override
 	protected int getWorkload(ImportCatalogStatus status) {
-		// NB regions * 7 (EC2 + Spot + RDS + EC2 Savings Plan prices + Fargate  + Fargate Savings Plan prices + Fargate spot)
+		// NB regions * 7 (EC2 + Spot + RDS + EC2 Savings Plan prices + Fargate + Fargate Savings Plan prices + Fargate
+		// spot)
 		// + 3 global prices (S3+EBS+EFS)
 		// + 1 (EC2 spot configuration)
 		// + 1 (Fargate spot configuration)
@@ -89,7 +90,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 
 	/**
 	 * Install AWS prices from a JSON file.
-	 * 
+	 *
 	 * @param <R>      The region prices wrapper type.
 	 * @param <J>      The region price type.
 	 *

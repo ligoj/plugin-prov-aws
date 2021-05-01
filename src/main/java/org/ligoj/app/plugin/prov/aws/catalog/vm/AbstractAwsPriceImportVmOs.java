@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * The compute part of AWS catalog import.
- * 
+ *
  * @param <T> The instance type's type.
  * @param <P> The price's type.
  * @param <C> The JSON price type.
@@ -51,7 +51,7 @@ public abstract class AbstractAwsPriceImportVmOs<T extends AbstractInstanceType,
 
 	/**
 	 * Return a CSV price reader instance.
-	 * 
+	 *
 	 * @param reader The input stream reader.
 	 * @return A CSV price reader instance
 	 * @throws IOException When the content cannot be read.
@@ -60,7 +60,7 @@ public abstract class AbstractAwsPriceImportVmOs<T extends AbstractInstanceType,
 
 	/**
 	 * Create a new transactional (READ_UNCOMMITTED) process for OnDemand/SPE prices in a specific region.
-	 * 
+	 *
 	 * @param gContext  The current global context.
 	 * @param gRegion   The region.
 	 * @param final     The API name
@@ -142,7 +142,7 @@ public abstract class AbstractAwsPriceImportVmOs<T extends AbstractInstanceType,
 
 	/**
 	 * Return the proxy of this class.
-	 * 
+	 *
 	 * @return The proxy of this class.
 	 */
 	public abstract AbstractAwsPriceImportVmOs<T, P, C, Q, X, R> newProxy();

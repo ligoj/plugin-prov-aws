@@ -13,7 +13,7 @@ import org.ligoj.bootstrap.core.csv.CsvReader;
 
 /**
  * Read CSV reader skipping the useless rows.
- * 
+ *
  * @param <T> Target bean type.
  */
 public abstract class AbstractAwsCsvReader<T> extends CsvBeanReader<T> {

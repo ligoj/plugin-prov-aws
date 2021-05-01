@@ -20,7 +20,7 @@ import org.ligoj.bootstrap.core.csv.CsvBeanReader;
 
 /**
  * Read AWS EC2 CSV input, skipping the AWS headers and non instance type rows.
- * 
+ *
  * @param <P> Target EC2 price type.
  */
 public abstract class AbstractCsvForBeanEc2<P extends AbstractAwsVmPrice> extends AbstractAwsCsvForBean<P> {
@@ -45,8 +45,8 @@ public abstract class AbstractCsvForBeanEc2<P extends AbstractAwsVmPrice> extend
 	}
 
 	/**
-	 * Build the reader parsing the CSV file from AWS to build {@link AwsEc2Price}
-	 * instances. Non AWS instances data are skipped, and headers are ignored.
+	 * Build the reader parsing the CSV file from AWS to build {@link AwsEc2Price} instances. Non AWS instances data are
+	 * skipped, and headers are ignored.
 	 *
 	 * @param reader  The original AWS CSV input.
 	 * @param mapping Additional header mapping.

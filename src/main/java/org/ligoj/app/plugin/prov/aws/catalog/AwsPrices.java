@@ -12,7 +12,7 @@ import lombok.Setter;
 
 /**
  * AWS prices JSON file structure.
- * 
+ *
  * @param <T> The region pricing container type.
  */
 @Getter

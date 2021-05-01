@@ -39,7 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * The compute part of AWS catalog import.
- * 
+ *
  * @param <T> The instance type's type.
  * @param <P> The price's type.
  * @param <C> The JSON price type.
@@ -80,7 +80,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 
 	/**
 	 * Return <code>true</code> when this price corresponds to a reserved price with up-front part.
-	 * 
+	 *
 	 * @param csv The current CSV price entry.
 	 * @return <code>true</code> when this price corresponds to a reserved price with up-front part.
 	 */
@@ -151,7 +151,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 
 	/**
 	 * Install or update a price.
-	 * 
+	 *
 	 * @param context The current context to handle lazy sub-entities creation.
 	 * @param csv     The current CSV entry.
 	 * @return The new updated price entity.
@@ -166,7 +166,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 
 	/**
 	 * Copy a CSV price entry to a price entity.
-	 * 
+	 *
 	 * @param csv The current CSV entry.
 	 * @param p   The target price entity.
 	 */
@@ -174,7 +174,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 
 	/**
 	 * Copy a CSV price entry to a price entity.
-	 * 
+	 *
 	 * @param context The current context to handle lazy sub-entities creation.
 	 * @param csv     The current CSV entry.
 	 * @param p       The target price entity.
@@ -287,7 +287,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 
 	/**
 	 * Remove SKU that were present in the context and not refresh with this update.
-	 * 
+	 *
 	 * @param context The local update context.
 	 */
 	protected void purgePrices(final X context) {
@@ -296,7 +296,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 
 	/**
 	 * Build a new instance price term from the CSV line.
-	 * 
+	 *
 	 * @param context The local update context.
 	 * @param csv     The CSV price row.
 	 * @return The updated {@link ProvInstancePriceTerm} corresponding to the CSV row.
@@ -550,7 +550,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 
 	/**
 	 * Return the rate code without SKU part of the current On Demand session.
-	 * 
+	 *
 	 * @param previousOd The previous On Demand prices.
 	 * @return The rate code without SKU part of the current On Demand session and looks like: <code>.JRTCKXETXF</code>.
 	 *         <code>null</code> when not found.

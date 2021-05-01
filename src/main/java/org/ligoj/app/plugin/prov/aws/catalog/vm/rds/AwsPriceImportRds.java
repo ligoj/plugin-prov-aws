@@ -77,7 +77,7 @@ public class AwsPriceImportRds extends
 
 	/**
 	 * Return the proxy of this class.
-	 * 
+	 *
 	 * @return The proxy of this class.
 	 */
 	public AwsPriceImportRds newProxy() {

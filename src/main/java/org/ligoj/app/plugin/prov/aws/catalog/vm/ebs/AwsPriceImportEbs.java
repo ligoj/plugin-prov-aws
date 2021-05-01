@@ -47,17 +47,16 @@ public class AwsPriceImportEbs extends AbstractAwsImport implements ImportCatalo
 		context.getMapSpotToNewRegion().putAll(toMap("spot-to-new-region.json", MAP_STR));
 
 		// Install EBS prices
-		installJsonPrices(context, "ebs", configuration.get(CONF_URL_EBS_PRICES, EBS_PRICES), EbsPrices.class,
-				r -> {
-					// Get previous prices for this location
-					final var region = locationRepository.findByName(context.getNode().getId(), r.getRegion());
-					final var previous = spRepository.findAll(node.getId(), region.getName())
-							.stream().collect(Collectors.toMap(p -> p.getType().getId(), Function.identity()));
-					r.getTypes().stream().filter(t -> containsKey(context, t))
-							.forEach(t -> t.getValues().stream().filter(j -> !"perPIOPSreq".equals(j.getRate()))
-									.findFirst().ifPresent(j -> installStoragePrice(context, j,
-											context.getStorageTypes().get(t.getName()), region, previous)));
-				});
+		installJsonPrices(context, "ebs", configuration.get(CONF_URL_EBS_PRICES, EBS_PRICES), EbsPrices.class, r -> {
+			// Get previous prices for this location
+			final var region = locationRepository.findByName(context.getNode().getId(), r.getRegion());
+			final var previous = spRepository.findAll(node.getId(), region.getName()).stream()
+					.collect(Collectors.toMap(p -> p.getType().getId(), Function.identity()));
+			r.getTypes().stream().filter(t -> containsKey(context, t))
+					.forEach(t -> t.getValues().stream().filter(j -> !"perPIOPSreq".equals(j.getRate())).findFirst()
+							.ifPresent(j -> installStoragePrice(context, j, context.getStorageTypes().get(t.getName()),
+									region, previous)));
+		});
 	}
 
 	private void installStorageTypes(final UpdateContext context) throws IOException {

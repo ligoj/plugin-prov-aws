@@ -31,10 +31,8 @@ public class CsvForBeanEc2 extends AbstractCsvForBeanEc2<AwsEc2Price> {
 	 * Build the reader parsing the CSV file from AWS to build {@link AwsEc2Price} instances. Non AWS instances data are
 	 * skipped, and headers are ignored.
 	 *
-	 * @param reader
-	 *            The original AWS CSV input.
-	 * @throws IOException
-	 *             When CSV content cannot be read.
+	 * @param reader The original AWS CSV input.
+	 * @throws IOException When CSV content cannot be read.
 	 */
 	public CsvForBeanEc2(final BufferedReader reader) throws IOException {
 		super(reader, HEADERS_MAPPING, AwsEc2Price.class);

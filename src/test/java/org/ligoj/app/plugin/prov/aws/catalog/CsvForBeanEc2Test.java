@@ -18,7 +18,7 @@ import org.springframework.core.io.ClassPathResource;
 class CsvForBeanEc2Test {
 
 	private void assertReadNull(final String file) throws IOException {
-		final BufferedReader reader = new BufferedReader(
+		final var reader = new BufferedReader(
 				new InputStreamReader(new ClassPathResource(file).getInputStream()));
 		Assertions.assertNull(new CsvForBeanEc2(reader).read());
 	}
@@ -45,17 +45,17 @@ class CsvForBeanEc2Test {
 
 	@Test
 	void readNAOs() throws IOException {
-		final BufferedReader reader = new BufferedReader(new InputStreamReader(
+		final var reader = new BufferedReader(new InputStreamReader(
 				new ClassPathResource("mock-server/aws/index-ec2-small-compute.csv").getInputStream()));
-		CsvForBeanEc2 beanEc2 = new CsvForBeanEc2(reader);
+		var beanEc2 = new CsvForBeanEc2(reader);
 		Assertions.assertEquals("HB5V2X8TXQUTDZBV", beanEc2.read().getSku());
 		Assertions.assertEquals("HB5V2X8TXQUTDZBW", beanEc2.read().getSku());
 	}
 
 	@Test
 	void read() throws IOException {
-		final BufferedReader reader = new BufferedReader(
-				new InputStreamReader(new ClassPathResource("mock-server/aws/index-ec2-small-ok.csv").getInputStream()));
+		final var reader = new BufferedReader(new InputStreamReader(
+				new ClassPathResource("mock-server/aws/index-ec2-small-ok.csv").getInputStream()));
 		Assertions.assertNotNull(new CsvForBeanEc2(reader).read());
 	}
 }

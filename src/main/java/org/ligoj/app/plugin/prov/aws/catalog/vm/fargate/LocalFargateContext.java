@@ -22,7 +22,7 @@ public class LocalFargateContext
 
 	/**
 	 * Context from the parent.
-	 * 
+	 *
 	 * @param parent       The parent context.
 	 * @param ptRepository The term repository.
 	 * @param tRepository  The type repository.

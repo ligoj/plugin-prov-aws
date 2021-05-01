@@ -36,7 +36,7 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * The provisioning price service for AWS. Manage install or update of prices.
- * 
+ *
  * @see https://aws.amazon.com/fargate/pricing/
  */
 @Slf4j
@@ -225,7 +225,7 @@ public class AwsPriceImportFargate extends
 
 	/**
 	 * Install AWS Spot prices from a JSON file.
-	 * 
+	 *
 	 * @param context  The update context.
 	 * @param endpoint The prices end-point JSON URL.
 	 * @throws IOException When JSON content cannot be parsed.

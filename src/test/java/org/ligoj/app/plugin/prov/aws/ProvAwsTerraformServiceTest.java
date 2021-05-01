@@ -80,7 +80,7 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 
 	@Test
 	void writeSimpleCentos() throws IOException {
-		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.CENTOS, null, 1, 1, 10, 8);
+		final var instance = newQuoteInstance("InstanceA", VmOs.CENTOS, null, 1, 1, 10, 8);
 		write(subscription, newQuoteVo(instance));
 		assertEquals("instance-centos.tf", "eu-west-3/vm-instancea.tf");
 		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-centos.tf").exists());
@@ -88,7 +88,7 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 
 	@Test
 	void writeSimpleAmz() throws IOException {
-		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 1, 10, 8);
+		final var instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 1, 10, 8);
 		write(subscription, newQuoteVo(instance));
 		assertEquals("instance-amazon.tf", "eu-west-3/vm-instancea.tf");
 		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
@@ -100,7 +100,7 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 
 	@Test
 	void writeSimpleAmzRootOnly() throws IOException {
-		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 1, 10);
+		final var instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 1, 10);
 		write(subscription, newQuoteVo(instance));
 		assertEquals("instance-amazon-1-device.tf", "eu-west-3/vm-instancea.tf");
 		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
@@ -108,7 +108,7 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 
 	@Test
 	void writeSimpleAmz3Devices() throws IOException {
-		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 1, 10, 11, 12);
+		final var instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 1, 10, 11, 12);
 		write(subscription, newQuoteVo(instance));
 		assertEquals("instance-amazon-3-devices.tf", "eu-west-3/vm-instancea.tf");
 		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
@@ -116,7 +116,7 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 
 	@Test
 	void writeSimpleWindows() throws IOException {
-		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.WINDOWS, null, 1, 1, 10, 8);
+		final var instance = newQuoteInstance("InstanceA", VmOs.WINDOWS, null, 1, 1, 10, 8);
 		write(subscription, newQuoteVo(instance));
 		assertEquals("instance-windows.tf", "eu-west-3/vm-instancea.tf");
 		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-windows.tf").exists());
@@ -124,7 +124,7 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 
 	@Test
 	void writeSimpleRHEL() throws IOException {
-		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.RHEL, null, 1, 1, 10, 8);
+		final var instance = newQuoteInstance("InstanceA", VmOs.RHEL, null, 1, 1, 10, 8);
 		write(subscription, newQuoteVo(instance));
 		assertEquals("instance-rhel.tf", "eu-west-3/vm-instancea.tf");
 		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-rhel.tf").exists());
@@ -132,7 +132,7 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 
 	@Test
 	void writeSpotAmz() throws IOException {
-		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, 0.1, 1, 1, 10, 8);
+		final var instance = newQuoteInstance("InstanceA", VmOs.LINUX, 0.1, 1, 1, 10, 8);
 		write(subscription, newQuoteVo(instance));
 		assertEquals("instance-spot.tf", "eu-west-3/ephemeral-instancea.tf");
 		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
@@ -143,7 +143,7 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 
 	@Test
 	void writeAutoScaling() throws IOException {
-		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 2, 10, 8);
+		final var instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 2, 10, 8);
 		write(subscription, newQuoteVo(instance));
 		assertEquals("instance-auto_scaling.tf", "eu-west-3/auto_scaling-instancea.tf");
 		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
@@ -151,7 +151,7 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 
 	@Test
 	void writeAutoScaling1Device() throws IOException {
-		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 2, 10);
+		final var instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 2, 10);
 		write(subscription, newQuoteVo(instance));
 		assertEquals("instance-auto_scaling-1-device.tf", "eu-west-3/auto_scaling-instancea.tf");
 		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
@@ -159,7 +159,7 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 
 	@Test
 	void writeAutoScaling3Devices() throws IOException {
-		final ProvQuoteInstance instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 2, 10, 11, 12);
+		final var instance = newQuoteInstance("InstanceA", VmOs.LINUX, null, 1, 2, 10, 11, 12);
 		write(subscription, newQuoteVo(instance));
 		assertEquals("instance-auto_scaling-3-devices.tf", "eu-west-3/auto_scaling-instancea.tf");
 		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
@@ -167,7 +167,7 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 
 	@Test
 	void writeAutoScalingUnbound() throws IOException {
-		final ProvQuoteInstance instanceA = newQuoteInstance("InstanceA", VmOs.LINUX, null, 2, null, 10, 8);
+		final var instanceA = newQuoteInstance("InstanceA", VmOs.LINUX, null, 2, null, 10, 8);
 		write(subscription, newQuoteVo(instanceA));
 		assertEquals("instance-auto_scaling-unbound.tf", "eu-west-3/auto_scaling-instancea.tf");
 		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
@@ -175,12 +175,12 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 
 	@Test
 	void writeMutliple() throws IOException {
-		final ProvQuoteInstance instanceA = newQuoteInstance("InstanceEC21", VmOs.LINUX, null, 1, 1, 10, 8);
-		final ProvQuoteInstance instanceB = newQuoteInstance("InstanceEC22", VmOs.WINDOWS, null, 1, 1, 10, 8);
-		final ProvQuoteInstance instanceC = newQuoteInstance("InstanceSpot1", VmOs.LINUX, 0.1, 1, 1, 10, 8);
-		final ProvQuoteInstance instanceD = newQuoteInstance("InstanceSpot2", VmOs.WINDOWS, 0.1, 1, 1, 10, 8);
-		final ProvQuoteInstance instanceE = newQuoteInstance("InstanceAS1", VmOs.LINUX, null, 1, 2, 10, 8);
-		final ProvQuoteInstance instanceF = newQuoteInstance("InstanceAS2", VmOs.WINDOWS, null, 1, null, 10, 8);
+		final var instanceA = newQuoteInstance("InstanceEC21", VmOs.LINUX, null, 1, 1, 10, 8);
+		final var instanceB = newQuoteInstance("InstanceEC22", VmOs.WINDOWS, null, 1, 1, 10, 8);
+		final var instanceC = newQuoteInstance("InstanceSpot1", VmOs.LINUX, 0.1, 1, 1, 10, 8);
+		final var instanceD = newQuoteInstance("InstanceSpot2", VmOs.WINDOWS, 0.1, 1, 1, 10, 8);
+		final var instanceE = newQuoteInstance("InstanceAS1", VmOs.LINUX, null, 1, 2, 10, 8);
+		final var instanceF = newQuoteInstance("InstanceAS2", VmOs.WINDOWS, null, 1, null, 10, 8);
 		write(subscription, newQuoteVo(instanceA, instanceB, instanceC, instanceD, instanceE, instanceF));
 		assertEquals("dashboard-multiple.tf", "eu-west-3/dashboard.tf");
 		assertEquals("dashboard-multiple-widgets.tpl.md", "eu-west-3/dashboard-widgets.tpl.md");
@@ -192,13 +192,11 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	/**
 	 * Call Terraform generation and check the result is same as input file content
 	 *
-	 * @param subscription
-	 *            subscription
-	 * @param quoteVo
-	 *            quote
+	 * @param subscription subscription
+	 * @param quoteVo      quote
 	 */
 	private void write(final Subscription subscription, final QuoteVo quoteVo) throws IOException {
-		final Context context = new Context();
+		final var context = new Context();
 		context.setSubscription(subscription);
 		context.setQuote(quoteVo);
 		newProvAwsTerraformService().write(context);
@@ -207,19 +205,18 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	/**
 	 * generate a quote instance for test purpose
 	 *
-	 * @param type
-	 *            instance type (Spot or OnDemand
+	 * @param type instance type (Spot or OnDemand
 	 * @return quote instance
 	 */
 	private ProvQuoteInstance newQuoteInstance(final String name, final VmOs os, final Double maxVariableCost,
 			final int min, final Integer max, int... storages) {
-		final ProvQuoteInstance quoteInstance = new ProvQuoteInstance();
-		final ProvInstanceType instance = new ProvInstanceType();
+		final var quoteInstance = new ProvQuoteInstance();
+		final var instance = new ProvInstanceType();
 		instance.setName("t2.micro");
-		final ProvInstancePrice instancePrice = new ProvInstancePrice();
+		final var instancePrice = new ProvInstancePrice();
 		instancePrice.setType(instance);
 		instancePrice.setOs(os);
-		final ProvInstancePriceTerm instancePriceType = new ProvInstancePriceTerm();
+		final var instancePriceType = new ProvInstancePriceTerm();
 		instancePriceType.setName("some");
 		instancePrice.setTerm(instancePriceType);
 		quoteInstance.setPrice(instancePrice);
@@ -231,10 +228,10 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 		quoteInstance.setOs(os);
 		quoteInstance.setStorages(new ArrayList<>());
 		IntStream.range(0, storages.length).forEach(idx -> {
-			final ProvQuoteStorage storage = new ProvQuoteStorage();
+			final var storage = new ProvQuoteStorage();
 			storage.setQuoteInstance(quoteInstance);
-			ProvStoragePrice price = new ProvStoragePrice();
-			ProvStorageType type = new ProvStorageType();
+			var price = new ProvStoragePrice();
+			var type = new ProvStorageType();
 			type.setName("gp2");
 			price.setType(type);
 			storage.setPrice(price);
@@ -247,13 +244,13 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	}
 
 	private ProvAwsTerraformService newProvAwsTerraformService() {
-		final ProvAwsTerraformService resource = new ProvAwsTerraformService();
+		final var resource = new ProvAwsTerraformService();
 		applicationContext.getAutowireCapableBeanFactory().autowireBean(resource);
 		resource.utils = new TerraformUtils() {
 
 			@Override
 			public File toFile(final Subscription subscription, final String... fragments) throws IOException {
-				final File file = fragments.length == 0 ? MOCK_PATH : new File(MOCK_PATH, String.join("/", fragments));
+				final var file = fragments.length == 0 ? MOCK_PATH : new File(MOCK_PATH, String.join("/", fragments));
 				FileUtils.forceMkdirParent(file);
 				return file;
 			}
@@ -262,20 +259,20 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	}
 
 	private void assertEquals(final String expected, final String generated) throws IOException {
-		final File expected2 = new File(EXPECTED_PATH, expected).getAbsoluteFile();
+		final var expected2 = new File(EXPECTED_PATH, expected).getAbsoluteFile();
 		assertTrue(expected2.exists());
-		final File generatedFile = new File(MOCK_PATH, generated).getAbsoluteFile();
+		final var generatedFile = new File(MOCK_PATH, generated).getAbsoluteFile();
 		assertTrue(generatedFile.exists());
 		Assertions.assertEquals(IOUtils.toString(expected2.toURI(), StandardCharsets.UTF_8),
 				IOUtils.toString(generatedFile.toURI(), StandardCharsets.UTF_8));
 	}
 
 	private QuoteVo newQuoteVo(final ProvQuoteInstance... instances) {
-		final QuoteVo quoteVo = new QuoteVo();
-		final ProvLocation location = new ProvLocation();
+		final var quoteVo = new QuoteVo();
+		final var location = new ProvLocation();
 		location.setName("eu-west-3");
 		quoteVo.setInstances(Arrays.asList(instances));
-		ProvQuote configuration = new ProvQuote();
+		var configuration = new ProvQuote();
 		configuration.setLocation(location);
 		Arrays.stream(instances).forEach(i -> {
 			i.setConfiguration(configuration);

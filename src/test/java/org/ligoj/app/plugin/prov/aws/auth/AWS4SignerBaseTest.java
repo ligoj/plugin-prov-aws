@@ -2,7 +2,7 @@
  * Licensed under MIT (https://github.com/ligoj/ligoj/blob/master/LICENSE)
  */
 /**
- * 
+ *
  */
 package org.ligoj.app.plugin.prov.aws.auth;
 
@@ -36,7 +36,7 @@ class AWS4SignerBaseTest {
 	 */
 	@Test
 	void testGetCanonicalizeHeaderNames() {
-		final String headerNames = signer.getCanonicalizeHeaderNames(ImmutableMap.of("header2", "h2", "header1", "h1"));
+		final var headerNames = signer.getCanonicalizeHeaderNames(ImmutableMap.of("header2", "h2", "header1", "h1"));
 		Assertions.assertEquals("header1;header2", headerNames);
 	}
 
@@ -46,7 +46,7 @@ class AWS4SignerBaseTest {
 	 */
 	@Test
 	void testGetCanonicalizedHeaderStringWithoutHeaders() {
-		final String headerNames = signer.getCanonicalizedHeaderString(new HashMap<String, String>());
+		final var headerNames = signer.getCanonicalizedHeaderString(new HashMap<String, String>());
 		Assertions.assertEquals("", headerNames);
 	}
 
@@ -56,7 +56,7 @@ class AWS4SignerBaseTest {
 	 */
 	@Test
 	void testGetCanonicalizedHeaderString() {
-		final String headerNames = signer
+		final var headerNames = signer
 				.getCanonicalizedHeaderString(ImmutableMap.of("header2", "h  2", "header1", "h1"));
 		Assertions.assertEquals("header1:h1\nheader2:h 2\n", headerNames);
 	}
@@ -67,7 +67,7 @@ class AWS4SignerBaseTest {
 	 */
 	@Test
 	void testGetCanonicalRequest() {
-		final String headerNames = signer.getCanonicalRequest("path", "GET", "q=1", "header1;header2",
+		final var headerNames = signer.getCanonicalRequest("path", "GET", "q=1", "header1;header2",
 				"header1:h1\nheader2:h 2\n", "bodyhash");
 		Assertions.assertEquals("GET\n/path\nq=1\nheader1:h1\nheader2:h 2\n\nheader1;header2\nbodyhash", headerNames);
 	}

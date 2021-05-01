@@ -11,8 +11,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsCsvForBean;
-import org.ligoj.app.plugin.prov.aws.catalog.AwsCsvPrice;
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsCsvReader;
+import org.ligoj.app.plugin.prov.aws.catalog.AwsCsvPrice;
 import org.ligoj.app.plugin.prov.aws.catalog.AwsPrice;
 import org.ligoj.bootstrap.core.csv.CsvBeanReader;
 
@@ -27,20 +27,19 @@ public class CsvForBeanEfs extends AbstractAwsCsvForBean<AwsCsvPrice> {
 	private static final Map<String, String> HEADERS_MAPPING = new HashMap<>();
 
 	/**
-	 * Build the reader parsing the CSV file from AWS to build {@link AwsPrice}
-	 * instances. Non AWS instances data are skipped, and headers are ignored.
+	 * Build the reader parsing the CSV file from AWS to build {@link AwsPrice} instances. Non AWS instances data are
+	 * skipped, and headers are ignored.
 	 *
-	 * @param reader
-	 *            The original AWS CSV input.
-	 * @throws IOException
-	 *             When no valid CSV header can be found.
+	 * @param reader The original AWS CSV input.
+	 * @throws IOException When no valid CSV header can be found.
 	 */
 	public CsvForBeanEfs(final BufferedReader reader) throws IOException {
 		super(reader, HEADERS_MAPPING, AwsCsvPrice.class);
 	}
 
 	@Override
-	protected CsvBeanReader<AwsCsvPrice> newCsvReader(final Reader reader, final String[] headers, final Class<AwsCsvPrice> beanType) {
+	protected CsvBeanReader<AwsCsvPrice> newCsvReader(final Reader reader, final String[] headers,
+			final Class<AwsCsvPrice> beanType) {
 		return new AbstractAwsCsvReader<>(reader, headers, beanType) {
 
 			@Override

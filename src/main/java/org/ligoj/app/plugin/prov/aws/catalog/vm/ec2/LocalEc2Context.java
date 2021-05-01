@@ -22,20 +22,22 @@ public class LocalEc2Context
 
 	/**
 	 * Context from the parent.
-	 * 
-	 * @param parent      The parent context.
+	 *
+	 * @param parent       The parent context.
 	 * @param ptRepository The term repository.
-	 * @param tRepository The type repository.
-	 * @param pRepository The price repository.
-	 * @param qRepository The quote repository.
-	 * @param region      The current region.
-	 * @param term1       The expected term name prefix alternative 1.
-	 * @param term2       The expected term name prefix alternative 2.
+	 * @param tRepository  The type repository.
+	 * @param pRepository  The price repository.
+	 * @param qRepository  The quote repository.
+	 * @param region       The current region.
+	 * @param term1        The expected term name prefix alternative 1.
+	 * @param term2        The expected term name prefix alternative 2.
 	 */
-	public LocalEc2Context(final UpdateContext parent, final ProvInstancePriceTermRepository ptRepository, final ProvInstanceTypeRepository tRepository,
-			final ProvInstancePriceRepository pRepository, final ProvQuoteInstanceRepository qRepository,
-			final ProvLocation region, final String term1, final String term2) {
-		super(parent, ptRepository, tRepository, pRepository, qRepository, region, parent.getInstanceTypes(), term1, term2);
+	public LocalEc2Context(final UpdateContext parent, final ProvInstancePriceTermRepository ptRepository,
+			final ProvInstanceTypeRepository tRepository, final ProvInstancePriceRepository pRepository,
+			final ProvQuoteInstanceRepository qRepository, final ProvLocation region, final String term1,
+			final String term2) {
+		super(parent, ptRepository, tRepository, pRepository, qRepository, region, parent.getInstanceTypes(), term1,
+				term2);
 	}
 
 	@Override

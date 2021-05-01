@@ -41,6 +41,7 @@ import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
 import org.ligoj.app.plugin.prov.aws.catalog.efs.AwsPriceImportEfs;
 import org.ligoj.app.plugin.prov.aws.catalog.s3.AwsPriceImportS3;
 import org.ligoj.app.plugin.prov.aws.catalog.suppport.AwsPriceImportSupport;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVm;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ebs.AwsPriceImportEbs;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AwsEc2Price;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AwsPriceImportEc2;
@@ -658,7 +659,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		applicationContext.getBean(SystemConfigurationRepository.class).findAll();
 		initSpringSecurityContext(DEFAULT_USER);
 		clearAllCache();
-		configure(AwsPriceImportEc2.CONF_URL_API_SAVINGS_PLAN, "/any.json");
+		configure(AbstractAwsPriceImportVm.CONF_URL_API_SAVINGS_PLAN, "/any.json");
 		mock("/region_index.json", "mock-server/aws/region_index.json");
 
 		mockOnlyEc2();
@@ -674,7 +675,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		applicationContext.getBean(SystemConfigurationRepository.class).findAll();
 		initSpringSecurityContext(DEFAULT_USER);
 		clearAllCache();
-		configure(AwsPriceImportEc2.CONF_URL_API_SAVINGS_PLAN, "/region_index.json");
+		configure(AbstractAwsPriceImportVm.CONF_URL_API_SAVINGS_PLAN, "/region_index.json");
 		mock("/region_index.json", "mock-server/aws/region_index-err.json");
 
 		mockOnlyEc2();
@@ -898,7 +899,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 	private void patchConfigurationUrl() {
 		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES, "/index-ec2.csv");
-		configure(AwsPriceImportEc2.CONF_URL_API_SAVINGS_PLAN, "/region_index.json");
+		configure(AbstractAwsPriceImportVm.CONF_URL_API_SAVINGS_PLAN, "/region_index.json");
 		configure(AwsPriceImportFargate.CONF_URL_FARGATE_PRICES, "/index-fargate.csv");
 		configure(AwsPriceImportFargate.CONF_URL_FARGATE_PRICES_SPOT, "/spot-fargate.json");
 		configure(AwsPriceImportRds.CONF_URL_RDS_PRICES, "/index-rds.csv");

@@ -17,7 +17,7 @@ public class AwsCsvPrice {
 	 * Ignored property
 	 */
 	private String drop;
-	
+
 	private String offerTermCode;
 	private String termType;
 	private double pricePerUnit;

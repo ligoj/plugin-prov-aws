@@ -111,7 +111,7 @@ public class AwsPriceImportEc2 extends
 
 	/**
 	 * Create a new transactional (READ_UNCOMMITTED) process for spot prices in a specific region.
-	 * 
+	 *
 	 * @param gContext The current global context.
 	 * @param r        The spot region.
 	 */

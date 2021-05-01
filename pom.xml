@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.ligoj.api</groupId>
 		<artifactId>plugin-parent</artifactId>
-		<version>3.2.8</version>
+		<version>3.2.9</version>
 		<relativePath />
 	</parent>
 
@@ -22,6 +22,15 @@
 		<url>https://github.com/ligoj/plugin-prov-aws.git</url>
 	</scm>
 
+	<dependencies>
+		<dependency>
+			<groupId>org.ligoj.plugin</groupId>
+			<artifactId>plugin-prov</artifactId>
+			<version>[2.3.2-SNAPSHOT,2.4.0)</version>
+			<scope>provided</scope>
+		</dependency>
+	</dependencies>
+
 	<profiles>
 		<profile>
 			<id>github</id>
@@ -34,13 +43,4 @@
 			</distributionManagement>
 		</profile>
 	</profiles>
-
-	<dependencies>
-		<dependency>
-			<groupId>org.ligoj.plugin</groupId>
-			<artifactId>plugin-prov</artifactId>
-			<version>[2.3.2-SNAPSHOT,2.4.0)</version>
-			<scope>provided</scope>
-		</dependency>
-	</dependencies>
 </project>

@@ -78,28 +78,28 @@ public class AwsPriceImportEc2 extends
 
 	@Override
 	public void install(final UpdateContext context) throws IOException {
-		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("ec2"));
+		nextStep(context, "ec2", null, 0);
 		context.setValidOs(Pattern.compile(configuration.get(CONF_OS, ".*"), Pattern.CASE_INSENSITIVE));
 		context.setValidInstanceType(Pattern.compile(configuration.get(CONF_ITYPE, ".*"), Pattern.CASE_INSENSITIVE));
 		installEc2(context, context.getNode(), "ec2", configuration.get(CONF_URL_EC2_PRICES, EC2_PRICES),
 				configuration.get(CONF_URL_EC2_PRICES_SPOT, EC2_PRICES_SPOT));
+		nextStep(context, "ec2", null, 1);
 	}
 
 	private void installEc2(final UpdateContext context, final Node node, final String api, final String apiPrice,
 			final String apiSpotPrice) throws IOException {
 
 		// Install the EC2 (non spot) prices
-		final var indexes = getSavingsPlanUrls(context);
-		newStream(context.getRegions().values()).filter(region -> isEnabledRegion(context, region)).map(region -> {
-			// Install OnDemand and reserved prices
-			newProxy().installEC2Prices(context, region, api, apiPrice, indexes);
-			return region;
-		}).reduce((region1, region2) -> {
-			nextStep(node, region2.getName(), 1);
-			return region1;
-		});
+		nextStep(context, api + " (savings plan indexes)", null, 0);
+		final var indexes = getSavingsPlanUrls(context, api);
+		nextStep(context, api + " (savings plan indexes)", null, 1);
+
+		// Install OnDemand and reserved prices
+		newStream(context.getRegions().values()).filter(region -> isEnabledRegion(context, region))
+				.forEach(region -> newProxy().installVmPrices(context, region, api, apiPrice, indexes));
 
 		// Install the SPOT EC2 prices
+		nextStep(context, api + "-spot", null, 0);
 		installJsonPrices(context, api + "-spot", apiSpotPrice, SpotPrices.class,
 				r -> newProxy().installSpotPrices(context, r));
 	}
@@ -117,7 +117,7 @@ public class AwsPriceImportEc2 extends
 	 */
 	@Transactional(propagation = Propagation.SUPPORTS, isolation = Isolation.READ_UNCOMMITTED)
 	public void installSpotPrices(final UpdateContext gContext, final SpotRegion r) {
-		nextStep(gContext.getNode(), r.getRegion(), 1);
+		nextStep(gContext, "ec2 (spot)", r.getRegion(), 0);
 		final var region = locationRepository.findByName(gContext.getNode().getId(), r.getRegion());
 
 		// Get previous prices for this location
@@ -135,6 +135,7 @@ public class AwsPriceImportEc2 extends
 
 		// Purge the SKUs
 		purgePrices(context);
+		nextStep(gContext, "ec2 (spot)", r.getRegion(), 0);
 	}
 
 	/**

@@ -67,14 +67,14 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 
 	@Override
 	protected int getWorkload(ImportCatalogStatus status) {
-		// NB regions * 7 (EC2 + Spot + RDS + EC2 Savings Plan prices + Fargate + Fargate Savings Plan prices + Fargate
-		// spot)
+		// NB regions * 5 (EC2 + RDS+ EC2 Savings Plan + Fargate + Fargate Savings Plan)
 		// + 3 global prices (S3+EBS+EFS)
-		// + 1 (EC2 spot configuration)
-		// + 1 (Fargate spot configuration)
 		// + 1 (EC2 savings plan configuration)
-		// + 1 flush
-		return status.getNbLocations() * 7 + 5 + 1;
+		// + 1 (EC2 spot & purge)
+		// + 1 (Fargate spot & purge)
+		// + 1 (RDS purge)
+		// + 1 (Support)
+		return status.getNbLocations() * 5 + 8;
 	}
 
 	/**
@@ -119,14 +119,12 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 					.peek(r -> r.setRegion(context.getMapSpotToNewRegion().getOrDefault(r.getRegion(), r.getRegion())))
 					.filter(r -> isEnabledRegion(context, r)).collect(Collectors.toList());
 			eRegions.forEach(r -> installRegion(context, r.getRegion()));
-			nextStep(context, null, 1);
 
 			// Install the prices for each region
 			newStream(eRegions).forEach(mapper::accept);
 		} finally {
 			// Report
 			log.info("AWS {} import finished", api);
-			nextStep(context, null, 1);
 		}
 	}
 

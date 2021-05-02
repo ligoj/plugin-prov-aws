@@ -44,7 +44,7 @@ public class AwsPriceImportS3 extends AbstractAwsImport implements ImportCatalog
 	@Override
 	public void install(final UpdateContext context) throws IOException {
 		log.info("AWS S3 prices ...");
-		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("s3"));
+		nextStep(context, "s3", null, 0);
 
 		// Track the created instance to cache partial costs
 		final var previous = spRepository.findByLocation(context.getNode().getId(), null).stream()
@@ -78,7 +78,7 @@ public class AwsPriceImportS3 extends AbstractAwsImport implements ImportCatalog
 		} finally {
 			// Report
 			log.info("AWS S3 finished : {} prices", priceCounter);
-			nextStep(context, null, 1);
+			nextStep(context, "s3", null, 1);
 		}
 	}
 

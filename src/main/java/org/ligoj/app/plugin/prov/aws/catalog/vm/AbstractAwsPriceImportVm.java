@@ -505,17 +505,17 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	/**
 	 * Return the savings plan URLs
 	 */
-	protected Map<String, String> getSavingsPlanUrls(final UpdateContext context) throws IOException {
-		return getSavingsPlanUrls(context, configuration.get(CONF_URL_API_SAVINGS_PLAN, SAVINGS_PLAN));
+	protected Map<String, String> getSavingsPlanUrls(final UpdateContext context, final String api) throws IOException {
+		return getSavingsPlanUrls(context, api, configuration.get(CONF_URL_API_SAVINGS_PLAN, SAVINGS_PLAN));
 	}
 
 	/**
 	 * Return the savings plan URLs
 	 */
-	private Map<String, String> getSavingsPlanUrls(final UpdateContext context, final String endpoint)
+	private Map<String, String> getSavingsPlanUrls(final UpdateContext context, final String api,final String endpoint)
 			throws IOException {
 		final var result = context.getSavingsPlanUrls();
-		log.info("AWS Savings plan indexes...");
+		log.info("AWS {} Savings plan indexes...", api);
 		try (var curl = new CurlProcessor()) {
 			// Get the remote prices stream
 			final var rawJson = StringUtils.defaultString(curl.get(endpoint), "{\"regions\":[]}");
@@ -525,11 +525,9 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			// All regions are considered
 			Arrays.stream(objectMapper.readValue(rawJson, SavingsPlanIndex.class).getRegions())
 					.forEach(rConf -> result.put(rConf.getRegionCode(), base + rConf.getVersionUrl()));
-			nextStep(context, null, 0);
 		} finally {
 			// Report
 			log.info("AWS Savings plan indexes: {}", result.size());
-			nextStep(context, null, 1);
 		}
 		return result;
 	}

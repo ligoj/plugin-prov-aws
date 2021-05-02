@@ -38,7 +38,7 @@ public class AwsPriceImportEbs extends AbstractAwsImport implements ImportCatalo
 
 	@Override
 	public void install(final UpdateContext context) throws IOException {
-		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("ebs"));
+		nextStep(context, "ebs", null, 0);
 		// The previously installed storage types cache. Key is the storage name
 		final var node = context.getNode();
 		context.setStorageTypes(stRepository.findAllBy(BY_NODE, context.getNode()).stream()
@@ -57,6 +57,7 @@ public class AwsPriceImportEbs extends AbstractAwsImport implements ImportCatalo
 							.ifPresent(j -> installStoragePrice(context, j, context.getStorageTypes().get(t.getName()),
 									region, previous)));
 		});
+		nextStep(context, "ebs", null, 1);
 	}
 
 	private void installStorageTypes(final UpdateContext context) throws IOException {

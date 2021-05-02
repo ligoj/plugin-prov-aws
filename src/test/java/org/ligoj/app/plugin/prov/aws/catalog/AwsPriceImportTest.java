@@ -15,6 +15,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.transaction.Transactional;
@@ -415,6 +416,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		check(provResource.getConfiguration(subscription), 449.057d, 46.667d);
 
 		// Install again with force mode, without price change in force mode
+		resetImportTask();
 		resource.install(true);
 		check(provResource.getConfiguration(subscription), 449.057d, 46.667d);
 		checkImportStatus(312 /* same */, 77 + 50 /* Fargate */);
@@ -424,6 +426,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		configure(AwsPriceImportRds.CONF_URL_RDS_PRICES, "/vs/%s/index-rds.csv");
 		mock("/vs/eu-west-1/index-rds.csv", "mock-server/aws/vs/index-rds.csv");
 		check(provResource.getConfiguration(subscription), 449.057d, 46.667d);
+		resetImportTask();
 		resource.install(true);
 		var dtype = this.bpRepository.findByExpected("code", "TBNHT84HARTQH8TY.JRTCKXETXF.6YS6EN2CT7").getType();
 		Assertions.assertEquals("db.m1.large.NEW", dtype.getName());
@@ -521,8 +524,8 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 	private void checkImportStatus(final int count, final int nbTypes) {
 		final var status = this.resource.getImportCatalogResource().getTask("service:prov:aws");
-		Assertions.assertTrue(status.getDone() >= 9);
-		Assertions.assertEquals(34, status.getWorkload());
+		Assertions.assertEquals(28, status.getDone());
+		Assertions.assertEquals(28, status.getWorkload());
 		Assertions.assertEquals("support", status.getPhase());
 		Assertions.assertEquals(DEFAULT_USER, status.getAuthor());
 		Assertions.assertEquals(nbTypes, status.getNbInstanceTypes().intValue());

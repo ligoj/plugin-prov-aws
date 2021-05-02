@@ -91,26 +91,22 @@ public class AwsPriceImportFargate extends
 
 	@Override
 	public void install(final UpdateContext context) throws IOException {
-		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase(API_NAME));
+		nextStep(context, API_NAME, null, 0);
 		installFargate(context, context.getNode(), API_NAME, configuration.get(CONF_URL_FARGATE_PRICES, FARGATE_PRICES),
 				configuration.get(CONF_URL_FARGATE_PRICES_SPOT, FARGATE_PRICES_SPOT));
+		nextStep(context, API_NAME, null, 1);
 	}
 
 	private void installFargate(final UpdateContext context, final Node node, final String api, final String apiPrice,
 			final String apiSpotPrice) throws IOException {
-
-		// Install the Fargate (non spot) prices
 		final var indexes = context.getSavingsPlanUrls();
-		newStream(context.getRegions().values()).filter(region -> isEnabledRegion(context, region)).map(region -> {
-			// Install OnDemand and reserved prices
-			newProxy().installEC2Prices(context, region, api, apiPrice, indexes);
-			return region;
-		}).reduce((region1, region2) -> {
-			nextStep(node, region2.getName(), 1);
-			return region1;
-		});
+
+		// Install OnDemand and reserved prices
+		newStream(context.getRegions().values()).filter(region -> isEnabledRegion(context, region))
+				.forEach(region -> newProxy().installVmPrices(context, region, api, apiPrice, indexes));
 
 		// Install the SPOT Fargate prices
+		nextStep(context, api + "-spot", null, 0);
 		installSpotPrices(context, apiSpotPrice);
 	}
 
@@ -232,7 +228,6 @@ public class AwsPriceImportFargate extends
 	 */
 	private void installSpotPrices(final UpdateContext gContext, final String endpoint) throws IOException {
 		log.info("AWS Fargate Spot prices...");
-		nextStep(gContext, "spot", 1);
 		try (var curl = new CurlProcessor()) {
 			// Get the remote prices stream
 			final var rawJson = StringUtils.defaultString(curl.get(endpoint), "{\"prices\":[]}");
@@ -279,7 +274,6 @@ public class AwsPriceImportFargate extends
 	private void installSpotPrices(final UpdateContext gContext, final ProvLocation region,
 			final Set<SpotPrice> prices) {
 		log.info("AWS Fargate Spot prices@{}...", region.getName());
-		nextStep(gContext.getNode(), region.getName(), 1);
 		final var costRam = findSpotCost(region, prices, GB_HOURS);
 		final var costCpu = findSpotCost(region, prices, VCPU_HOURS);
 

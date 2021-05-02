@@ -42,7 +42,7 @@ public class AwsPriceImportEfs extends AbstractAwsImport implements ImportCatalo
 	@Override
 	public void install(final UpdateContext context) throws IOException {
 		log.info("AWS EFS prices ...");
-		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("efs"));
+		nextStep(context, "efs", null, 0);
 
 		// Track the created instance to cache partial costs
 		final var efs = stRepository.findAllBy(BY_NODE, context.getNode(), new String[] { "name" }, "efs").get(0);
@@ -71,7 +71,7 @@ public class AwsPriceImportEfs extends AbstractAwsImport implements ImportCatalo
 		} finally {
 			// Report
 			log.info("AWS EFS finished : {} prices", priceCounter);
-			nextStep(context, null, 1);
+			nextStep(context, "efs", null, 1);
 		}
 	}
 

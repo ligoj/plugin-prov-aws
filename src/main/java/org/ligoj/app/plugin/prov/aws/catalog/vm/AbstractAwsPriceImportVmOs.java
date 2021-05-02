@@ -68,10 +68,11 @@ public abstract class AbstractAwsPriceImportVmOs<T extends AbstractInstanceType,
 	 * @param spIndexes The Savings Plan indexes endpoint.
 	 */
 	@Transactional(propagation = Propagation.SUPPORTS, isolation = Isolation.READ_UNCOMMITTED)
-	public void installEC2Prices(final UpdateContext gContext, final ProvLocation gRegion, final String api,
+	public void installVmPrices(final UpdateContext gContext, final ProvLocation gRegion, final String api,
 			final String apiPrice, final Map<String, String> spIndexes) {
 		final var endpoint = apiPrice.replace("%s", gRegion.getName());
 		log.info("AWS {} OnDemand/Reserved import started for region {}@{} ...", api, gRegion.getName(), endpoint);
+		nextStep(gContext, api, gRegion.getName(), 0);
 		// Track the created instance to cache partial costs
 		final var region = locationRepository.findOne(gRegion.getId());
 		final var context = newContext(gContext, region, TERM_ON_DEMAND, TERM_RESERVED);
@@ -115,7 +116,11 @@ public abstract class AbstractAwsPriceImportVmOs<T extends AbstractInstanceType,
 
 		// Savings Plan part: only when OD succeed
 		if (succeed) {
+			nextStep(context, api, gRegion.getName(), 1);
 			installSavingsPlan(gContext, spIndexes, api, endpoint, region, context);
+			nextStep(context, api + " (saving plan)", gRegion.getName(), 1);
+		} else {
+			nextStep(context, api, null, 2);
 		}
 	}
 

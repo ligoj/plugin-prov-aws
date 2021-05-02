@@ -66,13 +66,14 @@ public class AwsPriceImportRds extends
 
 	@Override
 	public void install(final UpdateContext context) throws IOException {
-		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("rds"));
+		nextStep(context, "rds", null, 0);
 		context.setDatabaseTypes(dtRepository.findAllBy(BY_NODE, context.getNode()).stream()
 				.collect(Collectors.toConcurrentMap(AbstractCodedEntity::getCode, Function.identity())));
 		context.setValidDatabaseType(Pattern.compile(configuration.get(CONF_DTYPE, ".*")));
 		final var apiPrice = configuration.get(CONF_URL_RDS_PRICES, RDS_PRICES);
 		newStream(context.getRegions().values()).filter(region -> isEnabledRegion(context, region))
 				.forEach(region -> newProxy().installRdsPrice(context, apiPrice, region));
+		nextStep(context, "rds", null, 1);
 	}
 
 	/**
@@ -93,7 +94,7 @@ public class AwsPriceImportRds extends
 	 */
 	@Transactional(propagation = Propagation.SUPPORTS, isolation = Isolation.READ_UNCOMMITTED)
 	public void installRdsPrice(final UpdateContext gContext, final String apiPrice, final ProvLocation gRegion) {
-		nextStep(gContext, gRegion.getName(), 1);
+		nextStep(gContext, "rds", gRegion.getName(), 0);
 		final var endpoint = apiPrice.replace("%s", gRegion.getName());
 		log.info("AWS RDS OnDemand/Reserved import started for region {}@{} ...", gRegion.getName(), endpoint);
 		final var region = locationRepository.findOne(gRegion.getId());
@@ -130,6 +131,7 @@ public class AwsPriceImportRds extends
 					context.getPrices().size(), String.format("%+d", context.getPrices().size() - oldCount));
 		}
 		context.cleanup();
+		nextStep(gContext, "rds", gRegion.getName(), 1);
 	}
 
 	/**

@@ -300,7 +300,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		final var quote = installAndConfigure();
 
 		// Check the whole quote
-		final var instance = check(quote, 449.057d, 46.667d);
+		final var instance = check(quote, 448.903d, 46.667d);
 		final var subscription = instance.getConfiguration().getSubscription().getId();
 
 		// Check the v1 only prices
@@ -413,19 +413,19 @@ class AwsPriceImportTest extends AbstractServerTest {
 		checkType();
 
 		provResource.updateCost(subscription);
-		check(provResource.getConfiguration(subscription), 449.057d, 46.667d);
+		check(provResource.getConfiguration(subscription), 448.903d, 46.667d);
 
 		// Install again with force mode, without price change in force mode
 		resetImportTask();
 		resource.install(true);
-		check(provResource.getConfiguration(subscription), 449.057d, 46.667d);
+		check(provResource.getConfiguration(subscription), 448.903d, 46.667d);
 		checkImportStatus(312 /* same */, 77 + 50 /* Fargate */);
 		checkType();
 
 		// Install again with force mode, with only specs changes in force mode
 		configure(AwsPriceImportRds.CONF_URL_RDS_PRICES, "/vs/%s/index-rds.csv");
 		mock("/vs/eu-west-1/index-rds.csv", "mock-server/aws/vs/index-rds.csv");
-		check(provResource.getConfiguration(subscription), 449.057d, 46.667d);
+		check(provResource.getConfiguration(subscription), 448.903d, 46.667d);
 		resetImportTask();
 		resource.install(true);
 		var dtype = this.bpRepository.findByExpected("code", "TBNHT84HARTQH8TY.JRTCKXETXF.6YS6EN2CT7").getType();
@@ -470,10 +470,11 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Check the new price
 		final var newQuote = provResource.getConfiguration(subscription);
-		Assertions.assertEquals(448.94d, newQuote.getCost().getMin(), DELTA);
+		Assertions.assertEquals(448.796d, newQuote.getCost().getMin(), DELTA);
 
-		// Storage price is updated
-		final var storage = newQuote.getStorages().get(0);
+		// gp2 storage price is updated
+		final var storage = newQuote.getStorages().stream().sorted().collect(Collectors.toList()).get(2);
+		Assertions.assertEquals("gp2", storage.getPrice().getType().getCode());
 		Assertions.assertEquals(0.5d, storage.getCost(), DELTA);
 		Assertions.assertEquals(5, storage.getSize(), DELTA);
 
@@ -531,7 +532,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(nbTypes, status.getNbInstanceTypes().intValue());
 		Assertions.assertEquals(count, status.getNbInstancePrices().intValue());
 		Assertions.assertEquals(4, status.getNbLocations().intValue());
-		Assertions.assertEquals(16, status.getNbStorageTypes().intValue());
+		Assertions.assertEquals(19, status.getNbStorageTypes().intValue());
 	}
 
 	private void mockServer() throws IOException {
@@ -1053,7 +1054,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		sLookup = qsResource.lookup(subscription,
 				QuoteStorageQuery.builder().latency(Rate.GOOD).optimized(ProvStorageOptimized.THROUGHPUT).build())
 				.get(0);
-		Assertions.assertEquals("WDJR7Q9RKV87VCVK", sLookup.getPrice().getCode());
+		Assertions.assertEquals("UZ53M743SDA37R4M", sLookup.getPrice().getCode());
 		final var svo2 = new QuoteStorageEditionVo();
 		svo2.setSize(1);
 		svo2.setOptimized(ProvStorageOptimized.THROUGHPUT);
@@ -1061,8 +1062,8 @@ class AwsPriceImportTest extends AbstractServerTest {
 		svo2.setName("nfs1");
 		svo2.setSubscription(subscription);
 		final var createEfs = qsResource.create(svo2);
-		Assertions.assertEquals(0.33, createEfs.getCost().getMin(), DELTA);
-		Assertions.assertEquals("efs", qsRepository.findOne(createEfs.getId()).getPrice().getType().getName());
+		Assertions.assertEquals(0.176, createEfs.getCost().getMin(), DELTA);
+		Assertions.assertEquals("efs-z", qsRepository.findOne(createEfs.getId()).getPrice().getType().getName());
 
 		// Add storage (S3) to this quote
 		sLookup = qsResource.lookup(subscription,

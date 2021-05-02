@@ -4,4 +4,7 @@ io1;IOPS;BEST;4;16384;%;%;;32000;500;;;
 st1;THROUGHPUT;GOOD;500;16384;%;%;;500;500;;;
 sc1;THROUGHPUT;GOOD;500;16384;%;%;;250;250;;;
 snapshot;DURABILITY;BEST;0;;;;;;;11;;
-efs;THROUGHPUT;GOOD;0;;;;;;;99.95;;Throughput scale 10+ GB per second. Up to thousands of EC2 instances, from multiple AZs, can connect concurrently to a file system.;2049/tcp
+efs;THROUGHPUT;GOOD;0;;;;;;;99.99;;Frequently accessed data requiring the highest durability and availability.;2049/tcp
+efs-ia;THROUGHPUT;MEDIUM;0;;;;;;;99.99;;Per GB retrieval fees apply.;2049/tcp
+efs-z;THROUGHPUT;GOOD;0;;;;;;;99.9;;Not resilient to the loss of the Availability Zone.;2049/tcp
+efs-z-ia;THROUGHPUT;MEDIUM;0;;;;;;;99.9;;Not resilient to the loss of the Availability Zone. Per GB retrieval fees apply.;2049/tcp

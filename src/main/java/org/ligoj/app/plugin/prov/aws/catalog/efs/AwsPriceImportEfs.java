@@ -12,18 +12,19 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsImport;
-import org.ligoj.app.plugin.prov.aws.catalog.AwsCsvPrice;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.catalog.ImportCatalog;
+import org.ligoj.app.plugin.prov.model.AbstractCodedEntity;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
-import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.springframework.stereotype.Component;
 
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * The provisioning EFS price service for AWS. Manage install or update of prices.
+ * 
+ * @see https://docs.aws.amazon.com/efs/latest/ug/storage-classes.html
  */
 @Slf4j
 @Component
@@ -45,9 +46,15 @@ public class AwsPriceImportEfs extends AbstractAwsImport implements ImportCatalo
 		nextStep(context, "efs", null, 0);
 
 		// Track the created instance to cache partial costs
-		final var efs = stRepository.findAllBy(BY_NODE, context.getNode(), new String[] { "name" }, "efs").get(0);
-		final var previous = spRepository.findByTypeName(context.getNode().getId(), "efs").stream()
-				.collect(Collectors.toMap(ProvStoragePrice::getLocation, Function.identity()));
+		context.setStorageTypes(
+				stRepository.findAllBy(BY_NODE, context.getNode()).stream().filter(t -> t.getCode().startsWith("efs"))
+						.collect(Collectors.toMap(AbstractCodedEntity::getCode, Function.identity())));
+
+		// See https://github.com/ligoj/plugin-prov-aws/issues/14
+		final var previous = spRepository.findByLocation(context.getNode().getId(), null).stream()
+				.filter(p -> p.getType().getCode().startsWith("efs")).collect(Collectors
+						.toMap(p2 -> p2.getLocation().getName() + p2.getType().getCode(), Function.identity()));
+		context.setPreviousStorage(previous);
 
 		var priceCounter = 0;
 		// Get the remote prices stream
@@ -62,7 +69,7 @@ public class AwsPriceImportEfs extends AbstractAwsImport implements ImportCatalo
 				final var location = getRegionByHumanName(context, csv.getLocation());
 				if (location != null) {
 					// Supported location
-					installEfsPrice(context, efs, previous, csv, location);
+					installEfsPrice(context, previous, csv, location);
 					priceCounter++;
 				}
 				// Read the next one
@@ -75,17 +82,31 @@ public class AwsPriceImportEfs extends AbstractAwsImport implements ImportCatalo
 		}
 	}
 
-	private void installEfsPrice(final UpdateContext context, final ProvStorageType efs,
-			final Map<ProvLocation, ProvStoragePrice> previous, AwsCsvPrice csv, final ProvLocation location) {
+	private void installEfsPrice(final UpdateContext context, final Map<String, ProvStoragePrice> previous,
+			AwsEfsPrice csv, final ProvLocation location) {
+		// Resolve the type
+		final var name = context.getMapStorageToApi().get(csv.getStorageClass());
+		if (name == null) {
+			log.warn("Unknown storage type {}, ignored", csv.getStorageClass());
+			return;
+		}
+		final var type = context.getStorageTypes().get(name);
+		if (type == null) {
+			log.warn("Unknown storage type {} resolved as {}, ignored", csv.getStorageClass(), name);
+			return;
+		}
+
 		// Update the price as needed
-		final var price = previous.computeIfAbsent(location, r -> {
+		final var price = context.getPreviousStorage().computeIfAbsent(location.getName() + type.getCode(), c -> {
 			final var p = new ProvStoragePrice();
-			p.setLocation(r);
-			p.setType(efs);
 			p.setCode(csv.getSku());
 			return p;
 		});
-		price.setCode(csv.getSku());
+
+		copyAsNeeded(context, price, p -> {
+			p.setLocation(location);
+			p.setType(type);
+		});
 		saveAsNeeded(context, price, csv.getPricePerUnit(), spRepository);
 	}
 }

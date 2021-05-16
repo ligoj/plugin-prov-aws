@@ -172,7 +172,7 @@ public class AwsPriceImportFargate extends
 		p.setOs(VmOs.LINUX);
 	}
 
-	protected ProvContainerType installInstanceType(final LocalFargateContext context, final double cpu,
+	private ProvContainerType installInstanceType(final LocalFargateContext context, final double cpu,
 			final double ramGb) {
 		final var sharedType = context.getPreviousTypes().computeIfAbsent(API_NAME + "-" + cpu + "-" + ramGb, code -> {
 			final var t = context.newType();

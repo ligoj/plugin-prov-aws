@@ -8,6 +8,7 @@ import java.net.URISyntaxException;
 
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
 import org.ligoj.app.plugin.prov.aws.catalog.efs.AwsPriceImportEfs;
+import org.ligoj.app.plugin.prov.aws.catalog.lambda.AwsPriceImportLambda;
 import org.ligoj.app.plugin.prov.aws.catalog.s3.AwsPriceImportS3;
 import org.ligoj.app.plugin.prov.aws.catalog.suppport.AwsPriceImportSupport;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ebs.AwsPriceImportEbs;
@@ -49,6 +50,9 @@ public class AwsPriceImport extends AbstractImportCatalogResource {
 	private AwsPriceImportS3 s3;
 
 	@Autowired
+	private AwsPriceImportLambda lambda;
+
+	@Autowired
 	private AwsPriceImportSupport support;
 
 	/**
@@ -62,10 +66,11 @@ public class AwsPriceImport extends AbstractImportCatalogResource {
 		final var context = initContext(new UpdateContext(), ProvAwsPluginResource.KEY, force);
 
 		base.install(context);
+		lambda.install(context);
+		s3.install(context);
 		ebs.install(context);
 		ec2.install(context);
 		rds.install(context);
-		s3.install(context);
 		efs.install(context);
 		fargate.install(context);
 		support.install(context);

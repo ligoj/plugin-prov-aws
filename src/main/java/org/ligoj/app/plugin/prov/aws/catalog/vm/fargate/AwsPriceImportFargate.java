@@ -101,6 +101,9 @@ public class AwsPriceImportFargate extends
 			final String apiSpotPrice) throws IOException {
 		final var indexes = context.getSavingsPlanUrls();
 
+		// Pre-install types
+		installFargateTypes(context);
+
 		// Install OnDemand and reserved prices
 		newStream(context.getRegions().values()).filter(region -> isEnabledRegion(context, region))
 				.forEach(region -> newProxy().installVmPrices(context, region, api, apiPrice, indexes));
@@ -172,9 +175,22 @@ public class AwsPriceImportFargate extends
 		p.setOs(VmOs.LINUX);
 	}
 
+	private String toCode(final double cpu, final double ramGb) {
+		return API_NAME + "-" + cpu + "-" + ramGb;
+	}
+
+	/**
+	 * Pre-install all Fargate container types.
+	 */
+	private void installFargateTypes(final UpdateContext context) {
+		final LocalFargateContext localContext = newContext(context, new ProvLocation(), null, null);
+		CPU_TO_RAM.forEach(
+				(cpu, ramGbA) -> Arrays.stream(ramGbA).forEach(ram -> installInstanceType(localContext, cpu, ram)));
+	}
+
 	private ProvContainerType installInstanceType(final LocalFargateContext context, final double cpu,
 			final double ramGb) {
-		final var sharedType = context.getPreviousTypes().computeIfAbsent(API_NAME + "-" + cpu + "-" + ramGb, code -> {
+		final var sharedType = context.getPreviousTypes().computeIfAbsent(toCode(cpu, ramGb), code -> {
 			final var t = context.newType();
 			t.setNode(context.getNode());
 			t.setCode(code);
@@ -182,7 +198,7 @@ public class AwsPriceImportFargate extends
 		});
 
 		final var type = context.getLocalTypes().computeIfAbsent(sharedType.getCode(),
-				code -> ObjectUtils.defaultIfNull(context.getTRepository().findBy("code", code), sharedType));
+				code -> ObjectUtils.defaultIfNull(ctRepository.findBy("code", code), sharedType));
 
 		// Update the statistics only once
 		return copyAsNeeded(context, type, t -> {

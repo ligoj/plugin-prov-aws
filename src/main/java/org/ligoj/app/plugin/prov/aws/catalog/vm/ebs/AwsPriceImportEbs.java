@@ -14,7 +14,6 @@ import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsImport;
 import org.ligoj.app.plugin.prov.aws.catalog.AwsPrice;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.catalog.ImportCatalog;
-import org.ligoj.app.plugin.prov.model.AbstractCodedEntity;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
@@ -30,6 +29,7 @@ public class AwsPriceImportEbs extends AbstractAwsImport implements ImportCatalo
 	 * The EBS prices end-point. Contains the prices for all regions.
 	 */
 	private static final String EBS_PRICES = "https://a0.awsstatic.com/pricing/1/ebs/pricing-ebs.js";
+	private static final String EBS_PRICES2 = "https://calculator.aws/pricing/2.0/meteredUnitMaps/ec2/USD/current/ebs-calculator.json";
 
 	/**
 	 * Configuration key used for {@link #EBS_PRICES}
@@ -39,12 +39,7 @@ public class AwsPriceImportEbs extends AbstractAwsImport implements ImportCatalo
 	@Override
 	public void install(final UpdateContext context) throws IOException {
 		nextStep(context, "ebs", null, 0);
-		// The previously installed storage types cache. Key is the storage name
 		final var node = context.getNode();
-		context.setStorageTypes(stRepository.findAllBy(BY_NODE, context.getNode()).stream()
-				.collect(Collectors.toMap(AbstractCodedEntity::getCode, Function.identity())));
-		installStorageTypes(context);
-		context.getMapSpotToNewRegion().putAll(toMap("spot-to-new-region.json", MAP_STR));
 
 		// Install EBS prices
 		installJsonPrices(context, "ebs", configuration.get(CONF_URL_EBS_PRICES, EBS_PRICES), EbsPrices.class, r -> {
@@ -58,33 +53,6 @@ public class AwsPriceImportEbs extends AbstractAwsImport implements ImportCatalo
 									region, previous)));
 		});
 		nextStep(context, "ebs", null, 1);
-	}
-
-	private void installStorageTypes(final UpdateContext context) throws IOException {
-		csvForBean.toBean(ProvStorageType.class, "csv/aws-prov-storage-type.csv").forEach(t -> {
-			final var entity = context.getStorageTypes().computeIfAbsent(t.getName(), n -> {
-				final var newType = new ProvStorageType();
-				newType.setNode(context.getNode());
-				newType.setCode(n);
-				return newType;
-			});
-
-			// Merge the storage type details
-			entity.setName(entity.getCode());
-			entity.setDescription(t.getDescription());
-			entity.setInstanceType(t.getInstanceType());
-			entity.setDatabaseType(t.getDatabaseType());
-			entity.setIops(t.getIops());
-			entity.setLatency(t.getLatency());
-			entity.setMaximal(t.getMaximal());
-			entity.setMinimal(t.getMinimal());
-			entity.setOptimized(t.getOptimized());
-			entity.setThroughput(t.getThroughput());
-			entity.setAvailability(t.getAvailability());
-			entity.setDurability9(t.getDurability9());
-			entity.setEngine(t.getEngine());
-			stRepository.save(entity);
-		});
 	}
 
 	/**

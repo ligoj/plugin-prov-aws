@@ -74,7 +74,8 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 		// + 1 (Fargate spot & purge)
 		// + 1 (RDS purge)
 		// + 1 (Support)
-		return status.getNbLocations() * 5 + 8;
+		// + 1 (Regions)
+		return status.getNbLocations() * 5 + 9;
 	}
 
 	/**

@@ -18,6 +18,7 @@ import org.ligoj.app.plugin.prov.model.AbstractCodedEntity;
 import org.ligoj.app.plugin.prov.model.AbstractInstanceType;
 import org.ligoj.app.plugin.prov.model.AbstractQuoteVm;
 import org.ligoj.app.plugin.prov.model.AbstractTermPrice;
+import org.ligoj.app.plugin.prov.model.AbstractTermPriceVm;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 
@@ -32,7 +33,7 @@ import lombok.Setter;
  * @param <C> The CSV price type.
  * @param <Q> The quote type.
  */
-public abstract class AbsractLocalContext<T extends AbstractInstanceType, P extends AbstractTermPrice<T>, C extends AbstractAwsVmPrice, Q extends AbstractQuoteVm<P>>
+public abstract class AbsractLocalContext<T extends AbstractInstanceType, P extends AbstractTermPriceVm<T>, C extends AbstractAwsVmPrice, Q extends AbstractQuoteVm<P>>
 		extends AbstractUpdateContext {
 
 	@Getter

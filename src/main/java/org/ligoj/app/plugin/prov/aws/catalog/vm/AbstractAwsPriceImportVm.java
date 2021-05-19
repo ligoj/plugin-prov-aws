@@ -28,7 +28,7 @@ import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlan
 import org.ligoj.app.plugin.prov.catalog.ImportCatalog;
 import org.ligoj.app.plugin.prov.model.AbstractInstanceType;
 import org.ligoj.app.plugin.prov.model.AbstractQuoteVm;
-import org.ligoj.app.plugin.prov.model.AbstractTermPrice;
+import org.ligoj.app.plugin.prov.model.AbstractTermPriceVm;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
@@ -47,7 +47,7 @@ import lombok.extern.slf4j.Slf4j;
  * @param <X> The context type.
  */
 @Slf4j
-public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P extends AbstractTermPrice<T>, C extends AbstractAwsVmPrice, Q extends AbstractQuoteVm<P>, X extends AbsractLocalContext<T, P, C, Q>>
+public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P extends AbstractTermPriceVm<T>, C extends AbstractAwsVmPrice, Q extends AbstractQuoteVm<P>, X extends AbsractLocalContext<T, P, C, Q>>
 		extends AbstractAwsImport implements ImportCatalog<UpdateContext> {
 
 	protected static final String TERM_SPOT_CODE = "spot";

@@ -1,0 +1,30 @@
+{
+  "formatVersion" : "v1.0",
+  "publicationDate" : "2021-05-14T16:21:33Z",
+  "regions" : {
+    "eu-west-3" : {
+      "regionCode" : "eu-west-3",
+      "currentVersionUrl" : "/offers/v1.0/aws/AmazonECS/current/default/empty.json"
+    },
+    "eu-west-2" : {
+      "regionCode" : "eu-west-2",
+      "currentVersionUrl" : "/offers/v1.0/aws/AmazonECS/current/default/empty.json"
+    },
+    "eu-west-1" : {
+      "regionCode" : "eu-west-1",
+      "currentVersionUrl" : "/offers/v1.0/aws/AmazonECS/current/eu-west-1/index.json"
+    },
+    "eu-central-1" : {
+      "regionCode" : "eu-central-1",
+      "currentVersionUrl" : "/offers/v1.0/aws/AmazonECS/current/default/empty.json"
+    },
+    "us-east-1" : {
+      "regionCode" : "us-east-1",
+      "currentVersionUrl" : "/offers/v1.0/aws/AmazonECS/current/default/empty.json"
+    },
+    "us-west-2" : {
+      "regionCode" : "us-west-2",
+      "currentVersionUrl" : "/offers/v1.0/aws/AmazonECS/current/default/empty.json"
+    }
+  }
+}

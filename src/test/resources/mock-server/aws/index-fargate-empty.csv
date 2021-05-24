@@ -1,6 +1,0 @@
-"FormatVersion","v1.0"
-"Disclaimer","This pricing list is for informational purposes only. All prices are subject to the additional terms included in the pricing pages on http://aws.amazon.com. All Free Tier prices are also subject to the terms included at https://aws.amazon.com/free/"
-"Publication Date","2020-12-14T22:37:55Z"
-"Version","20201214223755"
-"OfferCode","AmazonECS"
-"SKU","OfferTermCode","RateCode","TermType","PriceDescription","EffectiveDate","StartingRange","EndingRange","Unit","PricePerUnit","Currency","Product Family","serviceCode","Location","Location Type","Tenancy","usageType","operation","CPUType","MemoryType","serviceName"

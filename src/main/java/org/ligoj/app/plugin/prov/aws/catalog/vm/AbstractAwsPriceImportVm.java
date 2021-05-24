@@ -3,11 +3,16 @@
  */
 package org.ligoj.app.plugin.prov.aws.catalog.vm;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -20,9 +25,11 @@ import org.apache.commons.lang3.RegExUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.plugin.prov.aws.catalog.AbsractLocalContext;
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsImport;
+import org.ligoj.app.plugin.prov.aws.catalog.AwsPriceRegion;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
-import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanIndex;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AbstractCsvForBeanEc2;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlanProduct;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlanRate;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlanTerm;
 import org.ligoj.app.plugin.prov.catalog.ImportCatalog;
@@ -32,8 +39,12 @@ import org.ligoj.app.plugin.prov.model.AbstractTermPriceVm;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
+import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
 import org.ligoj.app.plugin.prov.model.Rate;
 import org.ligoj.bootstrap.core.curl.CurlProcessor;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -45,26 +56,31 @@ import lombok.extern.slf4j.Slf4j;
  * @param <C> The JSON price type.
  * @param <Q> The quote type.
  * @param <X> The context type.
+ * @param <R> The CSV bean reader type.
  */
 @Slf4j
-public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P extends AbstractTermPriceVm<T>, C extends AbstractAwsVmPrice, Q extends AbstractQuoteVm<P>, X extends AbsractLocalContext<T, P, C, Q>>
+public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P extends AbstractTermPriceVm<T>, C extends AbstractAwsVmPrice, Q extends AbstractQuoteVm<P>, X extends AbsractLocalContext<T, P, C, Q>, R extends AbstractCsvForBeanEc2<C>>
 		extends AbstractAwsImport implements ImportCatalog<UpdateContext> {
 
+	/**
+	 * Spot term code.
+	 */
 	protected static final String TERM_SPOT_CODE = "spot";
+
+	/**
+	 * Spot term name.
+	 */
 	protected static final String TERM_SPOT = "Spot";
 
+	/**
+	 * Compute Savings Plan name
+	 */
 	private static final String TERM_COMPUTE_SP = "Compute Savings Plan";
+
+	/**
+	 * EC2 Savings Plan name
+	 */
 	private static final String TERM_EC2_SP = "EC2 Savings Plan";
-
-	/**
-	 * The EC2 Savings Plan prices end-point, a JSON file. Contains the URL for each regions.
-	 */
-	private static final String SAVINGS_PLAN = "https://pricing.us-east-1.amazonaws.com/savingsPlan/v1.0/aws/AWSComputeSavingsPlan/current/region_index.json";
-
-	/**
-	 * Configuration key used for AWS URL Savings Plan prices.
-	 */
-	public static final String CONF_URL_API_SAVINGS_PLAN = String.format(CONF_URL_API_PRICES, "savings-plan");
 
 	/**
 	 * Reserved term types.
@@ -140,7 +156,6 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		// Round the computed hourly cost and save as needed
 		final var initCost = quantity.getPricePerUnit() / price.getTerm().getPeriod();
 		final var cost = hourly.getPricePerUnit() * context.getHoursMonth() + initCost;
-		context.getPrices().add(price.getCode());
 		saveAsNeeded(context, price, price.getCost(), cost, (cR, c) -> {
 			price.setInitialCost(quantity.getPricePerUnit());
 			price.setCost(cR);
@@ -171,6 +186,34 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * @param p   The target price entity.
 	 */
 	protected abstract void copy(final C csv, final P p);
+
+	/**
+	 * Copy a CSV price entry to a type entity.
+	 *
+	 * @param csv The current CSV entry.
+	 * @param p   The target type entity.
+	 */
+	protected void copy(final C csv, final T t) {
+		t.setCpu(csv.getCpu());
+		t.setAutoScale(true);
+		t.setName(t.getCode());
+		t.setConstant(!t.getName().startsWith("t") && !t.getName().startsWith("db.t"));
+		t.setPhysical(t.getName().contains("metal"));
+		t.setProcessor(StringUtils
+				.trimToNull(RegExUtils.removeAll(csv.getPhysicalProcessor(), "(Variable|\\s*Family|\\([^)]*\\))")));
+		t.setDescription(ArrayUtils.toString(
+				ArrayUtils.removeAllOccurrences(new String[] { csv.getStorage(), csv.getNetworkPerformance() }, null)));
+
+		// Convert GiB to MiB, and rounded
+		final var memoryStr = StringUtils.removeEndIgnoreCase(csv.getMemory(), " GiB").replace(",", "");
+		t.setRam((int) Math.round(Double.parseDouble(memoryStr) * 1024d));
+
+		// Rating
+		t.setCpuRate(getRate("cpu", csv));
+		t.setRamRate(getRate("ram", csv));
+		t.setNetworkRate(getRate("network", csv, csv.getNetworkPerformance()));
+		t.setStorageRate(toStorage(csv));
+	}
 
 	/**
 	 * Copy a CSV price entry to a price entity.
@@ -221,27 +264,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 				code -> ObjectUtils.defaultIfNull(context.getTRepository().findBy("code", code), sharedType));
 
 		// Update the statistics only once
-		return copyAsNeeded(context, type, t -> {
-			t.setCpu(csv.getCpu());
-			t.setAutoScale(true);
-			t.setName(t.getCode());
-			t.setConstant(!t.getName().startsWith("t") && !t.getName().startsWith("db.t"));
-			t.setPhysical(t.getName().contains("metal"));
-			t.setProcessor(StringUtils
-					.trimToNull(RegExUtils.removeAll(csv.getPhysicalProcessor(), "(Variable|\\s*Family|\\([^)]*\\))")));
-			t.setDescription(ArrayUtils.toString(ArrayUtils
-					.removeAllOccurrences(new String[] { csv.getStorage(), csv.getNetworkPerformance() }, null)));
-
-			// Convert GiB to MiB, and rounded
-			final var memoryStr = StringUtils.removeEndIgnoreCase(csv.getMemory(), " GiB").replace(",", "");
-			t.setRam((int) Math.round(Double.parseDouble(memoryStr) * 1024d));
-
-			// Rating
-			t.setCpuRate(getRate("cpu", csv));
-			t.setRamRate(getRate("ram", csv));
-			t.setNetworkRate(getRate("network", csv, csv.getNetworkPerformance()));
-			t.setStorageRate(toStorage(csv));
-		}, context.getTRepository());
+		return copyAsNeeded(context, type, t -> copy(csv, t), context.getTRepository());
 	}
 
 	private Rate toStorage(final C csv) {
@@ -365,21 +388,25 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	}
 
 	/**
+	 * Return <code>true</code> when the Savings Plan product is accepted.
+	 * 
+	 * @param product The product to accept.
+	 * @return <code>true</code> when the Savings Plan product is accepted.
+	 */
+	protected boolean filterSPProduct(SavingsPlanProduct product) {
+		return true;
+	}
+
+	/**
 	 * Download and install Savings Plan prices from AWS endpoint.
 	 */
-	private void installSavingsPlan(final X context, final String api, final String endpoint,
+	private void installSavingsPlan(final X context, final String api, final String serviceCode, final String endpoint,
 			final Map<String, P> previousOd) {
 		final var region = context.getRegion();
-		// Install SavingPlan prices on this region
-		if (endpoint == null) {
-			// No end-point found for SP/region
-			log.info("AWS {} No Savings Plan prices on region {}", api, region.getName());
-			return;
-		}
 		final var odCode = getOnDemandCode(previousOd);
 		if (odCode == null) {
 			// No OD found for SP/region
-			log.warn("AWS {} No OnDemand prices on region {}, Savings Plan is ignored", api, region.getName());
+			log.warn("AWS {} No OnDemand prices @{}, Savings Plan is ignored", api, region.getName());
 			return;
 		}
 
@@ -387,13 +414,16 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		try (var curl = new CurlProcessor()) {
 			// Get the remote prices stream
 			final var rawJson = curl.get(endpoint);
-			final var sps = objectMapper.readValue(rawJson, SavingsPlanPrice.class).getTerms().getSavingsPlan();
-			final var skuErrors = sps.stream().flatMap(sp -> installSavingsPlanRates(context,
-					newSavingsPlanTerm(context, sp), previousOd, odCode, sp.getRates())).filter(Objects::nonNull)
-					.collect(Collectors.toList());
+			final var sps = objectMapper.readValue(rawJson, SavingsPlanPrice.class);
+			final var skus = sps.getProducts().stream().filter(this::filterSPProduct).map(SavingsPlanProduct::getSku)
+					.collect(Collectors.toSet());
+			final var skuErrors = sps.getTerms().getSavingsPlan().stream().filter(sp -> skus.contains(sp.getSku()))
+					.flatMap(sp -> installSavingsPlanRates(context, serviceCode, newSavingsPlanTerm(context, sp),
+							previousOd, odCode, sp.getRates()))
+					.filter(Objects::nonNull).collect(Collectors.toList());
 			if (!skuErrors.isEmpty()) {
 				// At least one SKU as not been resolved
-				log.warn("AWS {} Savings Plan import errors for region {} with {} unresolved SKUs, first : {}", api,
+				log.warn("AWS {} Savings Plan import errors @{} with {} unresolved SKUs, first : {}", api,
 						region.getName(), skuErrors.size(), skuErrors.get(0));
 			}
 
@@ -401,18 +431,20 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			purgePrices(context);
 		} catch (final IOException | IllegalArgumentException use) {
 			// Something goes wrong for this region, stop for this region
-			log.warn("AWS {} Savings Plan import failed for region {}", api, region.getName(), use);
+			log.warn("AWS {} Savings Plan import failed @{}", api, region.getName(), use);
 		} finally {
 			// Report
-			log.info("AWS {} Savings Plan import finished for region {}: {} prices ({})", api, region.getName(),
+			log.info("AWS {} Savings Plan import finished @{}: {} prices ({})", api, region.getName(),
 					context.getPrices().size(), String.format("%+d", context.getPrices().size() - oldCount));
 			context.cleanup();
 		}
 	}
 
-	protected Stream<String> installSavingsPlanRates(final X context, final ProvInstancePriceTerm term,
-			final Map<String, P> previousOd, final String odCode, final Collection<SavingsPlanRate> rates) {
-		return rates.stream().map(r -> installSavingsPlanPrices(context, term, r, previousOd, odCode));
+	protected Stream<String> installSavingsPlanRates(final X context, final String serviceCode,
+			final ProvInstancePriceTerm term, final Map<String, P> previousOd, final String odCode,
+			final Collection<SavingsPlanRate> rates) {
+		return rates.stream().filter(r -> serviceCode.equals(r.getDiscountedServiceCode()))
+				.map(r -> installSavingsPlanPrices(context, term, r, previousOd, odCode));
 	}
 
 	/**
@@ -477,7 +509,6 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		final var cost = jsonPrice.getDiscountedRate().getPrice() * context.getHoursMonth();
 
 		// Save the price as needed with up-front computation
-		context.getPrices().add(price.getCode());
 		saveAsNeeded(context, price, price.getCost(), cost, (cR, c) -> {
 			price.setCost(cR);
 			price.setCostPeriod(round3Decimals(c * Math.max(1, term.getPeriod())));
@@ -502,47 +533,25 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		// Nothing to do by default
 	}
 
-	/**
-	 * Return the savings plan URLs
-	 */
-	protected Map<String, String> getSavingsPlanUrls(final UpdateContext context, final String api) throws IOException {
-		return getSavingsPlanUrls(context, api, configuration.get(CONF_URL_API_SAVINGS_PLAN, SAVINGS_PLAN));
-	}
-
-	/**
-	 * Return the savings plan URLs
-	 */
-	private Map<String, String> getSavingsPlanUrls(final UpdateContext context, final String api,final String endpoint)
-			throws IOException {
-		final var result = context.getSavingsPlanUrls();
-		log.info("AWS {} Savings plan indexes...", api);
-		try (var curl = new CurlProcessor()) {
-			// Get the remote prices stream
-			final var rawJson = StringUtils.defaultString(curl.get(endpoint), "{\"regions\":[]}");
-			final var baseParts = StringUtils.splitPreserveAllTokens(endpoint, "/");
-			final var base = baseParts[0] + "//" + baseParts[2];
-
-			// All regions are considered
-			Arrays.stream(objectMapper.readValue(rawJson, SavingsPlanIndex.class).getRegions())
-					.forEach(rConf -> result.put(rConf.getRegionCode(), base + rConf.getVersionUrl()));
-		} finally {
-			// Report
-			log.info("AWS Savings plan indexes: {}", result.size());
-		}
-		return result;
-	}
-
-	protected void installSavingsPlan(final UpdateContext gContext, final Map<String, String> spIndexes,
-			final String api, final String endpoint, final ProvLocation region, final X context) {
-		final var spEndpoint = spIndexes.get(region.getName());
-		log.info("AWS {} Savings Plan import started for region {}@{} ...", api, region, endpoint);
+	protected void installSavingsPlan(final UpdateContext gContext, final String endpoint, final String api,
+			final String serviceCode, final ProvLocation region, final X context) {
+		log.info("AWS {} Savings Plan import started @{}>{} ...", api, region.getName(), endpoint);
 		final var spContext = newContext(gContext, region, TERM_EC2_SP, TERM_COMPUTE_SP);
 		spContext.setLocalTypes(context.getLocalTypes());
 		spContext.setRegion(context.getRegion());
-		installSavingsPlan(spContext, api, spEndpoint, context.getLocals());
+		installSavingsPlan(spContext, api, serviceCode, endpoint, context.getLocals());
 		spContext.cleanup();
 	}
 
+	/**
+	 * Return a new local context.
+	 * 
+	 * @param context The current global context to handle lazy sub-entities creation.
+	 * @param region  The target region.
+	 * @param term1   The expected term name prefix alternative 1.
+	 * @param term2   The expected term name prefix alternative 2.
+	 * @return A new local context.
+	 */
 	protected abstract X newContext(final UpdateContext gContext, final ProvLocation region, final String term1,
 			final String term2);
 
@@ -603,6 +612,136 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	protected void newSavingPlanPrice(final P odPrice, final P p) {
 		p.setLicense(odPrice.getLicense());
 		copySavingsPlan(odPrice, p);
+	}
+
+	/**
+	 * Return a CSV price reader instance.
+	 *
+	 * @param reader The input stream reader.
+	 * @return A CSV price reader instance
+	 * @throws IOException When the content cannot be read.
+	 */
+	protected abstract R newReader(BufferedReader reader) throws IOException;
+
+	/**
+	 * Install all prices related to the current service.
+	 * @param gContext  The current global context.
+	 * @param api The current API name.
+	 * @param serviceCode The current service code
+	 * @param term1   The expected term name prefix alternative 1.
+	 * @param term2   The expected term name prefix alternative 2.
+	 * @throws IOException When indexes cannot be downloaded.
+	 */
+	protected void installPrices(final UpdateContext gContext, final String api, final String serviceCode,
+			final String term1, final String term2) throws IOException {
+		nextStep(gContext, api, null, 0);
+		log.info("AWS {} started ...", api);
+		// Get the remote prices stream
+		final var regions = getRegionalPrices(gContext, api, serviceCode);
+		final var spRegions = getRegionalSPPrices(gContext, api, serviceCode);
+		nextStep(gContext, api, null, 1);
+		newStream(regions.values()).forEach(r -> newProxy().installRegionalPrices(gContext, r, api, serviceCode,
+				spRegions.get(r.getRegionCode()), term1, term2));
+	}
+
+	/**
+	 * Create a new transactional (READ_UNCOMMITTED) process for OnDemand/SPE prices in a specific region.
+	 *
+	 * @param gContext  The current global context.
+	 * @param pRegion   The region configuration with price URLs.
+	 * @param api The current API name.
+	 * @param serviceCode The current service code
+	 * @param term1   The expected term name prefix alternative 1.
+	 * @param term2   The expected term name prefix alternative 2.
+	 */
+	@Transactional(propagation = Propagation.SUPPORTS, isolation = Isolation.READ_UNCOMMITTED)
+	public void installRegionalPrices(final UpdateContext gContext, final AwsPriceRegion pRegion, final String api,
+			final String serviceCode, final AwsPriceRegion spRegion, final String term1, final String term2) {
+		final var regionCode = pRegion.getRegionCode();
+		final var endpoint = getCsvUrl(gContext, pRegion.getUrl());
+		log.info("AWS {} OnDemand/Reserved import started for @{}>{} ...", api, regionCode, endpoint);
+		nextStep(gContext, api, regionCode, 0);
+
+		var region = locationRepository.findByName(gContext.getNode().getId(), regionCode);
+		if (region == null) {
+			region = installRegion(gContext, regionCode);
+		}
+
+		// Track the created instance to cache partial costs
+		final var context = newContext(gContext, region, term1, term2);
+		final var oldCount = context.getLocals().size();
+		context.setPreviousStorage(spRepository.findByLocation(context.getNode().getId(), regionCode).stream()
+				.collect(Collectors.toMap(ProvStoragePrice::getCode, Function.identity())));
+
+		// Get the remote prices stream
+		var succeed = false;
+		try (var reader = new BufferedReader(new InputStreamReader(new URI(endpoint).toURL().openStream()))) {
+			// Pipe to the CSV reader
+			final var csvReader = newReader(reader);
+
+			// Build the AWS instance prices from the CSV
+			var csv = csvReader.read();
+			while (csv != null) {
+
+				// Persist this price
+				if (isEnabled(context, csv)) {
+					installPrice(context, csv);
+				}
+
+				// Read the next one
+				csv = csvReader.read();
+			}
+			context.getPRepository().flush();
+
+			// Purge the SKUs
+			purgePrices(context);
+			succeed = true;
+		} catch (final IOException | URISyntaxException use) {
+			// Something goes wrong for this region, stop for this region
+			log.warn("AWS {} OnDemand/Reserved import failed @{}", api, region.getName(), use);
+		} finally {
+			// Report
+			log.info("AWS {} OnDemand/Reserved import finished @{}: {} prices ({})", api, region.getName(),
+					context.getPrices().size(), String.format("%+d", context.getPrices().size() - oldCount));
+		}
+
+		// Savings Plan part: only when OD succeed
+		if (spRegion == null) {
+			nextStep(context, api, null, 1);
+		} else if (succeed) {
+			nextStep(context, api, regionCode, 1);
+			installSavingsPlan(gContext, context.getUrl(spRegion.getUrl()), api, serviceCode, region, context);
+			nextStep(context, api + " (saving plan)", regionCode, 1);
+		} else {
+			nextStep(context, api, null, 2);
+		}
+		context.cleanup();
+	}
+
+	/**
+	 * Install the instance type (if needed), the instance price type (if needed) and the price.
+	 *
+	 * @param context The update context.
+	 * @param csv     The current CSV entry.
+	 */
+	protected abstract void installPrice(final X context, final C csv);
+
+	/**
+	 * Return the proxy of this class.
+	 *
+	 * @return The proxy of this class.
+	 */
+	public abstract AbstractAwsPriceImportVm<T, P, C, Q, X, R> newProxy();
+
+	/**
+	 * Is this record is enabled.
+	 * 
+	 * @param context The update context.
+	 * @param csv     The current CSV entry.
+	 * @return <code>true</code> when this record is accepted.
+	 */
+	protected boolean isEnabled(final X context, final C csv) {
+		return isEnabledType(context, csv.getInstanceType());
 	}
 
 }

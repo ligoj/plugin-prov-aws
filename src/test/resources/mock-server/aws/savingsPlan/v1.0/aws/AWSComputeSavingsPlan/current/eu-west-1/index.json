@@ -1,0 +1,204 @@
+{
+  "version" : "20200220220300",
+  "publicationDate" : "2020-02-20T22:03:00Z",
+  "products" : [ {
+    "sku" : "8GU23DFTKP2N43SD",
+    "productFamily" : "ComputeSavingsPlans",
+    "serviceCode" : "ComputeSavingsPlans",
+    "usageType" : "ComputeSP:1yrAllUpfront",
+    "operation" : "",
+    "attributes" : {
+      "purchaseOption" : "All Upfront",
+      "granularity" : "hourly",
+      "locationType" : "AWS Region",
+      "purchaseTerm" : "1yr",
+      "location" : "Any"
+    }
+  }, {
+    "sku" : "7DVU5XBSTGHBTJUV",
+    "productFamily" : "EC2InstanceSavingsPlans",
+    "serviceCode" : "ComputeSavingsPlans",
+    "usageType" : "EU-EC2SP:c1.1yrNoUpfront",
+    "operation" : "",
+    "attributes" : {
+      "purchaseOption" : "No Upfront",
+      "granularity" : "hourly",
+      "instanceType" : "c1",
+      "locationType" : "AWS Region",
+      "purchaseTerm" : "1yr",
+      "location" : "EU (Ireland)"
+    }
+  }, {
+    "sku" : "ZGC49G7XS8QA54BQ",
+    "productFamily" : "ComputeSavingsPlans",
+    "serviceCode" : "ComputeSavingsPlans",
+    "usageType" : "ComputeSP:3yrNoUpfront",
+    "operation" : "",
+    "attributes" : {
+      "purchaseOption" : "No Upfront",
+      "granularity" : "hourly",
+      "locationType" : "AWS Region",
+      "purchaseTerm" : "3yr",
+      "location" : "Any"
+    }
+  }
+  ],
+  
+  "terms" : {
+    "savingsPlan" : [ {
+      "sku" : "7DVU5XBSTGHBTJUV",
+      "description" : "1 year No Upfront c1 EC2 Instance Savings Plan in eu-west-1",
+      "leaseContractLength" : {
+        "duration" : 1
+      },
+      "rates" : [ {
+        "discountedSku" : "HB5V2X8TXQUTDZBV",
+        "discountedServiceCode" : "AmazonEC2",
+        "discountedUsageType" : "EUW1-DedicatedUsage:c1.medium",
+        "rateCode" : "7DVU5XBSTGHBTJUV.M2WTFX8JK6VDUNU5",
+        "discountedRate" : {
+          "price" : "0.087"
+        }
+      }, {
+        "discountedSku" : "_not_found_",
+        "discountedServiceCode" : "AmazonEC2",
+        "discountedUsageType" : "EUW1-UnusedDed:c1.medium",
+        "rateCode" : "7DVU5XBSTGHBTJUV.Y48XUZ9XH8NEYS8Q",
+        "discountedRate" : {
+          "price" : "6.455"
+        }
+	  }]
+    },{
+      "sku" : "8GU23DFTKP2N43SD",
+      "description" : "1 year All Upfront Compute Savings Plan",
+      "leaseContractLength" : {
+        "duration" : 1
+      },
+      "rates" : [ {
+        "discountedSku" : "HB5V2X8TXQUTDZBV",
+        "discountedServiceCode" : "AmazonEC2",
+        "discountedUsageType" : "EUW1-BoxUsage:c1.medium",
+        "rateCode" : "8GU23DFTKP2N43SD.29QDFBY626457QNP",
+        "discountedRate" : {
+          "price" : "0.098"
+        }
+      }, {
+        "discountedSku" : "HB5V2X8TXQUTDZBV",
+        "discountedServiceCode" : "AmazonEC2",
+        "discountedUsageType" : "EUW3-Unused:c1.medium",
+        "rateCode" : "8GU23DFTKP2N43SD.2FYQUTXHCPJH694R",
+        "discountedRate" : {
+          "price" : "0.82"
+        }
+      }, {
+        "discountedSku" : "K4EXFQ5YFQCP98EN",
+        "discountedUsageType" : "EU-Fargate-vCPU-Hours:perCPU",
+        "discountedOperation" : "",
+        "discountedServiceCode" : "AmazonECS",
+        "rateCode" : "8GU23DFTKP2N43SD.__INCOMPLETE__NO_GB_HOURS_PRICE__",
+        "unit" : "Hrs",
+        "discountedRate" : {
+          "price" : "0.0315744",
+          "currency" : "USD"
+        }
+      }, {
+        "discountedSku" : "SGGKTWDV7PGMPPSJ",
+        "discountedUsageType" : "EU-Lambda-GB-Second",
+        "discountedOperation" : "",
+        "discountedServiceCode" : "AWSLambda",
+        "rateCode" : "8GU23DFTKP2N43SD.__INCOMPLETE__NO_REQUESTS_PRICE__0",
+        "unit" : "Lambda-GB-Second",
+        "discountedRate" : {
+          "price" : "0.0000138",
+          "currency" : "USD"
+        }
+      }, {
+        "discountedSku" : "ZS4KB9WXZA5FWZ7A",
+        "discountedUsageType" : "EU-Lambda-Provisioned-GB-Second",
+        "discountedOperation" : "",
+        "discountedServiceCode" : "AWSLambda",
+        "rateCode" : "8GU23DFTKP2N43SD.__INCOMPLETE__NO_REQUESTS_PRICE__1",
+        "unit" : "Lambda-GB-Second",
+        "discountedRate" : {
+          "price" : "0.000009",
+          "currency" : "USD"
+        }
+      }]
+    }, {
+      "sku" : "ZGC49G7XS8QA54BQ",
+      "description" : "3 year No Upfront Compute Savings Plan",
+      "effectiveDate" : "2021-01-22T22:48:51Z",
+      "leaseContractLength" : {
+        "duration" : 3,
+        "unit" : "year"
+      },
+      "rates" : [ {
+        "discountedSku" : "K4EXFQ5YFQCP98EN",
+        "discountedUsageType" : "EU-Fargate-vCPU-Hours:perCPU",
+        "discountedOperation" : "",
+        "discountedServiceCode" : "AmazonECS",
+        "rateCode" : "ZGC49G7XS8QA54BQ.K4EXFQ5YFQCP98EN",
+        "unit" : "Hrs",
+        "discountedRate" : {
+          "price" : "0.024288",
+          "currency" : "USD"
+        }
+      }, {
+        "discountedSku" : "UP5ETC3QSW2QZGEY",
+        "discountedUsageType" : "EU-Fargate-GB-Hours",
+        "discountedOperation" : "",
+        "discountedServiceCode" : "AmazonECS",
+        "rateCode" : "ZGC49G7XS8QA54BQ.UP5ETC3QSW2QZGEY",
+        "unit" : "Hrs",
+        "discountedRate" : {
+          "price" : "0.002667",
+          "currency" : "USD"
+        }
+      }, {
+        "discountedSku" : "B5V2RNHAWGVJBZD3",
+        "discountedUsageType" : "EU-Request",
+        "discountedOperation" : "",
+        "discountedServiceCode" : "AWSLambda",
+        "rateCode" : "ZGC49G7XS8QA54BQ.B5V2RNHAWGVJBZD3",
+        "unit" : "Request",
+        "discountedRate" : {
+          "price" : "0.0000002",
+          "currency" : "USD"
+        }
+      }, {
+        "discountedSku" : "BP8P7CBMNM86SRMW",
+        "discountedUsageType" : "EU-Lambda-Provisioned-Concurrency",
+        "discountedOperation" : "",
+        "discountedServiceCode" : "AWSLambda",
+        "rateCode" : "ZGC49G7XS8QA54BQ.BP8P7CBMNM86SRMW",
+        "unit" : "Lambda-GB-Second",
+        "discountedRate" : {
+          "price" : "0.00000409",
+          "currency" : "USD"
+        }
+      }, {
+        "discountedSku" : "SGGKTWDV7PGMPPSJ",
+        "discountedUsageType" : "EU-Lambda-GB-Second",
+        "discountedOperation" : "",
+        "discountedServiceCode" : "AWSLambda",
+        "rateCode" : "ZGC49G7XS8QA54BQ.SGGKTWDV7PGMPPSJ",
+        "unit" : "Lambda-GB-Second",
+        "discountedRate" : {
+          "price" : "0.0000147",
+          "currency" : "USD"
+        }
+      }, {
+        "discountedSku" : "ZS4KB9WXZA5FWZ7A",
+        "discountedUsageType" : "EU-Lambda-Provisioned-GB-Second",
+        "discountedOperation" : "",
+        "discountedServiceCode" : "AWSLambda",
+        "rateCode" : "ZGC49G7XS8QA54BQ.ZS4KB9WXZA5FWZ7A",
+        "unit" : "Lambda-GB-Second",
+        "discountedRate" : {
+          "price" : "0.00000954",
+          "currency" : "USD"
+        }
+      }]
+    }]
+  }
+}

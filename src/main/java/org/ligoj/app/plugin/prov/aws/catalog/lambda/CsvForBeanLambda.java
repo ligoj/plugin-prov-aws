@@ -5,19 +5,16 @@ package org.ligoj.app.plugin.prov.aws.catalog.lambda;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.Reader;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsCsvForBean;
-import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsCsvReader;
-import org.ligoj.bootstrap.core.csv.CsvBeanReader;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AbstractCsvForBeanEc2;
 
 /**
  * Read AWS Lambda CSV input, skipping the AWS headers and non data type rows.
  */
-public class CsvForBeanLambda extends AbstractAwsCsvForBean<AwsLambdaPrice> {
+public class CsvForBeanLambda extends AbstractCsvForBeanEc2<AwsLambdaPrice> {
 
 	/**
 	 * Lambda Mapping to Java bean property
@@ -38,16 +35,7 @@ public class CsvForBeanLambda extends AbstractAwsCsvForBean<AwsLambdaPrice> {
 	}
 
 	@Override
-	protected CsvBeanReader<AwsLambdaPrice> newCsvReader(final Reader reader, final String[] headers,
-			final Class<AwsLambdaPrice> beanType) {
-		return new AbstractAwsCsvReader<>(reader, headers, beanType) {
-
-			@Override
-			protected boolean isValidRaw(final List<String> rawValues) {
-				// Excludes Free tiers
-				return !(rawValues.get(4).contains("Free Tier"));
-			}
-
-		};
+	public boolean isValidRaw(List<String> rawValues) {
+		return !(rawValues.get(4).contains("Free Tier"));
 	}
 }

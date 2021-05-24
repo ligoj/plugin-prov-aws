@@ -7,7 +7,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Formatter;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -16,9 +15,10 @@ import java.util.stream.Stream;
 
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.ligoj.app.model.Node;
+import org.ligoj.app.plugin.prov.aws.catalog.AwsPriceImportBase;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVmOs;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlanProduct;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlanRate;
 import org.ligoj.app.plugin.prov.catalog.AbstractUpdateContext;
 import org.ligoj.app.plugin.prov.model.ProvContainerPrice;
@@ -44,16 +44,16 @@ import lombok.extern.slf4j.Slf4j;
 public class AwsPriceImportFargate extends
 		AbstractAwsPriceImportVmOs<ProvContainerType, ProvContainerPrice, AwsFargatePrice, ProvQuoteContainer, LocalFargateContext, CsvForBeanFargate> {
 
+	/**
+	 * Service code.
+	 */
+	private static final String SERVICE_CODE = "AmazonECS";
+
 	private static final String VCPU_HOURS = "vCPU-Hours";
 
 	private static final String VCPU_HOURS_PER = VCPU_HOURS + ":perCPU";
 
 	private static final String GB_HOURS = "GB-Hours";
-
-	/**
-	 * The EC2 reserved and on-demand price end-point, a CSV file, accepting the region code with {@link Formatter}
-	 */
-	private static final String FARGATE_PRICES = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonECS/current/%s/index.csv";
 
 	/**
 	 * The EC2 spot price end-point, a JSON file. Contains the prices for all regions.
@@ -63,17 +63,13 @@ public class AwsPriceImportFargate extends
 	/**
 	 * The API name.
 	 */
-	private static final String API_NAME = "fargate";
-
-	/**
-	 * Configuration key used for {@link #FARGATE_PRICES}
-	 */
-	public static final String CONF_URL_FARGATE_PRICES = String.format(CONF_URL_API_PRICES, API_NAME);
+	private static final String API = "fargate";
+	private static final String API_SPOT = API + "-spot";
 
 	/**
 	 * Configuration key used for {@link #EC2_PRICES_SPOT}
 	 */
-	public static final String CONF_URL_FARGATE_PRICES_SPOT = String.format(CONF_URL_API_PRICES, API_NAME + "-spot");
+	public static final String CONF_URL_FARGATE_PRICES_SPOT = String.format(AwsPriceImportBase.CONF_URL_TMP_PRICES, API_SPOT);
 
 	private static final Map<Double, double[]> CPU_TO_RAM = Map.of(
 			// | .CPU | Memory Values |
@@ -91,38 +87,50 @@ public class AwsPriceImportFargate extends
 
 	@Override
 	public void install(final UpdateContext context) throws IOException {
-		nextStep(context, API_NAME, null, 0);
-		installFargate(context, context.getNode(), API_NAME, configuration.get(CONF_URL_FARGATE_PRICES, FARGATE_PRICES),
-				configuration.get(CONF_URL_FARGATE_PRICES_SPOT, FARGATE_PRICES_SPOT));
-		nextStep(context, API_NAME, null, 1);
-	}
-
-	private void installFargate(final UpdateContext context, final Node node, final String api, final String apiPrice,
-			final String apiSpotPrice) throws IOException {
-		final var indexes = context.getSavingsPlanUrls();
-
+		nextStep(context, API, null, 0);
 		// Pre-install types
 		installFargateTypes(context);
 
-		// Install OnDemand and reserved prices
-		newStream(context.getRegions().values()).filter(region -> isEnabledRegion(context, region))
-				.forEach(region -> newProxy().installVmPrices(context, region, api, apiPrice, indexes));
+		// Install OnDemand and savings plan prices
+		installPrices(context, API, SERVICE_CODE, TERM_ON_DEMAND, null);
 
 		// Install the SPOT Fargate prices
-		nextStep(context, api + "-spot", null, 0);
-		installSpotPrices(context, apiSpotPrice);
+		nextStep(context, API_SPOT, null, 0);
+		installSpotPrices(context, configuration.get(CONF_URL_FARGATE_PRICES_SPOT, FARGATE_PRICES_SPOT));
+		nextStep(context, API_SPOT, null, 1);
 	}
 
 	@Override
-	protected Stream<String> installSavingsPlanRates(final LocalFargateContext context,
+	protected void installPrice(final LocalFargateContext context, final AwsFargatePrice csv) {
+		final var partialCost = context.getPartialCost();
+		partialCost.put(csv.getUsageType().replaceFirst(".*Fargate-", ""), csv);
+		if (partialCost.containsKey(GB_HOURS) && partialCost.containsKey(VCPU_HOURS_PER)) {
+			// All parts are read
+			final var csvRam = partialCost.get(GB_HOURS);
+			final var csvCpu = partialCost.get(VCPU_HOURS_PER);
+			final var costRam = csvRam.getPricePerUnit();
+			final var costCpu = csvCpu.getPricePerUnit();
+			installFargatePrice(context, csvCpu, costRam, costCpu);
+		}
+	}
+
+	@Override
+	protected boolean filterSPProduct(final SavingsPlanProduct product) {
+		return "ComputeSavingsPlans".equals(product.getProductFamily());
+	}
+
+	@Override
+	protected Stream<String> installSavingsPlanRates(final LocalFargateContext context, final String serviceCode,
 			final ProvInstancePriceTerm term, final Map<String, ProvContainerPrice> previousOd, final String odCode,
 			final Collection<SavingsPlanRate> rates) {
-		final var fargatePrices = rates.stream().filter(r -> r.getDiscountedUsageType().contains("Fargate"))
-				.collect(Collectors.toList());
-		final var rateRam = findSavingsPlanCost(fargatePrices, GB_HOURS);
-		final var rateCpu = findSavingsPlanCost(fargatePrices, VCPU_HOURS_PER);
+		final var rateCpu = findSavingsPlanCost(rates, VCPU_HOURS_PER);
+		final var rateRam = findSavingsPlanCost(rates, GB_HOURS);
 		if (ObjectUtils.allNotNull(rateCpu, rateRam)) {
 			installSavingsPlanPrices(context, term, rateCpu, rateRam, previousOd, odCode);
+		} else {
+			log.warn("AWS {} No Savings Plan prices @{} term={}/{}, cpu={}, ram={}", API, context.getRegion().getName(),
+					term.getCode(), term.getName(), rateCpu, rateRam);
+			return Stream.empty();
 		}
 		return Stream.empty();
 	}
@@ -132,27 +140,12 @@ public class AwsPriceImportFargate extends
 			final Map<String, ProvContainerPrice> previousOd, final String odCode) {
 		final var costCpu = rateCpu.getDiscountedRate().getPrice();
 		final var costRam = rateRam.getDiscountedRate().getPrice();
-		final var cpuRateCode = rateRam.getRateCode();
+		final var cpuRateCode = rateCpu.getRateCode();
 		CPU_TO_RAM.forEach((cpu, ramGbA) -> Arrays.stream(ramGbA).forEach(ram -> {
 			rateCpu.getDiscountedRate().setPrice(costCpu * cpu + costRam * ram);
 			rateCpu.setRateCode(toPriceCode(cpuRateCode, cpu, ram));
 			super.installSavingsPlanPrices(context, term, rateCpu, previousOd, toPriceCode(odCode, cpu, ram));
 		}));
-	}
-
-	@Override
-	protected boolean handlePartialCost(final LocalFargateContext context, final AwsFargatePrice csv) {
-		context.getPartialCost().put(csv.getUsageType().replaceFirst(".*Fargate-", ""), csv);
-		if (context.getPartialCost().size() == 2) {
-			// All parts are read
-			final var csvRam = context.getPartialCost().get(GB_HOURS);
-			final var csvCpu = context.getPartialCost().get(VCPU_HOURS_PER);
-			final var costRam = csvRam.getPricePerUnit();
-			final var costCpu = csvCpu.getPricePerUnit();
-			context.getPrices().add(csvCpu.getSku());
-			installFargatePrice(context, csvCpu, costRam, costCpu);
-		}
-		return true;
 	}
 
 	/**
@@ -176,7 +169,7 @@ public class AwsPriceImportFargate extends
 	}
 
 	private String toCode(final double cpu, final double ramGb) {
-		return API_NAME + "-" + cpu + "-" + ramGb;
+		return API + "-" + cpu + "-" + ramGb;
 	}
 
 	/**
@@ -190,32 +183,27 @@ public class AwsPriceImportFargate extends
 
 	private ProvContainerType installInstanceType(final LocalFargateContext context, final double cpu,
 			final double ramGb) {
-		final var sharedType = context.getPreviousTypes().computeIfAbsent(toCode(cpu, ramGb), code -> {
-			final var t = context.newType();
-			t.setNode(context.getNode());
-			t.setCode(code);
-			return t;
-		});
+		final var fakeCsv = new AwsFargatePrice();
+		fakeCsv.setInstanceType(toCode(cpu, ramGb));
+		fakeCsv.setCpu(cpu);
+		fakeCsv.setRamGb(ramGb);
+		return installInstanceType(context, fakeCsv);
+	}
 
-		final var type = context.getLocalTypes().computeIfAbsent(sharedType.getCode(),
-				code -> ObjectUtils.defaultIfNull(ctRepository.findBy("code", code), sharedType));
+	protected void copy(final AwsFargatePrice csv, final ProvContainerType t) {
+		t.setAutoScale(true);
+		t.setName(t.getCode());
+		t.setConstant(true);
+		t.setPhysical(false);
+		t.setDescription("Fargate");
+		t.setCpu(csv.getCpu());
+		t.setRam(csv.getRamGb() * 1024d);
 
-		// Update the statistics only once
-		return copyAsNeeded(context, type, t -> {
-			t.setAutoScale(true);
-			t.setName(t.getCode());
-			t.setConstant(true);
-			t.setPhysical(false);
-			t.setDescription("Fargate");
-			t.setCpu(cpu);
-			t.setRam(ramGb * 1024d);
-
-			// Rating
-			t.setCpuRate(Rate.MEDIUM);
-			t.setRamRate(Rate.MEDIUM);
-			t.setNetworkRate(Rate.MEDIUM);
-			t.setStorageRate(Rate.MEDIUM);
-		}, context.getTRepository());
+		// Rating
+		t.setCpuRate(Rate.MEDIUM);
+		t.setRamRate(Rate.MEDIUM);
+		t.setNetworkRate(Rate.MEDIUM);
+		t.setStorageRate(Rate.MEDIUM);
 	}
 
 	@Override
@@ -272,7 +260,9 @@ public class AwsPriceImportFargate extends
 	 * Find the first cost corresponding to the required unit.
 	 */
 	private SavingsPlanRate findSavingsPlanCost(final Collection<SavingsPlanRate> rates, final String usageType) {
-		return rates.stream().filter(p -> p.getDiscountedUsageType().endsWith(usageType)).findFirst().orElse(null);
+		return rates.stream().filter(
+				p -> p.getDiscountedUsageType().endsWith(usageType) && SERVICE_CODE.equals(p.getDiscountedServiceCode()))
+				.findFirst().orElse(null);
 	}
 
 	/**
@@ -302,7 +292,7 @@ public class AwsPriceImportFargate extends
 		final var csvCpu = new AwsFargatePrice();
 		csvCpu.setTermType(term.getName());
 		csvCpu.setOfferTermCode(term.getCode());
-		csvCpu.setRateCode(term.getCode() + "." + region.getName() + "." + API_NAME);
+		csvCpu.setRateCode(term.getCode() + "." + region.getName() + "." + API);
 		installFargatePrice(context, csvCpu, costRam, costCpu);
 
 		// Purge the SKUs

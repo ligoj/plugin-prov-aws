@@ -14,4 +14,9 @@ import lombok.Setter;
 public class AwsEc2Price extends AbstractAwsVmOsPrice {
 
 	private String software;
+	
+	/**
+	 * API Volume type. Not <code>null</code> for EBS price.
+	 */
+	private String volume;
 }

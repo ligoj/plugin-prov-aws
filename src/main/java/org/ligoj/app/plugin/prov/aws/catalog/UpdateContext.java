@@ -10,6 +10,7 @@ import org.ligoj.app.plugin.prov.catalog.AbstractUpdateContext;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Context used to perform catalog update.
@@ -30,8 +31,10 @@ public class UpdateContext extends AbstractUpdateContext {
 	private final Map<String, String> mapSpotToNewRegion = new HashMap<>();
 
 	/**
-	 * Mapping from Spot region name to API name.
+	 * Offers index.
 	 */
 	@Getter
-	private final Map<String, String> savingsPlanUrls = new HashMap<>();
+	@Setter
+	private Map<String, AwsPriceOffer> offers;
+
 }

@@ -1,16 +1,11 @@
 {
-	"ebsGPSSD":"gp2",
-	"ebsPIOPSSSD":"io1",
-	"ebsTOHDD":"st1",
-	"ebsColdHDD":"sc1",
-	"ebsSnapsToS3":"snapshot",
-	"Standard": "s3",
-	"Standard - Infrequent Access": "s3-ia",
-	"One Zone - Infrequent Access": "s3-z-ia",
-	"Reduced Redundancy": "s3-rr",
-	"Amazon Glacier": "glacier",
-	"General Purpose": "efs",
-	"Infrequent Access": "efs-ia",
-	"One Zone-Infrequent Access": "efs-z-ia",
-	"One Zone-General Purpose": "efs-z"
+	"s3-Standard": "s3",
+	"s3-Standard - Infrequent Access": "s3-ia",
+	"s3-One Zone - Infrequent Access": "s3-z-ia",
+	"s3-Reduced Redundancy": "s3-rr",
+	"s3-Amazon Glacier": "glacier",
+	"efs-General Purpose": "efs",
+	"efs-Infrequent Access": "efs-ia",
+	"efs-One Zone-Infrequent Access": "efs-z-ia",
+	"efs-One Zone-General Purpose": "efs-z"
 }

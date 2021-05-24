@@ -5,7 +5,6 @@ package org.ligoj.app.plugin.prov.aws.catalog.vm.ec2;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.util.Formatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -14,8 +13,8 @@ import javax.annotation.PostConstruct;
 
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.ligoj.app.model.Node;
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
+import org.ligoj.app.plugin.prov.aws.catalog.AwsPriceImportBase;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVmOs;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
@@ -23,6 +22,7 @@ import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
 import org.ligoj.app.plugin.prov.model.ProvInstanceType;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
+import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
 import org.ligoj.app.plugin.prov.model.ProvTenancy;
 import org.ligoj.app.plugin.prov.model.VmOs;
 import org.ligoj.bootstrap.core.SpringUtils;
@@ -42,9 +42,9 @@ public class AwsPriceImportEc2 extends
 		AbstractAwsPriceImportVmOs<ProvInstanceType, ProvInstancePrice, AwsEc2Price, ProvQuoteInstance, LocalEc2Context, CsvForBeanEc2> {
 
 	/**
-	 * The EC2 reserved and on-demand price end-point, a CSV file, accepting the region code with {@link Formatter}
+	 * Service code.
 	 */
-	private static final String EC2_PRICES = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/%s/index.csv";
+	private static final String SERVICE_CODE = "AmazonEC2";
 
 	/**
 	 * The EC2 spot price end-point, a JSON file. Contains the prices for all regions.
@@ -52,14 +52,15 @@ public class AwsPriceImportEc2 extends
 	private static final String EC2_PRICES_SPOT = "https://spot-price.s3.amazonaws.com/spot.js";
 
 	/**
-	 * Configuration key used for {@link #EC2_PRICES}
+	 * API name of this service.
 	 */
-	public static final String CONF_URL_EC2_PRICES = String.format(CONF_URL_API_PRICES, "ec2");
+	private static final String API = "ec2";
+	private static final String API_SPOT = API + "-spot";
 
 	/**
 	 * Configuration key used for {@link #EC2_PRICES_SPOT}
 	 */
-	public static final String CONF_URL_EC2_PRICES_SPOT = String.format(CONF_URL_API_PRICES, "ec2-spot");
+	public static final String CONF_URL_EC2_PRICES_SPOT = String.format(AwsPriceImportBase.CONF_URL_TMP_PRICES, API_SPOT);
 
 	/**
 	 * Configuration key used for enabled OS pattern names. When value is <code>null</code>, no restriction.
@@ -78,30 +79,60 @@ public class AwsPriceImportEc2 extends
 
 	@Override
 	public void install(final UpdateContext context) throws IOException {
-		nextStep(context, "ec2", null, 0);
 		context.setValidOs(Pattern.compile(configuration.get(CONF_OS, ".*"), Pattern.CASE_INSENSITIVE));
 		context.setValidInstanceType(Pattern.compile(configuration.get(CONF_ITYPE, ".*"), Pattern.CASE_INSENSITIVE));
-		installEc2(context, context.getNode(), "ec2", configuration.get(CONF_URL_EC2_PRICES, EC2_PRICES),
-				configuration.get(CONF_URL_EC2_PRICES_SPOT, EC2_PRICES_SPOT));
-		nextStep(context, "ec2", null, 1);
-	}
-
-	private void installEc2(final UpdateContext context, final Node node, final String api, final String apiPrice,
-			final String apiSpotPrice) throws IOException {
-
-		// Install the EC2 (non spot) prices
-		nextStep(context, api + " (savings plan indexes)", null, 0);
-		final var indexes = getSavingsPlanUrls(context, api);
-		nextStep(context, api + " (savings plan indexes)", null, 1);
 
 		// Install OnDemand and reserved prices
-		newStream(context.getRegions().values()).filter(region -> isEnabledRegion(context, region))
-				.forEach(region -> newProxy().installVmPrices(context, region, api, apiPrice, indexes));
+		installPrices(context, API, SERVICE_CODE, TERM_ON_DEMAND, TERM_RESERVED);
 
 		// Install the SPOT EC2 prices
-		nextStep(context, api + "-spot", null, 0);
-		installJsonPrices(context, api + "-spot", apiSpotPrice, SpotPrices.class,
-				r -> newProxy().installSpotPrices(context, r));
+		nextStep(context, API_SPOT, null, 0);
+		installJsonPrices(context, API_SPOT, configuration.get(CONF_URL_EC2_PRICES_SPOT, EC2_PRICES_SPOT),
+				SpotPrices.class, r -> newProxy().installSpotPrices(context, r));
+
+		nextStep(context, API_SPOT, null, 1);
+	}
+
+	@Override
+	protected void installPrice(final LocalEc2Context context, final AwsEc2Price csv) {
+		if ("Compute Instance".equals(csv.getFamily())) {
+			if (!handlePartialCost(context, csv)) {
+				// No up-front, cost is fixed
+				final var price = newPrice(context, csv);
+				final var cost = csv.getPricePerUnit() * context.getHoursMonth();
+				saveAsNeeded(context, price, cost, context.getPRepository());
+			}
+		} else {
+			// Check the volume API
+			final var type = context.getStorageTypes().get(StringUtils.trimToEmpty(csv.getVolume()));
+			if (type == null) {
+				log.info("Ignore unkonown volume type {}", csv.getVolume());
+				return;
+			}
+
+			if (!"Storage".equals(csv.getFamily())) {
+				log.info("Ignore unkonown storage price type {}", csv.getFamily());
+				return;
+			}
+
+			// = csv.getSku()
+			final var code = context.getRegion().getName() + "-" + type.getName();
+			final var price = context.getPreviousStorage().computeIfAbsent(code, c -> {
+				final var p = new ProvStoragePrice();
+				p.setCode(c);
+				p.setType(type);
+				p.setLocation(context.getRegion());
+				return p;
+			});
+
+			// Update the price as needed
+			saveAsNeeded(context, price, csv.getPricePerUnit(), spRepository);
+		}
+	}
+
+	@Override
+	protected boolean isEnabled(final LocalEc2Context context, final AwsEc2Price csv) {
+		return !"Compute Instance".equals(csv.getFamily()) || super.isEnabled(context, csv);
 	}
 
 	@Override
@@ -122,11 +153,11 @@ public class AwsPriceImportEc2 extends
 
 		// Get previous prices for this location
 		final var context = newContext(gContext, region, TERM_SPOT, TERM_SPOT);
-		final var spotPriceType = newSpotInstanceTerm(context);
+		final var term = newSpotInstanceTerm(context);
 		r.getInstanceTypes().stream().flatMap(t -> t.getSizes().stream())
 				.filter(t -> isEnabledType(gContext, t.getName())).forEach(t -> {
 					if (context.getLocalTypes().containsKey(t.getName())) {
-						installSpotPrices(context, t, spotPriceType);
+						installSpotPrices(context, t, term);
 					} else {
 						// Unavailable instances type of spot are ignored
 						log.warn("Instance {} is referenced from spot but not available", t.getName());
@@ -141,12 +172,12 @@ public class AwsPriceImportEc2 extends
 	/**
 	 * EC2 spot installer. Install the instance type (if needed), the instance price type (if needed) and the price.
 	 *
-	 * @param context       The update context.
-	 * @param json          The current JSON entry.
-	 * @param spotPriceType The related AWS Spot instance price type.
+	 * @param context The update context.
+	 * @param json    The current JSON entry.
+	 * @param term    The related AWS Spot instance price term.
 	 */
 	private void installSpotPrices(final LocalEc2Context context, final AwsEc2SpotPrice json,
-			final ProvInstancePriceTerm spotPriceType) {
+			final ProvInstancePriceTerm term) {
 		final var region = context.getRegion();
 		final var type = context.getLocalTypes().get(json.getName());
 		final var baseCode = TERM_SPOT_CODE + "-" + region.getName() + "-" + type.getName() + "-";
@@ -158,7 +189,7 @@ public class AwsPriceImportEc2 extends
 					final var price = context.getLocals().computeIfAbsent(baseCode + op.getOs(), c -> {
 						final var p = context.newPrice(c);
 						p.setType(type);
-						p.setTerm(spotPriceType);
+						p.setTerm(term);
 						p.setTenancy(ProvTenancy.SHARED);
 						p.setOs(op.getOs());
 						p.setLocation(region);

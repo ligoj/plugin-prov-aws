@@ -5,141 +5,144 @@ package org.ligoj.app.plugin.prov.aws.catalog.lambda;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URL;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
-import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsImport;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
-import org.ligoj.app.plugin.prov.catalog.ImportCatalog;
-import org.ligoj.app.plugin.prov.model.AbstractCodedEntity;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVm;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlanProduct;
 import org.ligoj.app.plugin.prov.model.ProvFunctionPrice;
 import org.ligoj.app.plugin.prov.model.ProvFunctionType;
-import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
+import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
+import org.ligoj.app.plugin.prov.model.ProvLocation;
+import org.ligoj.app.plugin.prov.model.ProvQuoteFunction;
+import org.ligoj.app.plugin.prov.model.Rate;
+import org.ligoj.bootstrap.core.SpringUtils;
 import org.springframework.stereotype.Component;
-
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * The provisioning Lambda price service for AWS. Manage install and update of prices.
  * 
  * @see {@link https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSLambda/20210304163809/af-south-1/index.csv}
  */
-@Slf4j
 @Component
-public class AwsPriceImportLambda extends AbstractAwsImport implements ImportCatalog<UpdateContext> {
-
-	private static final String AWS_PRICES_PATH = "/offers/v1.0/aws/index.json";
-
-	private static final String AWS_PRICES_BASE = "https://pricing.us-east-1.amazonaws.com";
+public class AwsPriceImportLambda extends
+		AbstractAwsPriceImportVm<ProvFunctionType, ProvFunctionPrice, AwsLambdaPrice, ProvQuoteFunction, LocalLambdaContext, CsvForBeanLambda> {
 
 	/**
-	 * Configuration key used for {@link #AWS_PRICES_BASE}
+	 * Service code.
 	 */
-	public static final String CONF_URL_AWS_PRICES = String.format(CONF_URL_API_PRICES, "aws");
+	private static final String SERVICE_CODE = "AWSLambda";
+	
+	/**
+	 * API name of this service.
+	 */
+	private static final String API = "lambda";
+
+	@Override
+	protected void installPrice(final LocalLambdaContext context, final AwsLambdaPrice csv) {
+		context.setLast(csv);
+		context.getMapper().getOrDefault(csv.getGroup(), Function.identity()::apply).accept(csv);
+	}
+
+	@Override
+	protected void purgePrices(final LocalLambdaContext context) {
+		final var last = context.getLast();
+		if (last != null) {
+			// At least one price
+			final var region = installRegion(context, context.getRegion().getName(), last.getLocation());
+			final var term = installInstancePriceTerm(context, last);
+			installLambdaPrice(context, region, term, context.getStdPrice(), last, "lambda");
+			installLambdaPrice(context, region, term, context.getProvPrice(), last, "provisionned");
+		}
+
+		super.purgePrices(context);
+	}
 
 	@Override
 	public void install(final UpdateContext context) throws IOException {
-		log.info("AWS Lambda prices ...");
-		nextStep(context, "lambda", null, 0);
+		// Get the remote prices stream
+		installPrices(context, API, SERVICE_CODE, TERM_ON_DEMAND, null);
+	}
 
-		// Track the created instance to cache partial costs
-		final var previous = spRepository.findByLocation(context.getNode().getId(), null).stream()
-				.filter(p -> p.getType().getCode().startsWith("lambda")).collect(Collectors
-						.toMap(p2 -> p2.getLocation().getName() + p2.getType().getCode(), Function.identity()));
-		context.setPreviousStorage(previous);
-		context.setStorageTypes(previous.values().stream().map(ProvStoragePrice::getType).distinct()
-				.collect(Collectors.toMap(AbstractCodedEntity::getCode, Function.identity())));
+	@Override
+	protected boolean filterSPProduct(final SavingsPlanProduct product) {
+		return "ComputeSavingsPlans".equals(product.getProductFamily());
+	}
 
-		final var basePrice = configuration.get(CONF_URL_AWS_PRICES, AWS_PRICES_BASE);
-		var priceCounter = 0;
-		try (var reader = new BufferedReader(
-				new InputStreamReader(new URL(basePrice + AWS_PRICES_PATH).openStream()))) {
-			final var offers = objectMapper.readValue(reader, AwsPriceIndex.class).getOffers();
-			final var offer = offers.get("AWSLambda");
+	@Override
+	protected boolean isEnabled(final LocalLambdaContext context, final AwsLambdaPrice csv) {
+		return true;
+	}
 
-			final var stdPrice = new ProvFunctionPrice();
-			final var provPrice = new ProvFunctionPrice();
-			final Map<String, Consumer<AwsLambdaPrice>> mapper = Map.of("AWS-Lambda-Duration-Provisioned", d -> {
-				provPrice.setCostRam(provPrice.getCostRam() + d.getPricePerUnit());
-				provPrice.setCode(d.getRateCode());
-			}, "AWS-Lambda-Requests", d -> {
-				stdPrice.setCostRequests(d.getPricePerUnit());
-				provPrice.setCostRequests(d.getPricePerUnit());
-			}, "AWS-Lambda-Provisioned-Concurrency",
-					d -> provPrice.setCostRam(provPrice.getCostRam() + d.getPricePerUnit()), "AWS-Lambda-Duration",
-					d -> {
-						stdPrice.setCostRam(d.getPricePerUnit());
-						stdPrice.setCode(d.getRateCode());
-					});
+	private void installLambdaPrice(final LocalLambdaContext context, final ProvLocation region,
+			final ProvInstancePriceTerm term, final ProvFunctionPrice tempPrice, final AwsLambdaPrice csv,
+			final String typeName) {
+		csv.setInstanceType(typeName);
+		csv.setRateCode(tempPrice.getCode());
+		final var price = newPrice(context, csv);
+		saveAsNeeded(context, price, price.getCostRam(), tempPrice.getCostRam() * context.getHoursMonth(), (cR, c) -> {
+			price.setCostRam(cR);
+			price.setCostRequests(tempPrice.getCostRequests());
+			price.setCostPeriod(round3Decimals(c * price.getTerm().getPeriod() * context.getHoursMonth()));
+		}, context.getPRepository()::save);
+	}
 
-			// Get the remote prices stream
-			try (var reader2 = new BufferedReader(
-					new InputStreamReader(new URL(basePrice + offer.getCurrentRegionIndexUrl()).openStream()))) {
-				final var regions = objectMapper.readValue(reader, AwsPriceRegions.class).getRegions();
-				for (var region : regions.values().stream().filter(r -> isEnabledRegion(context, r.getRegionCode()))
-						.collect(Collectors.toList())) {
-					final var regionUrl = basePrice + region.getCurrentVersionUrl().replaceAll("\\.json$", "\\.csv$");
-					stdPrice.setCostRam(0d);
-					stdPrice.setCostRequests(0d);
-					provPrice.setCostRam(0d);
-					provPrice.setCostRequests(0d);
-					try (var reader3 = new BufferedReader(new InputStreamReader(new URL(regionUrl).openStream()))) {
-						// Pipe to the CSV reader
-						final var csvReader = new CsvForBeanLambda(reader3);
-
-						// Build the AWS storage prices from the CSV
-						var csv = csvReader.read();
-						while (csv != null) {
-							stdPrice.setLocation(installRegion(context, region.getRegionCode(), csv.getLocation()));
-							mapper.getOrDefault(csv.getGroup(), Function.identity()::apply).accept(csv);
-
-							// Read the next one
-							csv = csvReader.read();
-						}
-						installLambdaPrice(context, stdPrice);
-						installLambdaPrice(context, provPrice);
-						priceCounter += 2;
-					}
-				}
-			}
-		} finally {
-			// Report
-			log.info("AWS Lambda finished : {} prices", priceCounter);
-			nextStep(context, "lambda", null, 1);
-		}
+	@Override
+	protected void copy(final AwsLambdaPrice csv, final ProvFunctionPrice p) {
+		// TODO Auto-generated method stub
 
 	}
 
-	private void installLambdaPrice(final UpdateContext context, final ProvFunctionPrice csv) {
-		final var name = "";
-		final var type = context.getFunctionTypes().computeIfAbsent(name, n2 -> {
-			// New storage type
-			final var newType = new ProvFunctionType();
-			newType.setCode(n2);
-			newType.setNode(context.getNode());
-			return newType;
-		});
+	@Override
+	protected void copy(final AwsLambdaPrice csv, final ProvFunctionType t) {
+		t.setName(t.getCode());
+		t.setConstant("provisionned".equals(t.getCode()));
+		t.setAutoScale(true);
+		t.setCpu(1);
+		t.setPhysical(Boolean.FALSE);
+		t.setStorageRate(Rate.MEDIUM);
+		t.setCpuRate(Rate.MEDIUM);
+		t.setRamRate(Rate.MEDIUM);
+		t.setNetworkRate(Rate.MEDIUM);
+	}
 
-		copyAsNeeded(context, type, t -> {
-			// Update storage details
-			t.setName(t.getCode());
-		}, ftRepository);
+	@Override
+	protected LocalLambdaContext newContext(UpdateContext gContext, ProvLocation region, String term1, String term2) {
+		final var context = new LocalLambdaContext(gContext, iptRepository, ftRepository, fpRepository, qfRepository,
+				region, term1, term2);
+		final var stdPrice = new ProvFunctionPrice();
+		stdPrice.setCostRam(0d);
+		stdPrice.setCostRequests(0d);
+		final var provPrice = new ProvFunctionPrice();
+		provPrice.setCostRam(0d);
+		provPrice.setCostRequests(0d);
 
-		// Update the price as needed
-		final var price = context.getPreviousFunction().computeIfAbsent(csv.getCode(), c -> {
-			final var p = new ProvFunctionPrice();
-			p.setCode(c);
-			return p;
-		});
+		context.setStdPrice(stdPrice);
+		context.setProvPrice(provPrice);
 
-		copyAsNeeded(context, price, p -> {
-			p.setLocation(p.getLocation());
-			p.setType(type);
-		});
-		saveAsNeeded(context, price, csv.getCostRam(), fpRepository);
+		// Prepare the mapper to aggregate CSV entries
+		context.setMapper(Map.of("AWS-Lambda-Duration-Provisioned", d -> {
+			provPrice.setCostRam(provPrice.getCostRam() + d.getPricePerUnit());
+			provPrice.setCode(d.getRateCode());
+		}, "AWS-Lambda-Requests", d -> {
+			stdPrice.setCostRequests(d.getPricePerUnit());
+			provPrice.setCostRequests(d.getPricePerUnit());
+		}, "AWS-Lambda-Provisioned-Concurrency",
+				d -> provPrice.setCostRam(provPrice.getCostRam() + d.getPricePerUnit()), "AWS-Lambda-Duration", d -> {
+					stdPrice.setCostRam(d.getPricePerUnit());
+					stdPrice.setCode(d.getRateCode());
+				}));
+		return context;
+	}
+
+	@Override
+	protected CsvForBeanLambda newReader(BufferedReader reader) throws IOException {
+		return new CsvForBeanLambda(reader);
+	}
+
+	@Override
+	public AbstractAwsPriceImportVm<ProvFunctionType, ProvFunctionPrice, AwsLambdaPrice, ProvQuoteFunction, LocalLambdaContext, CsvForBeanLambda> newProxy() {
+		return SpringUtils.getBean(AwsPriceImportLambda.class);
 	}
 }

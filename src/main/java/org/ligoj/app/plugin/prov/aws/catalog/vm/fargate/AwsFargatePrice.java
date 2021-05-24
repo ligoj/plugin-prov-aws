@@ -16,5 +16,7 @@ import lombok.Setter;
 public class AwsFargatePrice extends AbstractAwsVmOsPrice {
 
 	private String usageType;
+	
+	private double ramGb;
 
 }

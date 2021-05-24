@@ -44,7 +44,9 @@ public class CsvForBeanRds extends AbstractCsvForBeanEc2<AwsRdsPrice> {
 	public boolean isValidRaw(List<String> rawValues) {
 		// Only Single-AZ
 		// Only "Database Instance" and "Database Storage" products
+		// No outpost
 		return rawValues.size() > 37 && "Single-AZ".equals(rawValues.get(37))
+				 && "AWS Region".equals(rawValues.get(18))
 				&& ("Database Instance".equals(rawValues.get(15)) || "Database Storage".equals(rawValues.get(15)));
 	}
 

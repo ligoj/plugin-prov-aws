@@ -19,6 +19,7 @@ import lombok.Setter;
 public class SavingsPlanPrice {
 
 	private SavingsPlanTerms terms;
+	private Collection<SavingsPlanProduct> products;
 
 	/**
 	 * Term definition
@@ -44,6 +45,17 @@ public class SavingsPlanPrice {
 	}
 
 	/**
+	 * Product.
+	 */
+	@Getter
+	@Setter
+	@JsonIgnoreProperties(ignoreUnknown = true)
+	public static class SavingsPlanProduct {
+		private String sku;
+		private String productFamily;
+	}
+
+	/**
 	 * Lease duration.
 	 */
 	@Getter
@@ -62,6 +74,7 @@ public class SavingsPlanPrice {
 	public static class SavingsPlanRate {
 		private String discountedSku;
 		private String discountedUsageType;
+		private String discountedServiceCode;
 		private String rateCode;
 		private SavingsPlanDRate discountedRate;
 	}

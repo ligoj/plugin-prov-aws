@@ -3,7 +3,7 @@
  */
 package org.ligoj.app.plugin.prov.aws.catalog.lambda;
 
-import org.ligoj.app.plugin.prov.aws.catalog.AwsCsvPrice;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsVmPrice;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -13,7 +13,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class AwsLambdaPrice extends AwsCsvPrice {
+public class AwsLambdaPrice extends AbstractAwsVmPrice {
 
 	private String group;
 }

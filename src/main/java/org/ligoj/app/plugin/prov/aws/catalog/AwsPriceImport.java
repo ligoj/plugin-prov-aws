@@ -11,7 +11,6 @@ import org.ligoj.app.plugin.prov.aws.catalog.efs.AwsPriceImportEfs;
 import org.ligoj.app.plugin.prov.aws.catalog.lambda.AwsPriceImportLambda;
 import org.ligoj.app.plugin.prov.aws.catalog.s3.AwsPriceImportS3;
 import org.ligoj.app.plugin.prov.aws.catalog.suppport.AwsPriceImportSupport;
-import org.ligoj.app.plugin.prov.aws.catalog.vm.ebs.AwsPriceImportEbs;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AwsPriceImportEc2;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.fargate.AwsPriceImportFargate;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.rds.AwsPriceImportRds;
@@ -44,9 +43,6 @@ public class AwsPriceImport extends AbstractImportCatalogResource {
 	private AwsPriceImportEfs efs;
 
 	@Autowired
-	private AwsPriceImportEbs ebs;
-
-	@Autowired
 	private AwsPriceImportS3 s3;
 
 	@Autowired
@@ -68,7 +64,6 @@ public class AwsPriceImport extends AbstractImportCatalogResource {
 		base.install(context);
 		lambda.install(context);
 		s3.install(context);
-		ebs.install(context);
 		ec2.install(context);
 		rds.install(context);
 		efs.install(context);

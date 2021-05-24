@@ -3,19 +3,24 @@
  */
 package org.ligoj.app.plugin.prov.aws.catalog;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.plugin.prov.ProvResource;
-import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
 import org.ligoj.app.plugin.prov.catalog.AbstractImportCatalogResource;
 import org.ligoj.app.plugin.prov.model.ImportCatalogStatus;
-import org.ligoj.bootstrap.core.INamableBean;
 import org.ligoj.bootstrap.core.curl.CurlProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -29,11 +34,6 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 
 	@Autowired
 	private ProvResource provResource;
-
-	/**
-	 * Configuration key used for AWS URL prices.
-	 */
-	public static final String CONF_URL_API_PRICES = ProvAwsPluginResource.KEY + ":%s-prices-url";
 
 	protected Double toInteger(final String value) {
 		return Optional.ofNullable(StringUtils.trimToNull(value))
@@ -53,29 +53,25 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 	}
 
 	/**
-	 * Convert the JSON name to the API name and check this storage is exists
-	 *
-	 * @param <T>     The storage type.
-	 * @param context The update context.
-	 * @param storage The storage to evaluate.
-	 * @return <code>true</code> when the storage is valid.
+	 * Return the full CSV URL from the relative URL
+	 * 
+	 * @param gContext The current global context.
+	 * @param url      The relative JSON URL.
+	 * @return The full CSV URL from the relative URL.
 	 */
-	protected <T extends INamableBean<?>> boolean containsKey(final UpdateContext context, final T storage) {
-		storage.setName(context.getMapStorageToApi().getOrDefault(storage.getName(), storage.getName()));
-		return context.getStorageTypes().containsKey(storage.getName());
+	protected String getCsvUrl(final UpdateContext gContext, final String url) {
+		return gContext.getUrl(url).replaceAll("\\.json$", ".csv");
 	}
 
 	@Override
 	protected int getWorkload(ImportCatalogStatus status) {
-		// NB regions * 5 (EC2 + RDS+ EC2 Savings Plan + Fargate + Fargate Savings Plan)
-		// + 3 global prices (S3+EBS+EFS)
-		// + 1 (EC2 savings plan configuration)
-		// + 1 (EC2 spot & purge)
-		// + 1 (Fargate spot & purge)
-		// + 1 (RDS purge)
+		// NB regions * 7 (EC2 + RDS + EC2 SP + Fargate + Fargate SP + Lambda + Lambda SP)
+		// + 2 global prices (S3+EFS)
+		// + 3 (EC2 + Fargate + Lambda savings plan configuration)
+		// + 2 (EC2 + Fargate spots)
 		// + 1 (Support)
 		// + 1 (Regions)
-		return status.getNbLocations() * 5 + 9;
+		return status.getNbLocations() * 7 + 9;
 	}
 
 	/**
@@ -86,7 +82,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 	 * @return <code>true</code> when the configuration enable the given region.
 	 */
 	protected boolean isEnabledRegion(final UpdateContext context, final AwsRegionPrices region) {
-		return isEnabledRegion(context, region.getRegion());
+		return isEnabledRegion(context, region.getRegion()) && !"us-west-2-lax-1a".equals(region.getRegion());
 	}
 
 	/**
@@ -126,6 +122,64 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 		} finally {
 			// Report
 			log.info("AWS {} import finished", api);
+		}
+	}
+
+	/**
+	 * Return the regional prices of each enabled region.
+	 * 
+	 * @param context     The update context.
+	 * @param api         The API name, only for logging.
+	 * @param serviceCode The AWS service code ie. <code>AmazonEC2</code>.
+	 * @return The regions with the corresponding prices file. The key corresponds to the API region code.
+	 * @throws IOException When the index cannot be retrieved.
+	 */
+	protected Map<String, AwsPriceRegion> getRegionalPrices(final UpdateContext context, final String api,
+			final String serviceCode) throws MalformedURLException, IOException {
+		return getRegionalSPPrices(context, api, serviceCode, AwsPriceOffer::getCurrentRegionIndexUrl,
+				AwsPriceRegions.class, "OnDemand");
+	}
+
+	/**
+	 * Return the regional savings plan prices of each enabled region.
+	 * 
+	 * @param context     The update context.
+	 * @param api         The API name, only for logging.
+	 * @param serviceCode The AWS service code ie. <code>AmazonEC2</code>.
+	 * @return The regions with the corresponding savings plan prices file. The key corresponds to the API region code.
+	 * @throws IOException When the index cannot be retrieved.
+	 */
+	protected Map<String, AwsPriceRegion> getRegionalSPPrices(final UpdateContext context, final String api,
+			final String serviceCode) throws MalformedURLException, IOException {
+		return getRegionalSPPrices(context, api, serviceCode, AwsPriceOffer::getCurrentSavingsPlanIndexUrl,
+				AwsSPPriceRegions.class, "SavingsPlan");
+	}
+
+	/**
+	 * Return the regional savings plan prices of each enabled region.
+	 * 
+	 * @param context     The update context.
+	 * @param api         The API name, only for logging.
+	 * @param serviceCode The AWS service code ie. <code>AmazonEC2</code>.
+	 * @param toUrl       The URL extractor from the offer configuration.
+	 * @param classifier  The kind of prices to retrieve. Only for logging.
+	 * @return The regions with the corresponding savings plan prices file. The key corresponds to the API region code.
+	 * @throws IOException When the index cannot be retrieved.
+	 */
+	private Map<String, AwsPriceRegion> getRegionalSPPrices(final UpdateContext context, final String api,
+			final String serviceCode, final Function<AwsPriceOffer, String> toUrl,
+			final Class<? extends RegionalPrices> clazz, final String classifier)
+			throws MalformedURLException, IOException {
+		final var path = toUrl.apply(context.getOffers().get(serviceCode));
+		if (path == null) {
+			return Collections.emptyMap();
+		}
+		final var indexUrl = context.getUrl(path);
+		log.info("AWS {} import: download regional {} index >{}", api, classifier, indexUrl);
+		try (var reader2 = new BufferedReader(new InputStreamReader(new URL(indexUrl).openStream()))) {
+			return objectMapper.readValue(reader2, clazz).getPRegions().entrySet().stream()
+					.filter(e -> isEnabledRegion(context, e.getKey()))
+					.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 		}
 	}
 

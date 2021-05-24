@@ -91,7 +91,7 @@ public abstract class AbsractLocalContext<T extends AbstractInstanceType, P exte
 	 * @param region        The current region.
 	 * @param previousTypes The previous types.
 	 * @param term1         The expected term name prefix alternative 1.
-	 * @param term2         The expected term name prefix alternative 2.
+	 * @param term2         The expected term name prefix alternative 2. May be <code>null</code>.
 	 */
 	protected AbsractLocalContext(final UpdateContext parent, final ProvInstancePriceTermRepository ptRepository,
 			final BaseProvInstanceTypeRepository<T> tRepository, final BaseProvTermPriceRepository<T, P> pRepository,
@@ -105,9 +105,11 @@ public abstract class AbsractLocalContext<T extends AbstractInstanceType, P exte
 		this.previousTypes = previousTypes;
 		this.localTypes = tRepository.findAllBy("node.id", node.getId()).stream()
 				.collect(Collectors.toMap(AbstractCodedEntity::getCode, Function.identity()));
-		this.localPriceTerms = ptRepository.findByLocation(node.getId(), region.getName(), term1, term2).stream()
+
+		final var term2B = term2 == null ? term1 : term2;
+		this.localPriceTerms = ptRepository.findByLocation(node.getId(), region.getName(), term1, term2B).stream()
 				.collect(Collectors.toMap(ProvInstancePriceTerm::getCode, Function.identity()));
-		this.locals = pRepository.findByLocation(node.getId(), region.getName(), term1, term2).stream()
+		this.locals = pRepository.findByLocation(node.getId(), region.getName(), term1, term2B).stream()
 				.collect(Collectors.toMap(AbstractTermPrice::getCode, Function.identity()));
 	}
 
@@ -146,6 +148,5 @@ public abstract class AbsractLocalContext<T extends AbstractInstanceType, P exte
 		this.partialCost.clear();
 		this.region = null;
 		this.previousTypes = null;
-		setStorageTypes(null);
 	}
 }

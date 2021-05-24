@@ -3,7 +3,7 @@
  */
 package org.ligoj.app.plugin.prov.aws.catalog.efs;
 
-import org.ligoj.app.plugin.prov.aws.catalog.AwsCsvPrice;
+import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsStoragePrice;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -13,7 +13,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class AwsEfsPrice extends AwsCsvPrice {
+public class AwsEfsPrice extends AbstractAwsStoragePrice {
 
-	private String storageClass;
+	// No specification
 }

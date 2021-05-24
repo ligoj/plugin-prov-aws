@@ -1,0 +1,57 @@
+{
+  "formatVersion" : "v1.0",
+  "publicationDate" : "2021-05-15T00:11:27Z",
+  "offers" : {
+    "AmazonEC2" : {
+      "offerCode" : "AmazonEC2",
+      "versionIndexUrl" : "/offers/v1.0/aws/AmazonEC2/index.json",
+      "currentVersionUrl" : "/offers/v1.0/aws/AmazonEC2/current/index.json",
+      "currentRegionIndexUrl" : "/offers/v1.0/aws/AmazonEC2/current/region_index.json",
+      "currentSavingsPlanIndexUrl" : "/savingsPlan/v1.0/aws/AWSComputeSavingsPlan/current/region_index-empty.json"
+    },
+    "AmazonECS" : {
+      "offerCode" : "AmazonECS",
+      "versionIndexUrl" : "/offers/v1.0/aws/AmazonECS/index.json",
+      "currentVersionUrl" : "/offers/v1.0/aws/AmazonECS/current/index.json",
+      "currentRegionIndexUrl" : "/offers/v1.0/aws/AmazonECS/current/region_index.json",
+      "currentSavingsPlanIndexUrl" : "/savingsPlan/v1.0/aws/AWSComputeSavingsPlan/current/region_index-empty.json"
+    },
+    "AmazonGlacier" : {
+      "offerCode" : "AmazonGlacier",
+      "versionIndexUrl" : "/offers/v1.0/aws/AmazonGlacier/index.json",
+      "currentVersionUrl" : "/offers/v1.0/aws/AmazonGlacier/current/index.json",
+      "currentRegionIndexUrl" : "/offers/v1.0/aws/AmazonGlacier/current/region_index.json"
+    },
+    "AmazonRDS" : {
+      "offerCode" : "AmazonRDS",
+      "versionIndexUrl" : "/offers/v1.0/aws/AmazonRDS/index.json",
+      "currentVersionUrl" : "/offers/v1.0/aws/AmazonRDS/current/index.json",
+      "currentRegionIndexUrl" : "/offers/v1.0/aws/AmazonRDS/current/region_index.json"
+    },
+    "AmazonEFS" : {
+      "offerCode" : "AmazonEFS",
+      "versionIndexUrl" : "/offers/v1.0/aws/AmazonEFS/index.json",
+      "currentVersionUrl" : "/offers/v1.0/aws/AmazonEFS/current/index.json",
+      "currentRegionIndexUrl" : "/offers/v1.0/aws/AmazonEFS/current/region_index.json"
+    },
+    "AmazonS3" : {
+      "offerCode" : "AmazonS3",
+      "versionIndexUrl" : "/offers/v1.0/aws/AmazonS3/index.json",
+      "currentVersionUrl" : "/offers/v1.0/aws/AmazonS3/current/index.json",
+      "currentRegionIndexUrl" : "/offers/v1.0/aws/AmazonS3/current/region_index.json"
+    },
+    "AWSLambda" : {
+      "offerCode" : "AWSLambda",
+      "versionIndexUrl" : "/offers/v1.0/aws/AWSLambda/index.json",
+      "currentVersionUrl" : "/offers/v1.0/aws/AWSLambda/current/index.json",
+      "currentRegionIndexUrl" : "/offers/v1.0/aws/AWSLambda/current/region_index.json",
+      "currentSavingsPlanIndexUrl" : "/savingsPlan/v1.0/aws/AWSComputeSavingsPlan/current/region_index-empty.json"
+    },
+    "AmazonS3GlacierDeepArchive" : {
+      "offerCode" : "AmazonS3GlacierDeepArchive",
+      "versionIndexUrl" : "/offers/v1.0/aws/AmazonS3GlacierDeepArchive/index.json",
+      "currentVersionUrl" : "/offers/v1.0/aws/AmazonS3GlacierDeepArchive/current/index.json",
+      "currentRegionIndexUrl" : "/offers/v1.0/aws/AmazonS3GlacierDeepArchive/current/region_index.json"
+    }
+  }
+}

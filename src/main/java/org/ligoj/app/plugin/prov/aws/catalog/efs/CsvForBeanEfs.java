@@ -12,7 +12,6 @@ import java.util.Map;
 
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsCsvForBean;
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsCsvReader;
-import org.ligoj.app.plugin.prov.aws.catalog.AwsPrice;
 import org.ligoj.bootstrap.core.csv.CsvBeanReader;
 
 /**
@@ -26,10 +25,11 @@ public class CsvForBeanEfs extends AbstractAwsCsvForBean<AwsEfsPrice> {
 	private static final Map<String, String> HEADERS_MAPPING = new HashMap<>();
 	static {
 		HEADERS_MAPPING.put("Storage Class", "storageClass");
+		HEADERS_MAPPING.put("Volume Type", "volumeType");
 	}
 
 	/**
-	 * Build the reader parsing the CSV file from AWS to build {@link AwsPrice} instances. Non AWS instances data are
+	 * Build the reader parsing the CSV file from AWS to build {@link AwsEfsPrice} instances. Non AWS instances data are
 	 * skipped, and headers are ignored.
 	 *
 	 * @param reader The original AWS CSV input.

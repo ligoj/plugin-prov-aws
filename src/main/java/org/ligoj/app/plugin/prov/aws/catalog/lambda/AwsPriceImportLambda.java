@@ -33,7 +33,7 @@ public class AwsPriceImportLambda extends
 	 * Service code.
 	 */
 	private static final String SERVICE_CODE = "AWSLambda";
-	
+
 	/**
 	 * API name of this service.
 	 */
@@ -81,18 +81,28 @@ public class AwsPriceImportLambda extends
 		csv.setInstanceType(typeName);
 		csv.setRateCode(tempPrice.getCode());
 		final var price = newPrice(context, csv);
-		saveAsNeeded(context, price, price.getCostRam(), tempPrice.getCostRam() * context.getHoursMonth(), (cR, c) -> {
-			price.setCostRam(cR);
-			price.setCostRequests(tempPrice.getCostRequests());
-			price.setCostPeriod(round3Decimals(c * price.getTerm().getPeriod() * context.getHoursMonth()));
-		}, context.getPRepository()::save);
+		saveAsNeeded(context, price, price.getCostRamRequest(), tempPrice.getCostRamRequest() * 3600 * context.getHoursMonth(),
+				(cR, c) -> {
+					price.setCostRamRequest(cR);
+					price.setCostRequests(tempPrice.getCostRequests());
+					price.setCostRamRequestConcurrency(tempPrice.getCostRamRequestConcurrency());
+					price.setCostPeriod(round3Decimals(c * price.getTerm().getPeriod()));
+				}, context.getPRepository()::save);
 	}
 
 	@Override
 	protected void copy(final AwsLambdaPrice csv, final ProvFunctionPrice p) {
-		// TODO Auto-generated method stub
-
-	}
+		p.setIncrementRam(1d/1024d);
+		p.setIncrementCpu(1d);
+		p.setMaxRam(10240d);
+		p.setMinRam(128d);
+		p.setMinRamRatio(0d);
+		p.setCostCpu(0d);
+		p.setCostRam(0d);
+		p.setIncrementDuration(1d);
+		p.setMinDuration(1d);
+		p.setMaxDuration(900000d); // 15min
+		}
 
 	@Override
 	protected void copy(final AwsLambdaPrice csv, final ProvFunctionType t) {
@@ -112,25 +122,21 @@ public class AwsPriceImportLambda extends
 		final var context = new LocalLambdaContext(gContext, iptRepository, ftRepository, fpRepository, qfRepository,
 				region, term1, term2);
 		final var stdPrice = new ProvFunctionPrice();
-		stdPrice.setCostRam(0d);
-		stdPrice.setCostRequests(0d);
 		final var provPrice = new ProvFunctionPrice();
-		provPrice.setCostRam(0d);
-		provPrice.setCostRequests(0d);
-
 		context.setStdPrice(stdPrice);
 		context.setProvPrice(provPrice);
 
 		// Prepare the mapper to aggregate CSV entries
 		context.setMapper(Map.of("AWS-Lambda-Duration-Provisioned", d -> {
-			provPrice.setCostRam(provPrice.getCostRam() + d.getPricePerUnit());
+			provPrice.setCostRamRequestConcurrency(d.getPricePerUnit());
 			provPrice.setCode(d.getRateCode());
 		}, "AWS-Lambda-Requests", d -> {
 			stdPrice.setCostRequests(d.getPricePerUnit());
 			provPrice.setCostRequests(d.getPricePerUnit());
-		}, "AWS-Lambda-Provisioned-Concurrency",
-				d -> provPrice.setCostRam(provPrice.getCostRam() + d.getPricePerUnit()), "AWS-Lambda-Duration", d -> {
-					stdPrice.setCostRam(d.getPricePerUnit());
+		}, "AWS-Lambda-Provisioned-Concurrency", d -> provPrice.setCostRam(d.getPricePerUnit()), "AWS-Lambda-Duration",
+				d -> {
+					stdPrice.setCostRamRequest(d.getPricePerUnit());
+					provPrice.setCostRamRequest(d.getPricePerUnit());
 					stdPrice.setCode(d.getRateCode());
 				}));
 		return context;

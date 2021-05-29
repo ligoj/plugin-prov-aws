@@ -60,7 +60,8 @@ public class AwsPriceImportEc2 extends
 	/**
 	 * Configuration key used for {@link #EC2_PRICES_SPOT}
 	 */
-	public static final String CONF_URL_EC2_PRICES_SPOT = String.format(AwsPriceImportBase.CONF_URL_TMP_PRICES, API_SPOT);
+	public static final String CONF_URL_EC2_PRICES_SPOT = String.format(AwsPriceImportBase.CONF_URL_TMP_PRICES,
+			API_SPOT);
 
 	/**
 	 * Configuration key used for enabled OS pattern names. When value is <code>null</code>, no restriction.
@@ -95,7 +96,7 @@ public class AwsPriceImportEc2 extends
 
 	@Override
 	protected void installPrice(final LocalEc2Context context, final AwsEc2Price csv) {
-		if ("Compute Instance".equals(csv.getFamily())) {
+		if (csv.getFamily().startsWith("Compute Instance")) {
 			if (!handlePartialCost(context, csv)) {
 				// No up-front, cost is fixed
 				final var price = newPrice(context, csv);
@@ -104,14 +105,15 @@ public class AwsPriceImportEc2 extends
 			}
 		} else {
 			// Check the volume API
-			final var type = context.getStorageTypes().get(StringUtils.trimToEmpty(csv.getVolume()));
+			final var type = context.getStorageTypes().get(context.getMapStorageToApi().getOrDefault(csv.getFamily(),
+					StringUtils.trimToEmpty(csv.getVolume())));
 			if (type == null) {
-				log.info("Ignore unkonown volume type {}", csv.getVolume());
+				log.info("Ignore unkonown volume type {}/{}", csv.getFamily(), csv.getVolume());
 				return;
 			}
 
-			if (!"Storage".equals(csv.getFamily())) {
-				log.info("Ignore unkonown storage price type {}", csv.getFamily());
+			if (!csv.getFamily().startsWith("Storage")) {
+				log.info("Ignore unkonown storage price type {}/{}", csv.getFamily(), csv.getVolume());
 				return;
 			}
 

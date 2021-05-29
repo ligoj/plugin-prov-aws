@@ -41,6 +41,12 @@ public abstract class AbsractLocalContext<T extends AbstractInstanceType, P exte
 	private ProvLocation region;
 
 	/**
+	 * Mapping from storage human name to API name.
+	 */
+	@Getter
+	private final Map<String, String> mapStorageToApi;
+
+	/**
 	 * The current partial cost for up-front options.
 	 */
 	@Getter
@@ -111,6 +117,8 @@ public abstract class AbsractLocalContext<T extends AbstractInstanceType, P exte
 				.collect(Collectors.toMap(ProvInstancePriceTerm::getCode, Function.identity()));
 		this.locals = pRepository.findByLocation(node.getId(), region.getName(), term1, term2B).stream()
 				.collect(Collectors.toMap(AbstractTermPrice::getCode, Function.identity()));
+		this.mapStorageToApi = parent.getMapStorageToApi();
+		
 	}
 
 	/**

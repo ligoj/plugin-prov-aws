@@ -7,5 +7,6 @@
 	"efs-General Purpose": "efs",
 	"efs-Infrequent Access": "efs-ia",
 	"efs-One Zone-Infrequent Access": "efs-z-ia",
-	"efs-One Zone-General Purpose": "efs-z"
+	"efs-One Zone-General Purpose": "efs-z",
+	"Storage Snapshot": "snapshot"
 }

@@ -81,10 +81,10 @@ public class AwsPriceImportLambda extends
 		csv.setInstanceType(typeName);
 		csv.setRateCode(tempPrice.getCode());
 		final var price = newPrice(context, csv);
-		saveAsNeeded(context, price, price.getCostRamRequest(), tempPrice.getCostRamRequest() * 3600 * context.getHoursMonth(),
-				(cR, c) -> {
+		saveAsNeeded(context, price, price.getCostRamRequest(),
+				tempPrice.getCostRamRequest() * 3600 * context.getHoursMonth(), (cR, c) -> {
 					price.setCostRamRequest(cR);
-					price.setCostRequests(tempPrice.getCostRequests());
+					price.setCostRequests(tempPrice.getCostRequests() * 1000000);
 					price.setCostRamRequestConcurrency(tempPrice.getCostRamRequestConcurrency());
 					price.setCostPeriod(round3Decimals(c * price.getTerm().getPeriod()));
 				}, context.getPRepository()::save);
@@ -92,24 +92,30 @@ public class AwsPriceImportLambda extends
 
 	@Override
 	protected void copy(final AwsLambdaPrice csv, final ProvFunctionPrice p) {
-		p.setIncrementRam(1d/1024d);
+		p.setIncrementRam(1d / 1024d);
 		p.setIncrementCpu(1d);
-		p.setMaxRam(10240d);
-		p.setMinRam(128d);
+		p.setMaxRam(10d);
+		p.setMinRam(128d / 1024d);
 		p.setMinRamRatio(0d);
 		p.setCostCpu(0d);
 		p.setCostRam(0d);
 		p.setIncrementDuration(1d);
 		p.setMinDuration(1d);
 		p.setMaxDuration(900000d); // 15min
-		}
+	}
+
+	@Override
+	protected void copySavingsPlan(final ProvFunctionPrice odPrice, final ProvFunctionPrice p) {
+		super.copySavingsPlan(odPrice, p);
+		copy(null, p);
+	}
 
 	@Override
 	protected void copy(final AwsLambdaPrice csv, final ProvFunctionType t) {
 		t.setName(t.getCode());
 		t.setConstant("provisionned".equals(t.getCode()));
 		t.setAutoScale(true);
-		t.setCpu(1);
+		t.setCpu(0);
 		t.setPhysical(Boolean.FALSE);
 		t.setStorageRate(Rate.MEDIUM);
 		t.setCpuRate(Rate.MEDIUM);

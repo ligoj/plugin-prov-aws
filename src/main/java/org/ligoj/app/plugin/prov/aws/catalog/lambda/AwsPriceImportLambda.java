@@ -124,7 +124,8 @@ public class AwsPriceImportLambda extends
 	}
 
 	@Override
-	protected LocalLambdaContext newContext(UpdateContext gContext, ProvLocation region, String term1, String term2) {
+	protected LocalLambdaContext newContext(final UpdateContext gContext, final ProvLocation region, final String term1,
+			String term2) {
 		final var context = new LocalLambdaContext(gContext, iptRepository, ftRepository, fpRepository, qfRepository,
 				region, term1, term2);
 		final var stdPrice = new ProvFunctionPrice();
@@ -149,7 +150,7 @@ public class AwsPriceImportLambda extends
 	}
 
 	@Override
-	protected CsvForBeanLambda newReader(BufferedReader reader) throws IOException {
+	protected CsvForBeanLambda newReader(final BufferedReader reader) throws IOException {
 		return new CsvForBeanLambda(reader);
 	}
 

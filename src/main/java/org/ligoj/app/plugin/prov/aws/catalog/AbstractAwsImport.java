@@ -38,7 +38,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 	protected Double toInteger(final String value) {
 		return Optional.ofNullable(StringUtils.trimToNull(value))
 				.map(v -> StringUtils.replaceEach(v, new String[] { "GB", "TB", " " }, new String[] { "", "", "" }))
-				.map(Double::valueOf).map(v -> value.contains("TB") ? v * 1024 : v).orElse(null);
+				.map(Double::valueOf).map(v -> value.contains("TB") ? v * 1024 : v).orElse(0d);
 	}
 
 	/**

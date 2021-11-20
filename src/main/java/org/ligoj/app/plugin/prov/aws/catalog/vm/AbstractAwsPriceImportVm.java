@@ -172,11 +172,9 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * @return The new updated price entity.
 	 */
 	protected P newPrice(final X context, final C csv) {
-		final var price = context.getLocals().computeIfAbsent(csv.getRateCode(), context::newPrice);
-
-		// Update the price in force mode
-		return copyAsNeeded(context, price, p -> copy(context, csv, price, installInstanceType(context, csv),
-				installInstancePriceTerm(context, csv)));
+		return syncAdd(context.getLocals(), csv.getRateCode(), context::newPrice,
+				price -> copyAsNeeded(context, price, p -> copy(context, csv, price, installInstanceType(context, csv),
+						installInstancePriceTerm(context, csv))));
 	}
 
 	/**
@@ -252,19 +250,19 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * @param csv     The current CSV entry.
 	 * @return Either the previous entity, either a new one. Never <code>null</code>.
 	 */
-	protected T installInstanceType(final X context, final C csv) {
-		final var sharedType = context.getPreviousTypes().computeIfAbsent(csv.getInstanceType(), code -> {
-			final var t = context.newType();
-			t.setNode(context.getNode());
-			t.setCode(code);
-			return t;
+	protected final T installInstanceType(final X context, final C csv) {
+		return syncAdd(context.getPreviousTypes(), csv.getInstanceType(), code -> {
+			final var n = context.newType();
+			n.setNode(context.getNode());
+			n.setCode(code);
+			return n;
+		}, previous -> {
+			final var type = context.getLocalTypes().computeIfAbsent(previous.getCode(),
+					code -> ObjectUtils.defaultIfNull(context.getTRepository().findBy("code", code), previous));
+
+			// Update the statistics only once
+			return copyAsNeeded(context, type, t -> copy(csv, t), context.getTRepository());
 		});
-
-		final var type = context.getLocalTypes().computeIfAbsent(sharedType.getCode(),
-				code -> ObjectUtils.defaultIfNull(context.getTRepository().findBy("code", code), sharedType));
-
-		// Update the statistics only once
-		return copyAsNeeded(context, type, t -> copy(csv, t), context.getTRepository());
 	}
 
 	private Rate toStorage(final C csv) {
@@ -359,15 +357,13 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	}
 
 	protected ProvInstancePriceTerm getLocalTerm(final X context, final String code) {
-		final var sharedTerm = context.getPriceTerms().computeIfAbsent(code, k -> {
+		return syncAdd(context.getPriceTerms(), code, k -> {
 			final var newTerm = new ProvInstancePriceTerm();
 			newTerm.setNode(context.getNode());
 			newTerm.setCode(k);
 			return newTerm;
-		});
-
-		return context.getLocalPriceTerms().computeIfAbsent(sharedTerm.getCode(),
-				c -> ObjectUtils.defaultIfNull(iptRepository.findBy("code", c), sharedTerm));
+		}, sharedTerm -> context.getLocalPriceTerms().computeIfAbsent(sharedTerm.getCode(),
+				c -> ObjectUtils.defaultIfNull(iptRepository.findBy("code", c), sharedTerm)));
 	}
 
 	/**
@@ -596,14 +592,14 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	protected P newSavingPlanPrice(final X context, final P odPrice, final SavingsPlanRate jsonPrice,
 			final ProvInstancePriceTerm term) {
 		final var type = odPrice.getType();
-		final var price = context.getLocals().computeIfAbsent(jsonPrice.getRateCode(), context::newPrice);
-		return copyAsNeeded(context, price, p -> {
-			p.setLocation(context.getRegion());
-			p.setType(type);
-			p.setTerm(term);
-			p.setPeriod(term.getPeriod());
-			newSavingPlanPrice(odPrice, p);
-		});
+		return syncAdd(context.getLocals(), jsonPrice.getRateCode(), context::newPrice,
+				price -> copyAsNeeded(context, price, p -> {
+					p.setLocation(context.getRegion());
+					p.setType(type);
+					p.setTerm(term);
+					p.setPeriod(term.getPeriod());
+					newSavingPlanPrice(odPrice, p);
+				}));
 	}
 
 	/**
@@ -625,11 +621,12 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 
 	/**
 	 * Install all prices related to the current service.
-	 * @param gContext  The current global context.
-	 * @param api The current API name.
+	 * 
+	 * @param gContext    The current global context.
+	 * @param api         The current API name.
 	 * @param serviceCode The current service code
-	 * @param term1   The expected term name prefix alternative 1.
-	 * @param term2   The expected term name prefix alternative 2.
+	 * @param term1       The expected term name prefix alternative 1.
+	 * @param term2       The expected term name prefix alternative 2.
 	 * @throws IOException When indexes cannot be downloaded.
 	 */
 	protected void installPrices(final UpdateContext gContext, final String api, final String serviceCode,
@@ -647,12 +644,12 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	/**
 	 * Create a new transactional (READ_UNCOMMITTED) process for OnDemand/SPE prices in a specific region.
 	 *
-	 * @param gContext  The current global context.
-	 * @param pRegion   The region configuration with price URLs.
-	 * @param api The current API name.
+	 * @param gContext    The current global context.
+	 * @param pRegion     The region configuration with price URLs.
+	 * @param api         The current API name.
 	 * @param serviceCode The current service code
-	 * @param term1   The expected term name prefix alternative 1.
-	 * @param term2   The expected term name prefix alternative 2.
+	 * @param term1       The expected term name prefix alternative 1.
+	 * @param term2       The expected term name prefix alternative 2.
 	 */
 	@Transactional(propagation = Propagation.SUPPORTS, isolation = Isolation.READ_UNCOMMITTED)
 	public void installRegionalPrices(final UpdateContext gContext, final AwsPriceRegion pRegion, final String api,

@@ -17,7 +17,7 @@ import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AbstractCsvForBeanEc2;
 public class CsvForBeanRds extends AbstractCsvForBeanEc2<AwsRdsPrice> {
 
 	/**
-	 * EC2 CSV Mapping to Java bean property
+	 * RDS CSV Mapping to Java bean property
 	 */
 	private static final Map<String, String> HEADERS_MAPPING = new HashMap<>();
 	static {
@@ -26,6 +26,7 @@ public class CsvForBeanRds extends AbstractCsvForBeanEc2<AwsRdsPrice> {
 		HEADERS_MAPPING.put("Min Volume Size", "sizeMin");
 		HEADERS_MAPPING.put("Max Volume Size", "sizeMax");
 		HEADERS_MAPPING.put("Volume Type", "volume");
+		HEADERS_MAPPING.put("Volume Name", "volumeName");
 		HEADERS_MAPPING.put("Storage Media", "storage");
 	}
 
@@ -45,8 +46,7 @@ public class CsvForBeanRds extends AbstractCsvForBeanEc2<AwsRdsPrice> {
 		// Only Single-AZ
 		// Only "Database Instance" and "Database Storage" products
 		// No outpost
-		return rawValues.size() > 37 && "Single-AZ".equals(rawValues.get(37))
-				 && "AWS Region".equals(rawValues.get(18))
+		return rawValues.size() > 37 && "Single-AZ".equals(rawValues.get(37)) && "AWS Region".equals(rawValues.get(18))
 				&& ("Database Instance".equals(rawValues.get(15)) || "Database Storage".equals(rawValues.get(15)));
 	}
 

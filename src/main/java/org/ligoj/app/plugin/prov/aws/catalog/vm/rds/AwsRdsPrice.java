@@ -9,7 +9,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * AWS EC2 price configuration
+ * AWS RDS price configuration
  */
 @Getter
 @Setter
@@ -21,5 +21,10 @@ public class AwsRdsPrice extends AbstractAwsVmPrice {
 	private String sizeMin;
 	private String sizeMax;
 	private String volume;
+	
+	/**
+	 * Optional volume name reference.
+	 */
+	private String volumeName;
 
 }

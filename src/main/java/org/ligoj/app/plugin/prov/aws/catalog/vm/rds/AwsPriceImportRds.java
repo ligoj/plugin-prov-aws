@@ -29,10 +29,13 @@ import org.ligoj.bootstrap.core.SpringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * The provisioning price service for RDS AWS. Manage install or update of prices.
  */
 @Component
+@Slf4j
 public class AwsPriceImportRds extends
 		AbstractAwsPriceImportVm<ProvDatabaseType, ProvDatabasePrice, AwsRdsPrice, ProvQuoteDatabase, LocalRdsContext, CsvForBeanRds> {
 
@@ -96,16 +99,23 @@ public class AwsPriceImportRds extends
 		} else {
 			// Database storage
 			final var type = installStorageType(context, csv);
-			final var price = context.getPreviousStorage().computeIfAbsent(csv.getSku(), c -> {
+			if (type == null) {
+				// Ignore this type
+				return;
+			}
+
+			log.info("Add Database storage sku={}, type={}, location={}", csv.getSku(), type.getName(),
+					context.getRegion().getName());
+			syncAdd(context.getPreviousStorage(), csv.getSku(), c -> {
 				final var p = new ProvStoragePrice();
 				p.setCode(c);
 				p.setType(type);
 				p.setLocation(context.getRegion());
 				return p;
-			});
+			}, p ->
 
 			// Update the price as needed
-			saveAsNeeded(context, price, csv.getPricePerUnit(), spRepository);
+			saveAsNeeded(context, p, csv.getPricePerUnit(), spRepository));
 		}
 	}
 
@@ -120,19 +130,28 @@ public class AwsPriceImportRds extends
 			if ("Aurora PostgreSQL".equals(csv.getEngine())) {
 				name = "rds-gp-aurora-postgresql";
 				engine = "Aurora PostgreSQL";
-			} else {
+			} else { /* Any */
 				name = "rds-gp-aurora-mysql";
 				engine = "Aurora MySQL";
 			}
-		} else {
+		} else if ("Oracle".equals(csv.getEngine()) && StringUtils.startsWith(csv.getVolume(), "General Purpose")) {
+			name = "rds-gp-oracle";
+			engine = "Oracle";
+		} else if ("Any".equals(csv.getEngine())) {
 			engine = null;
 			if ("General Purpose".equals(csv.getVolume())) {
 				name = "rds-gp";
 			} else if ("Provisioned IOPS".equals(csv.getVolume())) {
 				name = "rds-io";
-			} else {
+			} else if ("Magnetic".equals(csv.getVolume())) {
 				name = "rds-magnetic";
+			} else {
+				log.error("Unknwown RDS storage type {}/{}/{}", csv.getVolume(), csv.getEngine(), csv.getSku());
+				return null;
 			}
+		} else {
+			log.error("Unknwown RDS storage type {}/{}/{}", csv.getVolume(), csv.getEngine(), csv.getSku());
+			return null;
 		}
 
 		// Create as needed
@@ -145,11 +164,12 @@ public class AwsPriceImportRds extends
 
 		// Merge the updated statistics
 		return copyAsNeeded(context, type, t -> {
-			final var ssd = "SSD".equals(csv.getStorage());
+			final var ssd = StringUtils.contains(csv.getStorage(), "SSD");
 			t.setName(type.getCode());
 			t.setDescription(csv.getVolume());
-			t.setMinimal(toInteger(csv.getSizeMin()));
-			t.setMaximal(toInteger(csv.getSizeMax()));
+			final var ref = context.getStorageTypes().get(csv.getVolumeName());
+			t.setMinimal(ref == null ? toInteger(csv.getSizeMin()) : ref.getMinimal());
+			t.setMaximal(ref == null ? toInteger(csv.getSizeMax()) : ref.getMaximal());
 			t.setEngine(engine == null ? null : engine.toUpperCase(Locale.ENGLISH));
 			t.setDatabaseType("%");
 			t.setOptimized(ssd ? ProvStorageOptimized.IOPS : null);

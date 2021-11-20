@@ -10,8 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.lang3.StringUtils;
-
 /**
  * Read AWS EC2 CSV input, skipping the AWS headers and non instance type rows.
  */
@@ -27,6 +25,8 @@ public class CsvForBeanEc2 extends AbstractCsvForBeanEc2<AwsEc2Price> {
 		HEADERS_MAPPING.put("Pre Installed S/W", "software");
 		HEADERS_MAPPING.put("Storage", "storage");
 		HEADERS_MAPPING.put("Volume API Name", "volume");
+		HEADERS_MAPPING.put("CapacityStatus", "capacityStatus");
+		HEADERS_MAPPING.put("Capacity Status", "capacityStatus");
 	}
 
 	private Set<String> ACCEPTED_FAMILY = Set.of("Provisioned Throughput", "Storage", "System Operation",
@@ -48,11 +48,10 @@ public class CsvForBeanEc2 extends AbstractCsvForBeanEc2<AwsEc2Price> {
 		// Only Compute instance [bare metal] for now
 		// Only Tenancy compliant : no "host"
 		// No outpost
-		// CapacityStatus = 'Used'
-		return rawValues.size() > 49 && "AWS Region".equals(rawValues.get(18))
-				&& ACCEPTED_FAMILY.contains(rawValues.get(15)) && !"Host".equals(rawValues.get(36))
-				&& !"Red Hat Enterprise Linux with HA".equals(rawValues.get(38)) // No RHEL HA
-				&& "Used".equals(StringUtils.defaultIfBlank(rawValues.get(49), "Used"));
+		return rawValues.size() > 49 && "AWS Region".equals(rawValues.get(18) /* Location Type: No outpost */)
+				&& ACCEPTED_FAMILY.contains(rawValues.get(15) /* Product Family */)
+				&& !"Host".equals(rawValues.get(36) /* No dedicated host */)
+				&& !"Red Hat Enterprise Linux with HA".equals(rawValues.get(38) /* Operating System: No RHEL HA */);
 	}
 
 }

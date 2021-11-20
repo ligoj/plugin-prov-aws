@@ -19,4 +19,6 @@ public class AwsEc2Price extends AbstractAwsVmOsPrice {
 	 * API Volume type. Not <code>null</code> for EBS price.
 	 */
 	private String volume;
+	
+	private String capacityStatus;
 }

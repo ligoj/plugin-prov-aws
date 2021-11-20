@@ -134,7 +134,8 @@ public class AwsPriceImportEc2 extends
 
 	@Override
 	protected boolean isEnabled(final LocalEc2Context context, final AwsEc2Price csv) {
-		return !"Compute Instance".equals(csv.getFamily()) || super.isEnabled(context, csv);
+		return !csv.getFamily().startsWith("Compute Instance")
+				|| super.isEnabled(context, csv) && "Used".equals(csv.getCapacityStatus()) && !"NA".equals(csv.getOs());
 	}
 
 	@Override

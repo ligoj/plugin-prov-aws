@@ -256,4 +256,8 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	public void generateSecrets(final Context context) throws IOException {
 		terraformService.writeSecrets(context.getSubscription());
 	}
-}
+
+	@Override
+	public String getName() {
+		return "AWS";
+	}}

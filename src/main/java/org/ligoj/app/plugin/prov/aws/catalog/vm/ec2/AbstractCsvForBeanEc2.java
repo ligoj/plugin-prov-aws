@@ -36,6 +36,7 @@ public abstract class AbstractCsvForBeanEc2<P extends AbstractAwsVmPrice> extend
 		HEADERS_MAPPING.put("OfferingClass", "offeringClass");
 		HEADERS_MAPPING.put("Instance Type", "instanceType");
 		HEADERS_MAPPING.put("vCPU", "cpu");
+		HEADERS_MAPPING.put("GPU", "gpu");
 		HEADERS_MAPPING.put("Physical Processor", "physicalProcessor");
 		HEADERS_MAPPING.put("Memory", "memory");
 		HEADERS_MAPPING.put("License Model", "licenseModel");

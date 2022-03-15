@@ -185,6 +185,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 */
 	protected void copy(final C csv, final T t) {
 		t.setCpu(csv.getCpu());
+		t.setGpu(csv.getGpu());
 		t.setAutoScale(true);
 		t.setName(t.getCode());
 		t.setConstant(!t.getName().startsWith("t") && !t.getName().startsWith("db.t"));

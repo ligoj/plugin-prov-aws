@@ -18,6 +18,7 @@ public abstract class AbstractAwsVmPrice extends AwsCsvPrice {
 	private String offeringClass;
 	private String instanceType;
 	private double cpu;
+	private double gpu;
 	private String physicalProcessor;
 	private String memory;
 	private String tenancy;

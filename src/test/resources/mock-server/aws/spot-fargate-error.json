@@ -1,0 +1,21 @@
+{
+    "metadata": {
+        "copyright": "Copyright 2019 Amazon.com, Inc. or its affiliates. All rights reserved.",
+        "disclaimer": "This file is intended for use only on aws.amazon.com. We do not guarantee its availability or accuracy.",
+        "format:version": "1.0",
+        "source:version": "20190730194642"
+    },
+    "prices": [
+        {
+            "id": "f09cc16b-7c5a-4327-b8a9-bcb5a7f75d9c",
+            "unit": "vCPU-Hours",
+            "price": {
+                "USD": "AAAAAA"
+            },
+            "attributes": {
+                "aws:region": "eu-west-1",
+                "aws:label": "per vCPU per hour"
+            }
+        }
+    ]
+}

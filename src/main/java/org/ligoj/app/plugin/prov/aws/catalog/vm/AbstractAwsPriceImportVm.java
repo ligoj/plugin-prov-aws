@@ -137,18 +137,10 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * @param other      The previous CSV price entry.
 	 * @param repository The repository managing the price entity.
 	 */
-	protected void handlePartialCost(final X context, final C csv, final C other) {
-		final C quantity;
-		final C hourly;
-		if (csv.getPriceUnit().equals("Quantity")) {
-			// Up-front part
-			quantity = csv;
-			hourly = other;
-		} else {
-			// Hourly part
-			quantity = other;
-			hourly = csv;
-		}
+	private void handlePartialCost(final X context, final C csv, final C other) {
+		// Up-front part
+		final C quantity = csv;
+		final C hourly = other;
 
 		// Price code is based on the hourly term code
 		final var price = newPrice(context, hourly);

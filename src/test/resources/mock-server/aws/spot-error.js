@@ -11,7 +11,7 @@ callback({
                   "type":"generalCurrentGen",
                   "sizes":[
                      {
-                        "size":"m3.medium",
+                        "size":"c1.medium",
                         "valueColumns":[
                            {
                               "name":"linux",

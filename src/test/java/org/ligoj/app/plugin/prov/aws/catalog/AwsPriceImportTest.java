@@ -567,7 +567,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(nbTypes, status.getNbInstanceTypes().intValue());
 		Assertions.assertEquals(count, status.getNbInstancePrices().intValue());
 		Assertions.assertEquals(6, status.getNbLocations().intValue());
-		Assertions.assertEquals(21, status.getNbStorageTypes().intValue());
+		Assertions.assertEquals(22, status.getNbStorageTypes().intValue());
 	}
 
 	private ProvQuoteInstance check(final QuoteVo quote, final double cost, final double computeCost) {
@@ -708,7 +708,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Only OD+RI prices have been imported
 		Assertions.assertEquals(74, itRepository.findAll().size());
-		Assertions.assertEquals(3, iptRepository.findAll().size()); // RI3y, OD, Spot
+		Assertions.assertEquals(3, iptRepository.findAll().size()); // RI, OD, Spot
 	}
 
 	/**
@@ -802,7 +802,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES_SPOT, "/any.js");
 		configure(AwsPriceImportFargate.CONF_URL_FARGATE_PRICES_SPOT, "/spot-fargate.json");
 		mock("/spot-fargate.json", "mock-server/aws/spot-fargate-empty.json");
-		mock("/spot.json", "mock-server/aws/spot-empty.js");
+		mock("/spot.js", "mock-server/aws/spot-empty.js");
 		startMockServer();
 
 		// Check the reserved
@@ -837,7 +837,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 	@Test
 	void installFargateSpotError() throws Exception {
 		mockAll();
-		mock("/spot.js", "mock-server/aws/spot-error.js");
+		mock("/spot-fargate.json", "mock-server/aws/spot-fargate-error.json");
 		startMockServer();
 
 		// Parse error expected

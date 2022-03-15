@@ -39,11 +39,6 @@ class CsvForBeanEc2Test {
 	}
 
 	@Test
-	void readNotUsed() throws IOException {
-		assertReadNull("mock-server/aws/index-ec2-small-not-used.csv");
-	}
-
-	@Test
 	void readNAOs() throws IOException {
 		final var reader = new BufferedReader(new InputStreamReader(
 				new ClassPathResource("mock-server/aws/index-ec2-small-compute.csv").getInputStream()));

@@ -39,21 +39,36 @@ public class AwsPriceImportLambda extends
 	 */
 	private static final String API = "lambda";
 
+	/**
+	 * Lambda types to aggregated price.
+	 */
+	private static final Map<String, Function<LocalLambdaContext, ProvFunctionPrice>> TYPE_TO_PRICE = Map.of("lambda",
+			c -> c.getStdPrice(), "provisionned", c -> c.getProvPrice(), "lambda-arm", c -> c.getStdPriceArm(),
+			"provisionned-arm", c -> c.getProvPriceArm());
+
 	@Override
 	protected void installPrice(final LocalLambdaContext context, final AwsLambdaPrice csv) {
 		context.setLast(csv);
-		context.getMapper().getOrDefault(csv.getGroup(), Function.identity()::apply).accept(csv);
+		// Ignore Free Tier price
+		if (csv.getLocation() != "Any") {
+			context.getMapper().getOrDefault(csv.getGroup(), Function.identity()::apply).accept(csv);
+		}
 	}
 
 	@Override
 	protected void purgePrices(final LocalLambdaContext context) {
 		final var last = context.getLast();
 		if (last != null) {
-			// At least one price
+			// At least one price in this region
 			final var region = installRegion(context, context.getRegion().getName(), last.getLocation());
 			final var term = installInstancePriceTerm(context, last);
-			installLambdaPrice(context, region, term, context.getStdPrice(), last, "lambda");
-			installLambdaPrice(context, region, term, context.getProvPrice(), last, "provisionned");
+			TYPE_TO_PRICE.forEach((t, p) -> {
+				final var price = p.apply(context);
+				if (price.getCode() != null) {
+					// At least one price of this type
+					installLambdaPrice(context, region, term, price, last, t);
+				}
+			});
 		}
 
 		super.purgePrices(context);
@@ -82,10 +97,11 @@ public class AwsPriceImportLambda extends
 		csv.setRateCode(tempPrice.getCode());
 		final var price = newPrice(context, csv);
 		saveAsNeeded(context, price, price.getCostRamRequest(),
-				tempPrice.getCostRamRequest() * 3600 * context.getHoursMonth(), (cR, c) -> {
+				tempPrice.getCostRamRequest() * 3600d * context.getHoursMonth(), (cR, c) -> {
 					price.setCostRamRequest(cR);
-					price.setCostRequests(tempPrice.getCostRequests() * 1000000);
-					price.setCostRamRequestConcurrency(tempPrice.getCostRamRequestConcurrency());
+					price.setCostRequests(round3Decimals(tempPrice.getCostRequests() * 1e6d));
+					price.setCostRamRequestConcurrency(
+							round3Decimals(tempPrice.getCostRamRequestConcurrency() * 3600d * context.getHoursMonth()));
 					price.setCostPeriod(round3Decimals(c * price.getTerm().getPeriod()));
 				}, context.getPRepository()::save);
 	}
@@ -94,6 +110,8 @@ public class AwsPriceImportLambda extends
 	protected void copy(final AwsLambdaPrice csv, final ProvFunctionPrice p) {
 		p.setIncrementRam(1d / 1024d);
 		p.setIncrementCpu(1d);
+		p.setMinCpu(0d);
+		p.setMaxCpu(4d);
 		p.setMaxRam(10d);
 		p.setMinRam(128d / 1024d);
 		p.setMinRamRatio(0d);
@@ -113,9 +131,10 @@ public class AwsPriceImportLambda extends
 	@Override
 	protected void copy(final AwsLambdaPrice csv, final ProvFunctionType t) {
 		t.setName(t.getCode());
-		t.setConstant("provisionned".equals(t.getCode()));
+		t.setConstant(t.getCode().startsWith("provisionned"));
 		t.setAutoScale(true);
 		t.setCpu(0);
+		t.setProcessor(t.getCode().endsWith("-arm") ? "ARM" : "INTEL");
 		t.setPhysical(Boolean.FALSE);
 		t.setStorageRate(Rate.MEDIUM);
 		t.setCpuRate(Rate.MEDIUM);
@@ -129,23 +148,37 @@ public class AwsPriceImportLambda extends
 		final var context = new LocalLambdaContext(gContext, iptRepository, ftRepository, fpRepository, qfRepository,
 				region, term1, term2);
 		final var stdPrice = new ProvFunctionPrice();
+		final var stdPriceArm = new ProvFunctionPrice();
 		final var provPrice = new ProvFunctionPrice();
+		final var provPriceArm = new ProvFunctionPrice();
 		context.setStdPrice(stdPrice);
+		context.setStdPriceArm(stdPriceArm);
 		context.setProvPrice(provPrice);
+		context.setProvPriceArm(provPriceArm);
 
-		// Prepare the mapper to aggregate CSV entries
+		// Prepare the mapping to aggregate CSV entries
 		context.setMapper(Map.of("AWS-Lambda-Duration-Provisioned", d -> {
 			provPrice.setCostRamRequestConcurrency(d.getPricePerUnit());
 			provPrice.setCode(d.getRateCode());
+		}, "AWS-Lambda-Duration-Provisioned-ARM", d -> {
+			provPriceArm.setCostRamRequestConcurrency(d.getPricePerUnit());
+			provPriceArm.setCode(d.getRateCode());
+		}, "AWS-Lambda-Duration", d -> {
+			provPrice.setCostRamRequest(d.getPricePerUnit());
+			stdPrice.setCostRamRequest(d.getPricePerUnit());
+			stdPrice.setCode(d.getRateCode());
+		}, "AWS-Lambda-Duration-ARM", d -> {
+			provPriceArm.setCostRamRequest(d.getPricePerUnit());
+			stdPriceArm.setCostRamRequest(d.getPricePerUnit());
+			stdPriceArm.setCode(d.getRateCode());
 		}, "AWS-Lambda-Requests", d -> {
-			stdPrice.setCostRequests(d.getPricePerUnit());
 			provPrice.setCostRequests(d.getPricePerUnit());
-		}, "AWS-Lambda-Provisioned-Concurrency", d -> provPrice.setCostRam(d.getPricePerUnit()), "AWS-Lambda-Duration",
-				d -> {
-					stdPrice.setCostRamRequest(d.getPricePerUnit());
-					provPrice.setCostRamRequest(d.getPricePerUnit());
-					stdPrice.setCode(d.getRateCode());
-				}));
+			stdPrice.setCostRequests(d.getPricePerUnit());
+		}, "AWS-Lambda-Requests-ARM", d -> {
+			provPriceArm.setCostRequests(d.getPricePerUnit());
+			stdPriceArm.setCostRequests(d.getPricePerUnit());
+		}, "AWS-Lambda-Provisioned-Concurrency", d -> provPrice.setCostRam(d.getPricePerUnit()),
+				"AWS-Lambda-Provisioned-Concurrency-ARM", d -> provPriceArm.setCostRam(d.getPricePerUnit())));
 		return context;
 	}
 

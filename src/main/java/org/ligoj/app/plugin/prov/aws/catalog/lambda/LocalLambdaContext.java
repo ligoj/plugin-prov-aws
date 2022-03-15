@@ -31,6 +31,8 @@ public class LocalLambdaContext
 	private AwsLambdaPrice last;
 	private ProvFunctionPrice stdPrice;
 	private ProvFunctionPrice provPrice;
+	private ProvFunctionPrice stdPriceArm;
+	private ProvFunctionPrice provPriceArm;
 
 	private Map<String, Consumer<AwsLambdaPrice>> mapper;
 

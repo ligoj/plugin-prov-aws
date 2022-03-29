@@ -2,4 +2,5 @@ node.id;code;slaStartTime;slaEndTime;slaWeekEnd;commitment;accessApi;accessEmail
 service:prov:aws;Basic;;;FALSE;1;;BILLING;;;1;;86400000;;;;WORST;
 service:prov:aws;Developer;28800000;64800000;FALSE;1;;ALL;;;1;86400000;43200000;;;;LOW;https://aws.amazon.com/premiumsupport/plans/developers/
 service:prov:aws;Business;0;86400000;TRUE;1;ALL;ALL;ALL;ALL;;86400000;43200000;14400000;3600000;;MEDIUM;https://aws.amazon.com/premiumsupport/plans/business/
+service:prov:aws;Enterprise On-Ramp;0;86400000;TRUE;1;ALL;ALL;ALL;ALL;;86400000;43200000;14400000;3600000;1800000;BEST;https://aws.amazon.com/premiumsupport/plans/enterprise/
 service:prov:aws;Enterprise;0;86400000;TRUE;1;ALL;ALL;ALL;ALL;;86400000;43200000;14400000;3600000;900000;BEST;https://aws.amazon.com/premiumsupport/plans/enterprise/

@@ -23,7 +23,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.RegExUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.ligoj.app.plugin.prov.aws.catalog.AbsractLocalContext;
+import org.ligoj.app.plugin.prov.aws.catalog.AbstractLocalContext;
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsImport;
 import org.ligoj.app.plugin.prov.aws.catalog.AwsPriceRegion;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
@@ -59,7 +59,7 @@ import lombok.extern.slf4j.Slf4j;
  * @param <R> The CSV bean reader type.
  */
 @Slf4j
-public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P extends AbstractTermPriceVm<T>, C extends AbstractAwsVmPrice, Q extends AbstractQuoteVm<P>, X extends AbsractLocalContext<T, P, C, Q>, R extends AbstractCsvForBeanEc2<C>>
+public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P extends AbstractTermPriceVm<T>, C extends AbstractAwsVmPrice, Q extends AbstractQuoteVm<P>, X extends AbstractLocalContext<T, P, C, Q>, R extends AbstractCsvForBeanEc2<C>>
 		extends AbstractAwsImport implements ImportCatalog<UpdateContext> {
 
 	/**
@@ -433,7 +433,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			final ProvInstancePriceTerm term, final Map<String, P> previousOd, final String odCode,
 			final Collection<SavingsPlanRate> rates) {
 		return rates.stream().filter(r -> serviceCode.equals(r.getDiscountedServiceCode()))
-				.map(r -> installSavingsPlanPrices(context, term, r, previousOd, odCode));
+				.map(r -> installSavingsPlanPrice(context, term, r, previousOd, odCode));
 	}
 
 	/**
@@ -479,7 +479,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * Install the prices related to a term. The instance price type is reused from the discounted OnDemand price, and
 	 * must exists.
 	 */
-	protected String installSavingsPlanPrices(final X context, final ProvInstancePriceTerm term,
+	protected String installSavingsPlanPrice(final X context, final ProvInstancePriceTerm term,
 			final SavingsPlanRate jsonPrice, final Map<String, P> previousOd, final String odCode2) {
 		if (jsonPrice.getDiscountedUsageType().contains("Unused")) {
 			// Ignore this usage
@@ -498,7 +498,15 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		final var cost = jsonPrice.getDiscountedRate().getPrice() * context.getHoursMonth();
 
 		// Save the price as needed with up-front computation
-		saveAsNeeded(context, price, price.getCost(), cost, (cR, c) -> {
+		saveSPAsNeeded(context, term, price, odPrice, cost);
+
+		// No error
+		return null;
+	}
+
+	protected P saveSPAsNeeded(final X context, final ProvInstancePriceTerm term, final P price, final P odPrice,
+			final double cost) {
+		return saveAsNeeded(context, price, price.getCost(), cost, (cR, c) -> {
 			price.setCost(cR);
 			price.setCostPeriod(round3Decimals(c * Math.max(1, term.getPeriod())));
 
@@ -513,9 +521,6 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 				price.setInitialCost(price.getCostPeriod());
 			}
 		}, context.getPRepository()::save);
-
-		// No error
-		return null;
 	}
 
 	protected void copySavingsPlan(final P odPrice, final P p) {

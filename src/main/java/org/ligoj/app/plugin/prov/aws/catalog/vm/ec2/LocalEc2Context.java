@@ -3,7 +3,7 @@
  */
 package org.ligoj.app.plugin.prov.aws.catalog.vm.ec2;
 
-import org.ligoj.app.plugin.prov.aws.catalog.AbsractLocalContext;
+import org.ligoj.app.plugin.prov.aws.catalog.AbstractLocalContext;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceRepository;
 import org.ligoj.app.plugin.prov.dao.ProvInstancePriceTermRepository;
@@ -18,7 +18,7 @@ import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
  * Context used to perform catalog update.
  */
 public class LocalEc2Context
-		extends AbsractLocalContext<ProvInstanceType, ProvInstancePrice, AwsEc2Price, ProvQuoteInstance> {
+		extends AbstractLocalContext<ProvInstanceType, ProvInstancePrice, AwsEc2Price, ProvQuoteInstance> {
 
 	/**
 	 * Context from the parent.

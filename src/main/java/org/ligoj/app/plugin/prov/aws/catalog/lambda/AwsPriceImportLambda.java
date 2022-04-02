@@ -5,12 +5,15 @@ package org.ligoj.app.plugin.prov.aws.catalog.lambda;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVm;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlanProduct;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlanRate;
 import org.ligoj.app.plugin.prov.model.ProvFunctionPrice;
 import org.ligoj.app.plugin.prov.model.ProvFunctionType;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
@@ -126,6 +129,7 @@ public class AwsPriceImportLambda extends
 	protected void copySavingsPlan(final ProvFunctionPrice odPrice, final ProvFunctionPrice p) {
 		super.copySavingsPlan(odPrice, p);
 		copy(null, p);
+		p.setCostRequests(odPrice.getCostRequests());
 	}
 
 	@Override
@@ -180,6 +184,52 @@ public class AwsPriceImportLambda extends
 		}, "AWS-Lambda-Provisioned-Concurrency", d -> provPrice.setCostRam(d.getPricePerUnit()),
 				"AWS-Lambda-Provisioned-Concurrency-ARM", d -> provPriceArm.setCostRam(d.getPricePerUnit())));
 		return context;
+	}
+	
+	@Override
+	protected Stream<String> installSavingsPlanRates(final LocalLambdaContext context, final String serviceCode,
+			final ProvInstancePriceTerm term, final Map<String, ProvFunctionPrice> previousOd, final String odCode,
+			final Collection<SavingsPlanRate> rates) {
+		final var stdPrice = new ProvFunctionPrice();
+		final var stdPriceArm = new ProvFunctionPrice();
+		final var provPrice = new ProvFunctionPrice();
+		final var provPriceArm = new ProvFunctionPrice();
+		context.setStdPrice(stdPrice);
+		context.setStdPriceArm(stdPriceArm);
+		context.setProvPrice(provPrice);
+		context.setProvPriceArm(provPriceArm);
+
+		// Prepare the mapping to aggregate CSV entries
+		context.setMapper(Map.of("AWS-Lambda-Duration-Provisioned", d -> {
+			provPrice.setCostRamRequestConcurrency(d.getPricePerUnit());
+			provPrice.setCode(d.getRateCode());
+		}, "AWS-Lambda-Duration-Provisioned-ARM", d -> {
+			provPriceArm.setCostRamRequestConcurrency(d.getPricePerUnit());
+			provPriceArm.setCode(d.getRateCode());
+		}, "AWS-Lambda-Duration", d -> {
+			provPrice.setCostRamRequest(d.getPricePerUnit());
+			stdPrice.setCostRamRequest(d.getPricePerUnit());
+			stdPrice.setCode(d.getRateCode());
+		}, "AWS-Lambda-Duration-ARM", d -> {
+			provPriceArm.setCostRamRequest(d.getPricePerUnit());
+			stdPriceArm.setCostRamRequest(d.getPricePerUnit());
+			stdPriceArm.setCode(d.getRateCode());
+		}, "AWS-Lambda-Requests", d -> {
+			provPrice.setCostRequests(d.getPricePerUnit());
+			stdPrice.setCostRequests(d.getPricePerUnit());
+		}, "AWS-Lambda-Requests-ARM", d -> {
+			provPriceArm.setCostRequests(d.getPricePerUnit());
+			stdPriceArm.setCostRequests(d.getPricePerUnit());
+		}, "AWS-Lambda-Provisioned-Concurrency", d -> provPrice.setCostRam(d.getPricePerUnit()),
+				"AWS-Lambda-Provisioned-Concurrency-ARM", d -> provPriceArm.setCostRam(d.getPricePerUnit())));
+		return null;
+	}
+
+
+	@Override
+	protected ProvFunctionPrice saveSPAsNeeded(final LocalLambdaContext context, final ProvInstancePriceTerm term,
+			final ProvFunctionPrice price, final ProvFunctionPrice odPrice, final double cost) {
+		return super.saveSPAsNeeded(context, term, price, odPrice, cost * 3600d * context.getHoursMonth());
 	}
 
 	@Override

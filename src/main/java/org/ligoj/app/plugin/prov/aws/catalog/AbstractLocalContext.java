@@ -33,7 +33,7 @@ import lombok.Setter;
  * @param <C> The CSV price type.
  * @param <Q> The quote type.
  */
-public abstract class AbsractLocalContext<T extends AbstractInstanceType, P extends AbstractTermPriceVm<T>, C extends AbstractAwsVmPrice, Q extends AbstractQuoteVm<P>>
+public abstract class AbstractLocalContext<T extends AbstractInstanceType, P extends AbstractTermPriceVm<T>, C extends AbstractAwsVmPrice, Q extends AbstractQuoteVm<P>>
 		extends AbstractUpdateContext {
 
 	@Getter
@@ -99,7 +99,7 @@ public abstract class AbsractLocalContext<T extends AbstractInstanceType, P exte
 	 * @param term1         The expected term name prefix alternative 1.
 	 * @param term2         The expected term name prefix alternative 2. May be <code>null</code>.
 	 */
-	protected AbsractLocalContext(final UpdateContext parent, final ProvInstancePriceTermRepository ptRepository,
+	protected AbstractLocalContext(final UpdateContext parent, final ProvInstancePriceTermRepository ptRepository,
 			final BaseProvInstanceTypeRepository<T> tRepository, final BaseProvTermPriceRepository<T, P> pRepository,
 			final BaseProvQuoteRepository<Q> qRepository, final ProvLocation region, final Map<String, T> previousTypes,
 			final String term1, final String term2) {

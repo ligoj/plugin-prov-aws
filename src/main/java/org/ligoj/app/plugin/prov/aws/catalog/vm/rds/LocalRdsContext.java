@@ -3,7 +3,7 @@
  */
 package org.ligoj.app.plugin.prov.aws.catalog.vm.rds;
 
-import org.ligoj.app.plugin.prov.aws.catalog.AbsractLocalContext;
+import org.ligoj.app.plugin.prov.aws.catalog.AbstractLocalContext;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.dao.ProvDatabasePriceRepository;
 import org.ligoj.app.plugin.prov.dao.ProvDatabaseTypeRepository;
@@ -18,7 +18,7 @@ import org.ligoj.app.plugin.prov.model.ProvQuoteDatabase;
  * Context used to perform catalog update.
  */
 public class LocalRdsContext
-		extends AbsractLocalContext<ProvDatabaseType, ProvDatabasePrice, AwsRdsPrice, ProvQuoteDatabase> {
+		extends AbstractLocalContext<ProvDatabaseType, ProvDatabasePrice, AwsRdsPrice, ProvQuoteDatabase> {
 
 	/**
 	 * Context from the parent.

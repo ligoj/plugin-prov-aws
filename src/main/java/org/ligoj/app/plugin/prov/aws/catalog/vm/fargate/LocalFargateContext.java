@@ -3,7 +3,7 @@
  */
 package org.ligoj.app.plugin.prov.aws.catalog.vm.fargate;
 
-import org.ligoj.app.plugin.prov.aws.catalog.AbsractLocalContext;
+import org.ligoj.app.plugin.prov.aws.catalog.AbstractLocalContext;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.dao.ProvContainerPriceRepository;
 import org.ligoj.app.plugin.prov.dao.ProvContainerTypeRepository;
@@ -18,7 +18,7 @@ import org.ligoj.app.plugin.prov.model.ProvQuoteContainer;
  * Context used to perform catalog update.
  */
 public class LocalFargateContext
-		extends AbsractLocalContext<ProvContainerType, ProvContainerPrice, AwsFargatePrice, ProvQuoteContainer> {
+		extends AbstractLocalContext<ProvContainerType, ProvContainerPrice, AwsFargatePrice, ProvQuoteContainer> {
 
 	/**
 	 * Context from the parent.

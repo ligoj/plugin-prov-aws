@@ -144,7 +144,7 @@ public class AwsPriceImportFargate extends
 		CPU_TO_RAM.forEach((cpu, ramGbA) -> Arrays.stream(ramGbA).forEach(ram -> {
 			rateCpu.getDiscountedRate().setPrice(costCpu * cpu + costRam * ram);
 			rateCpu.setRateCode(toPriceCode(cpuRateCode, cpu, ram));
-			super.installSavingsPlanPrices(context, term, rateCpu, previousOd, toPriceCode(odCode, cpu, ram));
+			super.installSavingsPlanPrice(context, term, rateCpu, previousOd, toPriceCode(odCode, cpu, ram));
 		}));
 	}
 

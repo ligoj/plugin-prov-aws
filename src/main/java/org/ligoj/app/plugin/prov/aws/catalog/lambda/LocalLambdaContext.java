@@ -6,7 +6,7 @@ package org.ligoj.app.plugin.prov.aws.catalog.lambda;
 import java.util.Map;
 import java.util.function.Consumer;
 
-import org.ligoj.app.plugin.prov.aws.catalog.AbsractLocalContext;
+import org.ligoj.app.plugin.prov.aws.catalog.AbstractLocalContext;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.dao.ProvFunctionPriceRepository;
 import org.ligoj.app.plugin.prov.dao.ProvFunctionTypeRepository;
@@ -26,7 +26,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class LocalLambdaContext
-		extends AbsractLocalContext<ProvFunctionType, ProvFunctionPrice, AwsLambdaPrice, ProvQuoteFunction> {
+		extends AbstractLocalContext<ProvFunctionType, ProvFunctionPrice, AwsLambdaPrice, ProvQuoteFunction> {
 
 	private AwsLambdaPrice last;
 	private ProvFunctionPrice stdPrice;

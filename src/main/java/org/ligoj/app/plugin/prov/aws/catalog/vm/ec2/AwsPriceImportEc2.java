@@ -108,12 +108,12 @@ public class AwsPriceImportEc2 extends
 			final var type = context.getStorageTypes().get(context.getMapStorageToApi().getOrDefault(csv.getFamily(),
 					StringUtils.trimToEmpty(csv.getVolume())));
 			if (type == null) {
-				log.info("Ignore unkonown volume type {}/{}", csv.getFamily(), csv.getVolume());
+				log.info("Ignore unknown volume type {}/{}", csv.getFamily(), csv.getVolume());
 				return;
 			}
 
 			if (!csv.getFamily().startsWith("Storage")) {
-				log.info("Ignore unkonown storage price type {}/{}", csv.getFamily(), csv.getVolume());
+				log.info("Ignore unknown storage price type {}/{}", csv.getFamily(), csv.getVolume());
 				return;
 			}
 

@@ -6,7 +6,6 @@ package org.ligoj.app.plugin.prov.aws.catalog;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
 import java.util.Collections;
@@ -114,7 +113,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 			// Install the enabled regions as needed
 			final var eRegions = prices.getConfig().getRegions().stream()
 					.peek(r -> r.setRegion(context.getMapSpotToNewRegion().getOrDefault(r.getRegion(), r.getRegion())))
-					.filter(r -> isEnabledRegion(context, r)).collect(Collectors.toList());
+					.filter(r -> isEnabledRegion(context, r)).toList();
 			eRegions.forEach(r -> installRegion(context, r.getRegion()));
 
 			// Install the prices for each region
@@ -135,7 +134,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 	 * @throws IOException When the index cannot be retrieved.
 	 */
 	protected Map<String, AwsPriceRegion> getRegionalPrices(final UpdateContext context, final String api,
-			final String serviceCode) throws MalformedURLException, IOException {
+			final String serviceCode) throws IOException {
 		return getRegionalSPPrices(context, api, serviceCode, AwsPriceOffer::getCurrentRegionIndexUrl,
 				AwsPriceRegions.class, "OnDemand");
 	}
@@ -150,7 +149,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 	 * @throws IOException When the index cannot be retrieved.
 	 */
 	protected Map<String, AwsPriceRegion> getRegionalSPPrices(final UpdateContext context, final String api,
-			final String serviceCode) throws MalformedURLException, IOException {
+			final String serviceCode) throws IOException {
 		return getRegionalSPPrices(context, api, serviceCode, AwsPriceOffer::getCurrentSavingsPlanIndexUrl,
 				AwsSPPriceRegions.class, "SavingsPlan");
 	}
@@ -169,7 +168,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 	private Map<String, AwsPriceRegion> getRegionalSPPrices(final UpdateContext context, final String api,
 			final String serviceCode, final Function<AwsPriceOffer, String> toUrl,
 			final Class<? extends RegionalPrices> clazz, final String classifier)
-			throws MalformedURLException, IOException {
+			throws IOException {
 		final var path = toUrl.apply(context.getOffers().get(serviceCode));
 		if (path == null) {
 			return Collections.emptyMap();

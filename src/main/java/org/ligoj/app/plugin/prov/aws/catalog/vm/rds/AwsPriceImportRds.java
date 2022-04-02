@@ -146,11 +146,11 @@ public class AwsPriceImportRds extends
 			} else if ("Magnetic".equals(csv.getVolume())) {
 				name = "rds-magnetic";
 			} else {
-				log.error("Unknwown RDS storage type {}/{}/{}", csv.getVolume(), csv.getEngine(), csv.getSku());
+				log.error("Unknown RDS storage type {}/{}/{}", csv.getVolume(), csv.getEngine(), csv.getSku());
 				return null;
 			}
 		} else {
-			log.error("Unknwown RDS storage type {}/{}/{}", csv.getVolume(), csv.getEngine(), csv.getSku());
+			log.error("Unknown RDS storage type {}/{}/{}", csv.getVolume(), csv.getEngine(), csv.getSku());
 			return null;
 		}
 

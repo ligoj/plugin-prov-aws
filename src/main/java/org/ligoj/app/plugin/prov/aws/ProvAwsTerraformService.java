@@ -436,12 +436,12 @@ public class ProvAwsTerraformService {
 				StandardCopyOption.REPLACE_EXISTING);
 	}
 
-	private void template(final Context context, final UnaryOperator<String> formater, final String... fragments)
+	private void template(final Context context, final UnaryOperator<String> formatter, final String... fragments)
 			throws IOException {
 		try (var source = toInput(String.join("/", fragments));
 				var target = new FileOutputStream(utils.toFile(context.getSubscription(), fragments));
 				Writer targetW = new OutputStreamWriter(target)) {
-			targetW.write(formater.apply(IOUtils.toString(source, StandardCharsets.UTF_8)));
+			targetW.write(formatter.apply(IOUtils.toString(source, StandardCharsets.UTF_8)));
 		}
 	}
 

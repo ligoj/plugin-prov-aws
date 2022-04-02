@@ -46,14 +46,14 @@ public class AwsPriceImportLambda extends
 	 * Lambda types to aggregated price.
 	 */
 	private static final Map<String, Function<LocalLambdaContext, ProvFunctionPrice>> TYPE_TO_PRICE = Map.of("lambda",
-			c -> c.getStdPrice(), "provisionned", c -> c.getProvPrice(), "lambda-arm", c -> c.getStdPriceArm(),
-			"provisionned-arm", c -> c.getProvPriceArm());
+			c -> c.getStdPrice(), "provisioned", c -> c.getProvPrice(), "lambda-arm", c -> c.getStdPriceArm(),
+			"provisioned-arm", c -> c.getProvPriceArm());
 
 	@Override
 	protected void installPrice(final LocalLambdaContext context, final AwsLambdaPrice csv) {
 		context.setLast(csv);
 		// Ignore Free Tier price
-		if (csv.getLocation() != "Any") {
+		if (!csv.getLocation().equals("Any")) {
 			context.getMapper().getOrDefault(csv.getGroup(), Function.identity()::apply).accept(csv);
 		}
 	}
@@ -135,7 +135,7 @@ public class AwsPriceImportLambda extends
 	@Override
 	protected void copy(final AwsLambdaPrice csv, final ProvFunctionType t) {
 		t.setName(t.getCode());
-		t.setConstant(t.getCode().startsWith("provisionned"));
+		t.setConstant(t.getCode().startsWith("provisioned"));
 		t.setAutoScale(true);
 		t.setCpu(0);
 		t.setProcessor(t.getCode().endsWith("-arm") ? "ARM" : "INTEL");

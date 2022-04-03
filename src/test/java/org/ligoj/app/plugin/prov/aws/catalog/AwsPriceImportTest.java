@@ -245,7 +245,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 	 * Only for dead but necessary contracted code.
 	 */
 	@Test
-	void dummyCoverage() throws IOException {
+	void dummyCoverage() {
 		new AwsEc2Price().getDrop();
 		new AwsPriceImportEc2().newProxy();
 		new AwsPriceImportRds().newProxy();
@@ -257,13 +257,13 @@ class AwsPriceImportTest extends AbstractServerTest {
 	 * Invalid EC2 CSV header
 	 */
 	@Test
-	void installInvalidHeader() throws IOException {
+	void installInvalidHeader() {
 		final var reader = new BufferedReader(new StringReader("any"));
 		Assertions.assertEquals("Premature end of CSV file, headers were not found",
 				Assertions.assertThrows(TechnicalException.class, () -> new CsvForBeanEc2(reader)).getMessage());
 	}
 
-	void mock404(final String url) throws IOException {
+	void mock404(final String url) {
 		httpServer.stubFor(get(urlEqualTo(url)).willReturn(aResponse().withStatus(HttpStatus.SC_NOT_FOUND)));
 	}
 
@@ -508,7 +508,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(448.736d, newQuote.getCost().getMin(), DELTA);
 
 		// gp2 storage price is updated
-		final var storage = newQuote.getStorages().stream().sorted().collect(Collectors.toList()).get(2);
+		final var storage = newQuote.getStorages().stream().sorted().toList().get(2);
 		Assertions.assertEquals("gp3", storage.getPrice().getType().getCode());
 		Assertions.assertEquals(0.44d, storage.getCost(), DELTA);
 		Assertions.assertEquals(5, storage.getSize(), DELTA);

@@ -4,7 +4,8 @@
 package org.ligoj.app.plugin.prov.aws.catalog.lambda;
 
 import java.util.Map;
-import java.util.function.Consumer;
+import java.util.Set;
+import java.util.function.BiConsumer;
 
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractLocalContext;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
@@ -21,7 +22,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * Context used to perform catalog update.
+ * Context used to perform catalog update of Lambda for a specific region.
  */
 @Getter
 @Setter
@@ -29,12 +30,12 @@ public class LocalLambdaContext
 		extends AbstractLocalContext<ProvFunctionType, ProvFunctionPrice, AwsLambdaPrice, ProvQuoteFunction> {
 
 	private AwsLambdaPrice last;
+	private ProvFunctionPrice edgePrice;
 	private ProvFunctionPrice stdPrice;
 	private ProvFunctionPrice provPrice;
 	private ProvFunctionPrice stdPriceArm;
 	private ProvFunctionPrice provPriceArm;
-
-	private Map<String, Consumer<AwsLambdaPrice>> mapper;
+	private Map<Set<String>, BiConsumer<String,Double>> mapper;
 
 	/**
 	 * Context from the parent.

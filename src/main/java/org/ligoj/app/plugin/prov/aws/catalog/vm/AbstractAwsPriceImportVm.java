@@ -23,8 +23,8 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.RegExUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.ligoj.app.plugin.prov.aws.catalog.AbstractLocalContext;
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsImport;
+import org.ligoj.app.plugin.prov.aws.catalog.AbstractLocalContext;
 import org.ligoj.app.plugin.prov.aws.catalog.AwsPriceRegion;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.AbstractCsvForBeanEc2;
@@ -107,7 +107,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	/**
 	 * Handle partial up-front prices split into multiple price entries.
 	 *
-	 * @param context The current context to handle lazy sub-entities creation.
+	 * @param context The regional update context.
 	 * @param csv     The current CSV price entry.
 	 * @return <code>true</code> when the current CSV entry is associated to a RI with up-front.
 	 */
@@ -132,7 +132,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	/**
 	 * Handle partial up-front prices split into multiple price entries.
 	 *
-	 * @param context    The current context to handle lazy sub-entities creation.
+	 * @param context    The regional update context.
 	 * @param csv        The current CSV price entry.
 	 * @param other      The previous CSV price entry.
 	 * @param repository The repository managing the price entity.
@@ -159,7 +159,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	/**
 	 * Install or update a price.
 	 *
-	 * @param context The current context to handle lazy sub-entities creation.
+	 * @param context The regional update context.
 	 * @param csv     The current CSV entry.
 	 * @return The new updated price entity.
 	 */
@@ -209,7 +209,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	/**
 	 * Copy a CSV price entry to a price entity.
 	 *
-	 * @param context The current context to handle lazy sub-entities creation.
+	 * @param context The regional update context.
 	 * @param csv     The current CSV entry.
 	 * @param p       The target price entity.
 	 * @param type    The instance type.
@@ -239,7 +239,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	/**
 	 * Install a new EC2/RDS instance type. The previous entries will contains this type at the end of this operation.
 	 *
-	 * @param context The current context to handle lazy sub-entities creation.
+	 * @param context The regional update context.
 	 * @param csv     The current CSV entry.
 	 * @return Either the previous entity, either a new one. Never <code>null</code>.
 	 */
@@ -302,7 +302,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	/**
 	 * Remove SKU that were present in the context and not refresh with this update.
 	 *
-	 * @param context The local update context.
+	 * @param context The regional update context.
 	 */
 	protected void purgePrices(final X context) {
 		super.purgePrices(context, context.getLocals(), context.getPRepository(), context.getQRepository());
@@ -311,7 +311,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	/**
 	 * Build a new instance price term from the CSV line.
 	 *
-	 * @param context The local update context.
+	 * @param context The regional update context.
 	 * @param csv     The CSV price row.
 	 * @return The updated {@link ProvInstancePriceTerm} corresponding to the CSV row.
 	 */
@@ -392,8 +392,8 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	private void installSavingsPlan(final X context, final String api, final String serviceCode, final String endpoint,
 			final Map<String, P> previousOd) {
 		final var region = context.getRegion();
-		final var odCode = getOnDemandCode(previousOd);
-		if (odCode == null) {
+		final var odTermCode = getOnDemandCode(previousOd);
+		if (odTermCode == null) {
 			// No OD found for SP/region
 			log.warn("AWS {} No OnDemand prices @{}, Savings Plan is ignored", api, region.getName());
 			return;
@@ -408,8 +408,8 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 					.collect(Collectors.toSet());
 			final var skuErrors = sps.getTerms().getSavingsPlan().stream().filter(sp -> skus.contains(sp.getSku()))
 					.flatMap(sp -> installSavingsPlanRates(context, serviceCode, newSavingsPlanTerm(context, sp),
-							previousOd, odCode, sp.getRates()))
-					.filter(Objects::nonNull).collect(Collectors.toList());
+							previousOd, odTermCode, sp.getRates()))
+					.filter(Objects::nonNull).toList();
 			if (!skuErrors.isEmpty()) {
 				// At least one SKU as not been resolved
 				log.warn("AWS {} Savings Plan import errors @{} with {} unresolved SKUs, first : {}", api,
@@ -429,11 +429,22 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		}
 	}
 
+	/**
+	 * Persist the savings plan prices for a specific term and region.
+	 * 
+	 * @param context     The current global context to handle lazy sub-entities creation.
+	 * @param serviceCode The service code to filter.
+	 * @param term        The current term.
+	 * @param previousOd  The previous On Demand prices.
+	 * @param odTermCode  The On Demand term code.
+	 * @param rates       The SP rates to filter.
+	 * @return A stream of filtered rates with a broken discounted rate reference.
+	 */
 	protected Stream<String> installSavingsPlanRates(final X context, final String serviceCode,
-			final ProvInstancePriceTerm term, final Map<String, P> previousOd, final String odCode,
+			final ProvInstancePriceTerm term, final Map<String, P> previousOd, final String odTermCode,
 			final Collection<SavingsPlanRate> rates) {
 		return rates.stream().filter(r -> serviceCode.equals(r.getDiscountedServiceCode()))
-				.map(r -> installSavingsPlanPrice(context, term, r, previousOd, odCode));
+				.map(r -> installSavingsPlanPrice(context, term, r, previousOd, odTermCode));
 	}
 
 	/**
@@ -476,20 +487,27 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	}
 
 	/**
-	 * Install the prices related to a term. The instance price type is reused from the discounted OnDemand price, and
-	 * must exists.
+	 * Install the SP prices related to a term. The instance price type is reused from the discounted OnDemand price,
+	 * and must exists.
+	 * 
+	 * @param context    The regional update context.
+	 * @param term       The current term.
+	 * @param jsonPrice  The SP price to persist.
+	 * @param previousOd The previous On Demand prices.
+	 * @param odTermCode The On Demand term code.
+	 * @return A stream of filtered rates with a broken discounted rate reference.
 	 */
 	protected String installSavingsPlanPrice(final X context, final ProvInstancePriceTerm term,
-			final SavingsPlanRate jsonPrice, final Map<String, P> previousOd, final String odCode2) {
+			final SavingsPlanRate jsonPrice, final Map<String, P> previousOd, final String odTermCode) {
 		if (jsonPrice.getDiscountedUsageType().contains("Unused")) {
 			// Ignore this usage
 			return null;
 		}
 
-		// Get the related OD Price // K4EXFQ5YFQCP98EN.JRTCKXETXF.6YS6EN2CT7|4.0|8.0 //
-		// HB5V2X8TXQUTDZBV.JRTCKXETXF.6YS6EN2CT7|4.0|8.0
-		final var odPrice = previousOd.get(jsonPrice.getDiscountedSku() + odCode2);
+		// Get the related OD Price
+		final var odPrice = previousOd.get(jsonPrice.getDiscountedSku() + odTermCode);
 		if (odPrice == null) {
+			// Return discounted SKU not found
 			return jsonPrice.getDiscountedSku();
 		}
 
@@ -497,36 +515,58 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		final var price = newSavingPlanPrice(context, odPrice, jsonPrice, term);
 		final var cost = jsonPrice.getDiscountedRate().getPrice() * context.getHoursMonth();
 
-		// Save the price as needed with up-front computation
-		saveSPAsNeeded(context, term, price, odPrice, cost);
+		// Save the price as needed with up-front computation if any
+		saveAsNeeded(context, price, price.getCost(), cost, (cR, c) -> {
+			price.setCost(cR);
+			saveInitialCost(price, c);
+		}, context.getPRepository()::save);
 
 		// No error
 		return null;
 	}
 
-	protected P saveSPAsNeeded(final X context, final ProvInstancePriceTerm term, final P price, final P odPrice,
-			final double cost) {
-		return saveAsNeeded(context, price, price.getCost(), cost, (cR, c) -> {
-			price.setCost(cR);
-			price.setCostPeriod(round3Decimals(c * Math.max(1, term.getPeriod())));
+	/**
+	 * Save initial cost depending on the term of given price.
+	 * 
+	 * @param price The target price to complete.
+	 * @param cost  The actual monthly based cost.
+	 */
+	protected void saveInitialCost(final P price, final double cost) {
+		final var costPeriod = cost * Math.max(1, price.getTerm().getPeriod());
+		price.setCostPeriod(round3Decimals(costPeriod));
 
-			if (!term.getInitialCost().booleanValue()) {
-				// No up-front
-				price.setInitialCost(0d);
-			} else if (term.getName().contains("Partial")) {
-				// Partial up-front
-				price.setInitialCost(round3Decimals(price.getCostPeriod() * 0.5d));
-			} else {
-				// All up-front
-				price.setInitialCost(price.getCostPeriod());
-			}
-		}, context.getPRepository()::save);
+		if (!price.getTerm().getInitialCost().booleanValue()) {
+			// No up-front
+			price.setInitialCost(0d);
+		} else if (price.getTerm().getName().contains("Partial")) {
+			// Partial up-front: at least 50% of the full period
+			price.setInitialCost(round3Decimals(costPeriod * 0.5d));
+		} else {
+			// All up-front
+			price.setInitialCost(price.getCostPeriod());
+		}
 	}
 
-	protected void copySavingsPlan(final P odPrice, final P p) {
+	/**
+	 * Copy OnDemand attributes to Savings Plan price.
+	 * 
+	 * @param odPrice The OnDemand source price.
+	 * @param spPrice The target savings plan price.
+	 */
+	protected void copySavingsPlan(final P odPrice, final P spPrice) {
 		// Nothing to do by default
 	}
 
+	/**
+	 * Install savings plan prices of target regions.
+	 * 
+	 * @param gContext    The current global context to handle lazy sub-entities creation.
+	 * @param endpoint    The endpoint price URL.
+	 * @param api         The current API name.
+	 * @param serviceCode The current service code
+	 * @param region      The current region.
+	 * @param context     The regional update context.
+	 */
 	protected void installSavingsPlan(final UpdateContext gContext, final String endpoint, final String api,
 			final String serviceCode, final ProvLocation region, final X context) {
 		log.info("AWS {} Savings Plan import started @{}>{} ...", api, region.getName(), endpoint);
@@ -550,11 +590,11 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			final String term2);
 
 	/**
-	 * Return the rate code without SKU part of the current On Demand session.
+	 * Return the rate term code without SKU part of the current On Demand session.
 	 *
 	 * @param previousOd The previous On Demand prices.
-	 * @return The rate code without SKU part of the current On Demand session and looks like: <code>.JRTCKXETXF</code>.
-	 *         <code>null</code> when not found.
+	 * @return The rate term code without SKU part of the current On Demand session and looks like:
+	 *         <code>.JRTCKXETXF</code>. <code>null</code> when not found.
 	 */
 	protected String getOnDemandCode(final Map<String, P> previousOd) {
 		return previousOd.values().stream()
@@ -714,9 +754,9 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	}
 
 	/**
-	 * Install the instance type (if needed), the instance price type (if needed) and the price.
+	 * Install the instance type (if needed), the instance price term (if needed) and the on-demand price.
 	 *
-	 * @param context The update context.
+	 * @param context The regional update context.
 	 * @param csv     The current CSV entry.
 	 */
 	protected abstract void installPrice(final X context, final C csv);
@@ -731,7 +771,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	/**
 	 * Is this record is enabled.
 	 * 
-	 * @param context The update context.
+	 * @param context The regional update context.
 	 * @param csv     The current CSV entry.
 	 * @return <code>true</code> when this record is accepted.
 	 */

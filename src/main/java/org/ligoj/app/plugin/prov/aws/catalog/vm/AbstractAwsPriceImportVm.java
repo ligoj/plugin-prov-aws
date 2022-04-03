@@ -137,10 +137,10 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * @param other      The previous CSV price entry.
 	 * @param repository The repository managing the price entity.
 	 */
-	private void handlePartialCost(final X context, final C csv, final C other) {
+	private void handlePartialCost(final X context, final C one, final C two) {
 		// Up-front part
-		final C quantity = csv;
-		final C hourly = other;
+		final C quantity = "Quantity".equals(one.getPriceUnit()) ? one : two;
+		final C hourly = "Quantity".equals(one.getPriceUnit()) ? two : one;
 
 		// Price code is based on the hourly term code
 		final var price = newPrice(context, hourly);
@@ -148,6 +148,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		// Round the computed hourly cost and save as needed
 		final var initCost = quantity.getPricePerUnit() / price.getTerm().getPeriod();
 		final var cost = hourly.getPricePerUnit() * context.getHoursMonth() + initCost;
+
 		saveAsNeeded(context, price, price.getCost(), cost, (cR, c) -> {
 			price.setInitialCost(quantity.getPricePerUnit());
 			price.setCost(cR);

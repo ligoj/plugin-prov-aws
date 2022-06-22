@@ -117,7 +117,6 @@ public class AwsPriceImportEc2 extends
 				return;
 			}
 
-			// = csv.getSku()
 			final var code = context.getRegion().getName() + "-" + type.getName();
 			final var price = context.getPreviousStorage().computeIfAbsent(code, c -> {
 				final var p = new ProvStoragePrice();

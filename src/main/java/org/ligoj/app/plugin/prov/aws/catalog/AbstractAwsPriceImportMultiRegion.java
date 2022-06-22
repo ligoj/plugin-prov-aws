@@ -39,8 +39,8 @@ public abstract class AbstractAwsPriceImportMultiRegion<C extends AbstractAwsSto
 
 		// Retrieve the previous storage prices
 		// See https://github.com/ligoj/plugin-prov-aws/issues/14
-		context.setPreviousStorage(spRepository.findByLocation(context.getNode().getId(), null).stream().collect(
-				Collectors.toMap(p2 -> p2.getLocation().getName() + p2.getType().getCode(), Function.identity())));
+		context.setPreviousStorage(spRepository.findByLocation(context.getNode().getId(), null).stream()
+				.collect(Collectors.toMap(ProvStoragePrice::getCode, Function.identity())));
 
 		var priceCounter = 0;
 		// Get the remote prices stream
@@ -99,9 +99,9 @@ public abstract class AbstractAwsPriceImportMultiRegion<C extends AbstractAwsSto
 		copyAsNeeded(context, type, t -> update(csv, t), stRepository);
 
 		// Update the price as needed
-		final var price = context.getPreviousStorage().computeIfAbsent(location.getName() + name, r -> {
+		final var price = context.getPreviousStorage().computeIfAbsent(location.getName() + "-" + name, c -> {
 			final var p = new ProvStoragePrice();
-			p.setCode(csv.getSku());
+			p.setCode(c);
 			return p;
 		});
 

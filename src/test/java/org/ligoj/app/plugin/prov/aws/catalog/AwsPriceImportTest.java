@@ -976,7 +976,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		sLookup = qsResource.lookup(subscription,
 				QuoteStorageQuery.builder().latency(Rate.GOOD).optimized(ProvStorageOptimized.THROUGHPUT).build())
 				.get(0);
-		Assertions.assertEquals("UZ53M743SDA37R4M", sLookup.getPrice().getCode());
+		Assertions.assertEquals("eu-west-1-efs-z", sLookup.getPrice().getCode());
 		final var svo2 = new QuoteStorageEditionVo();
 		svo2.setSize(1);
 		svo2.setOptimized(ProvStorageOptimized.THROUGHPUT);
@@ -991,7 +991,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		sLookup = qsResource.lookup(subscription,
 				QuoteStorageQuery.builder().latency(Rate.MEDIUM).optimized(ProvStorageOptimized.DURABILITY).build())
 				.get(0);
-		Assertions.assertEquals("QESS8VZ4CR8YK5WX", sLookup.getPrice().getCode());
+		Assertions.assertEquals("eu-west-1-s3-z-ia", sLookup.getPrice().getCode());
 		final var type = sLookup.getPrice().getType();
 		Assertions.assertEquals(99.5d, type.getAvailability(), 0.000000001d);
 		Assertions.assertEquals(11, type.getDurability9().intValue());

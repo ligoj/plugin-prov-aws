@@ -24,7 +24,7 @@ import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery.AWS4SignatureQueryB
 import org.ligoj.app.plugin.prov.aws.auth.AWS4SignerForAuthorizationHeader;
 import org.ligoj.app.plugin.prov.aws.catalog.AwsPriceImport;
 import org.ligoj.app.plugin.prov.catalog.ImportCatalogService;
-import org.ligoj.app.plugin.prov.terraform.Context;
+import org.ligoj.app.plugin.prov.terraform.TerraformContext;
 import org.ligoj.app.plugin.prov.terraform.Terraforming;
 import org.ligoj.bootstrap.core.NamedBean;
 import org.ligoj.bootstrap.core.curl.CurlProcessor;
@@ -140,7 +140,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	}
 
 	@Override
-	public void generate(final Context context) throws IOException {
+	public void generate(final TerraformContext context) throws IOException {
 		terraformService.write(context);
 	}
 
@@ -253,7 +253,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	}
 
 	@Override
-	public void generateSecrets(final Context context) throws IOException {
+	public void generateSecrets(final TerraformContext context) throws IOException {
 		terraformService.writeSecrets(context.getSubscription());
 	}
 

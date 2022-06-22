@@ -31,8 +31,8 @@ import org.ligoj.app.plugin.prov.model.AbstractQuote;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
 import org.ligoj.app.plugin.prov.model.VmOs;
-import org.ligoj.app.plugin.prov.terraform.Context;
 import org.ligoj.app.plugin.prov.terraform.InstanceMode;
+import org.ligoj.app.plugin.prov.terraform.TerraformContext;
 import org.ligoj.app.plugin.prov.terraform.TerraformUtils;
 import org.ligoj.app.resource.subscription.SubscriptionResource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -134,7 +134,7 @@ public class ProvAwsTerraformService {
 	 * @param context The Terraform context holding the subscription, the quote and the user inputs.
 	 * @throws IOException When Terraform content cannot be written.
 	 */
-	public void write(final Context context) throws IOException {
+	public void write(final TerraformContext context) throws IOException {
 		writeStatics(context);
 		writeContext(context);
 		writeRegions(context);
@@ -144,7 +144,7 @@ public class ProvAwsTerraformService {
 	/**
 	 * Write the global subscription and project context.
 	 */
-	private void writeContext(final Context context) throws IOException {
+	private void writeContext(final TerraformContext context) throws IOException {
 		final var project = context.getSubscription().getProject();
 		context.add("project.id", project.getId().toString()).add("project.pkey", project.getPkey())
 				.add("project.name", project.getName())
@@ -152,12 +152,12 @@ public class ProvAwsTerraformService {
 		template(context, s -> replace(s, context), "terraform.keep.auto.tfvars");
 	}
 
-	private void writeStatics(final Context context) throws IOException {
+	private void writeStatics(final TerraformContext context) throws IOException {
 		copy(context, "main.tf");
 		copy(context, "variables.keep.tf");
 	}
 
-	private void writeRegions(final Context context) throws IOException {
+	private void writeRegions(final TerraformContext context) throws IOException {
 		final var locations = new HashSet<String>();
 		context.getQuote().getInstances().stream().map(this::getLocation).map(ProvLocation::getName)
 				.forEach(locations::add);
@@ -172,7 +172,7 @@ public class ProvAwsTerraformService {
 		return Objects.requireNonNullElse(resource.getLocation(), resource.getConfiguration().getLocation());
 	}
 
-	private void writeRegion(final Context context) throws IOException {
+	private void writeRegion(final TerraformContext context) throws IOException {
 		final var instances = new ArrayList<ProvQuoteInstance>();
 		context.getQuote().getInstances().stream().filter(i -> getLocation(i).getName().equals(context.getLocation()))
 				.forEach(instances::add);
@@ -190,7 +190,7 @@ public class ProvAwsTerraformService {
 	/**
 	 * Write dashboard: charts and Markdown.
 	 */
-	private void writeRegionDashboard(final Context context) throws IOException {
+	private void writeRegionDashboard(final TerraformContext context) throws IOException {
 		final var modes = context.getModes();
 		// Charts
 		context.setInstances(modes.get(InstanceMode.AUTO_SCALING));
@@ -216,7 +216,7 @@ public class ProvAwsTerraformService {
 				context.getLocation(), "dashboard.tf");
 	}
 
-	private String getDashboardReferences(final Context context) {
+	private String getDashboardReferences(final TerraformContext context) {
 		final var buffer = new StringBuilder();
 		appendDashboardReferences(buffer, context, context.getModes().get(InstanceMode.VM),
 				"ec2{{i}} = \"${aws_instance.{{key}}.id}\"", "ec2{{i}}_name = \"{{name}}\"",
@@ -233,7 +233,7 @@ public class ProvAwsTerraformService {
 		return buffer.toString();
 	}
 
-	private void appendDashboardReferences(final StringBuilder buffer, final Context context,
+	private void appendDashboardReferences(final StringBuilder buffer, final TerraformContext context,
 			final List<ProvQuoteInstance> instances, final String... formats) {
 		final var normalizeFormat = new NormalizeFormat();
 		for (final var format : formats) {
@@ -256,19 +256,19 @@ public class ProvAwsTerraformService {
 		return buffer.toString();
 	}
 
-	private String getDashboardNetwork(final Context context) throws IOException {
+	private String getDashboardNetwork(final TerraformContext context) throws IOException {
 		final var format = toString("my-region/dashboard-widgets-line.json");
 		return newMetric(context, format, CLOUD_WATCH_ELB, "LoadBalancer", "${alb{{i}}}",
 				new String[][] { { "ProcessedBytes", "-", "-", "${alb{{i}}_name}" } });
 	}
 
-	private String getDashboardLatency(final Context context) throws IOException {
+	private String getDashboardLatency(final TerraformContext context) throws IOException {
 		final var format = toString("my-region/dashboard-widgets-line.json");
 		return newMetric(context, format, CLOUD_WATCH_ELB, "LoadBalancer", "${alb{{i}}}",
 				new String[][] { { "TargetResponseTime", "-", "-", "${alb{{i}}_name}" } });
 	}
 
-	private String getDashboardScaling(final Context context) throws IOException {
+	private String getDashboardScaling(final TerraformContext context) throws IOException {
 		final var format = toString("my-region/dashboard-widgets-area.json");
 		return newMetric(context, format, "AWS/AutoScaling", "AutoScalingGroupName", "${asg{{i}}}",
 				new String[][] { { "GroupInServiceInstances", "2ca02c", "left", "${asg{{i}}_name}" },
@@ -276,7 +276,7 @@ public class ProvAwsTerraformService {
 						{ "GroupTerminatingInstances", "d62728", RIGHT, "Term. ${asg{{i}}_name}" } });
 	}
 
-	private String getDashboardBalancing(final Context context) throws IOException {
+	private String getDashboardBalancing(final TerraformContext context) throws IOException {
 		final var format = toString("my-region/dashboard-widgets-area.json");
 		return newMetric(context, format, CLOUD_WATCH_ELB, "TargetGroup",
 				"${alb{{i}}_tg}\", \"LoadBalancer\", \"${alb{{i}}}",
@@ -284,7 +284,7 @@ public class ProvAwsTerraformService {
 						{ "UnHealthyHostCount", "d62728", RIGHT, "KO ${alb{{i}}_name}" } });
 	}
 
-	private String newMetric(final Context context, final String format, final String service, final String idProperty,
+	private String newMetric(final TerraformContext context, final String format, final String service, final String idProperty,
 			final String id, String[]... variants) {
 		final var instances = context.getInstances();
 		final var buffer = new StringBuilder();
@@ -307,7 +307,7 @@ public class ProvAwsTerraformService {
 	/**
 	 * Write referenced OS
 	 */
-	private void writeRegionOs(final Context context, final List<ProvQuoteInstance> instances) throws IOException {
+	private void writeRegionOs(final TerraformContext context, final List<ProvQuoteInstance> instances) throws IOException {
 		final var oss = new HashSet<VmOs>();
 		instances.stream().map(ProvQuoteInstance::getOs).forEach(oss::add);
 		for (final var os : oss) {
@@ -320,7 +320,7 @@ public class ProvAwsTerraformService {
 		return mappingOsAmi.getOrDefault(os, os.name().toLowerCase(Locale.ENGLISH));
 	}
 
-	private void writeRegionStatics(final Context context) throws IOException {
+	private void writeRegionStatics(final TerraformContext context) throws IOException {
 		copyFromTo(context, "my-region/provider.tf", context.getLocation(), "provider.keep.tf");
 		copyFromTo(context, "my-region/variables.keep.tf", context.getLocation(), "variables.keep.tf");
 		copyFromTo(context, "my-region/vpc.tf", context.getLocation(), "vpc.tf");
@@ -329,7 +329,7 @@ public class ProvAwsTerraformService {
 	/**
 	 * Write instances configuration.
 	 */
-	private void writeRegionInstances(final Context context) throws IOException {
+	private void writeRegionInstances(final TerraformContext context) throws IOException {
 		// Write the the region bootstrap module : will be persistent to handle emptied
 		// region
 		templateFromTo(context, "my-region.tf", context.getLocation() + ".keep.tf");
@@ -426,17 +426,17 @@ public class ProvAwsTerraformService {
 		}
 	}
 
-	private void copy(final Context context, final String... fragments) throws IOException {
+	private void copy(final TerraformContext context, final String... fragments) throws IOException {
 		Files.copy(toInput(String.join("/", fragments)), utils.toFile(context.getSubscription(), fragments).toPath(),
 				StandardCopyOption.REPLACE_EXISTING);
 	}
 
-	private void copyFromTo(final Context context, final String from, final String... toFragments) throws IOException {
+	private void copyFromTo(final TerraformContext context, final String from, final String... toFragments) throws IOException {
 		Files.copy(toInput(from), utils.toFile(context.getSubscription(), toFragments).toPath(),
 				StandardCopyOption.REPLACE_EXISTING);
 	}
 
-	private void template(final Context context, final UnaryOperator<String> formatter, final String... fragments)
+	private void template(final TerraformContext context, final UnaryOperator<String> formatter, final String... fragments)
 			throws IOException {
 		try (var source = toInput(String.join("/", fragments));
 				var target = new FileOutputStream(utils.toFile(context.getSubscription(), fragments));
@@ -445,7 +445,7 @@ public class ProvAwsTerraformService {
 		}
 	}
 
-	private void templateFromTo(final Context context, final String from, final String... toFragments)
+	private void templateFromTo(final TerraformContext context, final String from, final String... toFragments)
 			throws IOException {
 		try (var source = toInput(from);
 				var target = new FileOutputStream(utils.toFile(context.getSubscription(), toFragments));
@@ -462,7 +462,7 @@ public class ProvAwsTerraformService {
 		return result;
 	}
 
-	private String replace(String source, final Context context) {
+	private String replace(String source, final TerraformContext context) {
 		var result = source;
 		for (final var entry : context.getContext().entrySet()) {
 			result = StringUtils.replace(result, String.format("{{%s}}", entry.getKey()), entry.getValue());

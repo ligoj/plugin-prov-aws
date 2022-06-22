@@ -35,7 +35,7 @@ import org.ligoj.app.plugin.prov.aws.auth.AWS4SignatureQuery.AWS4SignatureQueryB
 import org.ligoj.app.plugin.prov.aws.catalog.AwsPriceImport;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvQuote;
-import org.ligoj.app.plugin.prov.terraform.Context;
+import org.ligoj.app.plugin.prov.terraform.TerraformContext;
 import org.ligoj.bootstrap.core.curl.CurlRequest;
 import org.ligoj.bootstrap.core.resource.BusinessException;
 import org.mockito.ArgumentMatchers;
@@ -114,7 +114,7 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 		final var resource2 = new ProvAwsPluginResource();
 		super.applicationContext.getAutowireCapableBeanFactory().autowireBean(resource2);
 		resource2.terraformService = Mockito.mock(ProvAwsTerraformService.class);
-		final var context = new Context();
+		final var context = new TerraformContext();
 		context.setSubscription(em.find(Subscription.class, subscription));
 		resource2.generate(context);
 	}
@@ -123,7 +123,7 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 	void generateSecrets() throws IOException {
 		final var resource2 = new ProvAwsPluginResource();
 		resource2.terraformService = Mockito.mock(ProvAwsTerraformService.class);
-		resource2.generateSecrets(new Context());
+		resource2.generateSecrets(new TerraformContext());
 	}
 
 	/**

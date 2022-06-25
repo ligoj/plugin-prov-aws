@@ -182,7 +182,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * Copy a CSV price entry to a type entity.
 	 *
 	 * @param csv The current CSV entry.
-	 * @param p   The target type entity.
+	 * @param t   The target type entity.
 	 */
 	protected void copy(final C csv, final T t) {
 		t.setCpu(csv.getCpu());
@@ -581,10 +581,10 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	/**
 	 * Return a new local context.
 	 * 
-	 * @param context The current global context to handle lazy sub-entities creation.
-	 * @param region  The target region.
-	 * @param term1   The expected term name prefix alternative 1.
-	 * @param term2   The expected term name prefix alternative 2.
+	 * @param gContext The current global context to handle lazy sub-entities creation.
+	 * @param region   The target region.
+	 * @param term1    The expected term name prefix alternative 1.
+	 * @param term2    The expected term name prefix alternative 2.
 	 * @return A new local context.
 	 */
 	protected abstract X newContext(final UpdateContext gContext, final ProvLocation region, final String term1,

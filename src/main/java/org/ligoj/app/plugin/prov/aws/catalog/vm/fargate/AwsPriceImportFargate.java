@@ -67,9 +67,10 @@ public class AwsPriceImportFargate extends
 	private static final String API_SPOT = API + "-spot";
 
 	/**
-	 * Configuration key used for {@link #EC2_PRICES_SPOT}
+	 * Configuration key used for {@link #API_SPOT}
 	 */
-	public static final String CONF_URL_FARGATE_PRICES_SPOT = String.format(AwsPriceImportBase.CONF_URL_TMP_PRICES, API_SPOT);
+	public static final String CONF_URL_FARGATE_PRICES_SPOT = String.format(AwsPriceImportBase.CONF_URL_TMP_PRICES,
+			API_SPOT);
 
 	private static final Map<Double, double[]> CPU_TO_RAM = Map.of(
 			// | .CPU | Memory Values |
@@ -260,9 +261,8 @@ public class AwsPriceImportFargate extends
 	 * Find the first cost corresponding to the required unit.
 	 */
 	private SavingsPlanRate findSavingsPlanCost(final Collection<SavingsPlanRate> rates, final String usageType) {
-		return rates.stream().filter(
-				p -> p.getDiscountedUsageType().endsWith(usageType) && SERVICE_CODE.equals(p.getDiscountedServiceCode()))
-				.findFirst().orElse(null);
+		return rates.stream().filter(p -> p.getDiscountedUsageType().endsWith(usageType)
+				&& SERVICE_CODE.equals(p.getDiscountedServiceCode())).findFirst().orElse(null);
 	}
 
 	/**

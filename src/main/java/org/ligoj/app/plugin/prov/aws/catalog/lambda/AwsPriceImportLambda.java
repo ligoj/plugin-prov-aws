@@ -152,7 +152,7 @@ public class AwsPriceImportLambda extends
 		final var stdPriceArm = new ProvFunctionPrice();
 		final var provPrice = new ProvFunctionPrice();
 		final var provPriceArm = new ProvFunctionPrice();
-		context.setEdgePrice(stdPrice);
+		context.setEdgePrice(edgePrice);
 		context.setStdPrice(stdPrice);
 		context.setStdPriceArm(stdPriceArm);
 		context.setProvPrice(provPrice);

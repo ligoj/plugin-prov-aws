@@ -154,6 +154,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			price.setCost(cR);
 			price.setCostPeriod(round3Decimals(price.getInitialCost()
 					+ hourly.getPricePerUnit() * price.getTerm().getPeriod() * context.getHoursMonth()));
+			setCo2(context, price);
 		}, context.getPRepository()::save);
 	}
 
@@ -181,10 +182,11 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	/**
 	 * Copy a CSV price entry to a type entity.
 	 *
-	 * @param csv The current CSV entry.
-	 * @param t   The target type entity.
+	 * @param context The regional update context.
+	 * @param csv     The current CSV entry.
+	 * @param t       The target type entity.
 	 */
-	protected void copy(final C csv, final T t) {
+	protected void copy(final X context, final C csv, final T t) {
 		t.setCpu(csv.getCpu());
 		t.setGpu(csv.getGpu());
 		t.setAutoScale(true);
@@ -205,6 +207,8 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		t.setRamRate(getRate("ram", csv));
 		t.setNetworkRate(getRate("network", csv, csv.getNetworkPerformance()));
 		t.setStorageRate(toStorage(csv));
+		setCo2(context, t);
+
 	}
 
 	/**
@@ -255,7 +259,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 					code -> ObjectUtils.defaultIfNull(context.getTRepository().findBy("code", code), previous));
 
 			// Update the statistics only once
-			return copyAsNeeded(context, type, t -> copy(csv, t), context.getTRepository());
+			return copyAsNeeded(context, type, t -> copy(context, csv, t), context.getTRepository());
 		});
 	}
 
@@ -519,7 +523,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		// Save the price as needed with up-front computation if any
 		saveAsNeeded(context, price, price.getCost(), cost, (cR, c) -> {
 			price.setCost(cR);
-			saveInitialCost(price, c);
+			saveInitialCost(context, price, c);
 		}, context.getPRepository()::save);
 
 		// No error
@@ -532,7 +536,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * @param price The target price to complete.
 	 * @param cost  The actual monthly based cost.
 	 */
-	protected void saveInitialCost(final P price, final double cost) {
+	protected void saveInitialCost(final X context, final P price, final double cost) {
 		final var costPeriod = cost * Math.max(1, price.getTerm().getPeriod());
 		price.setCostPeriod(round3Decimals(costPeriod));
 
@@ -546,6 +550,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			// All up-front
 			price.setInitialCost(price.getCostPeriod());
 		}
+		setCo2(context, price);
 	}
 
 	/**

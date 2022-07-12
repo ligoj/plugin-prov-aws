@@ -118,7 +118,6 @@ public abstract class AbstractLocalContext<T extends AbstractInstanceType, P ext
 		this.locals = pRepository.findByLocation(node.getId(), region.getName(), term1, term2B).stream()
 				.collect(Collectors.toMap(AbstractTermPrice::getCode, Function.identity()));
 		this.mapStorageToApi = parent.getMapStorageToApi();
-		
 	}
 
 	/**

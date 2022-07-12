@@ -191,7 +191,8 @@ public class AwsPriceImportFargate extends
 		return installInstanceType(context, fakeCsv);
 	}
 
-	protected void copy(final AwsFargatePrice csv, final ProvContainerType t) {
+	@Override
+	protected void copy(final LocalFargateContext context, final AwsFargatePrice csv, final ProvContainerType t) {
 		t.setAutoScale(true);
 		t.setName(t.getCode());
 		t.setConstant(true);

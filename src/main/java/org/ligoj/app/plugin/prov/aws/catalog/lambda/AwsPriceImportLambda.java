@@ -121,7 +121,7 @@ public class AwsPriceImportLambda extends
 	}
 
 	@Override
-	protected void copy(final AwsLambdaPrice csv, final ProvFunctionType t) {
+	protected void copy(final LocalLambdaContext context, final AwsLambdaPrice csv, final ProvFunctionType t) {
 		final var provisioned = t.getCode().startsWith("provisioned");
 		t.setName(t.getCode());
 		t.setConstant(provisioned);
@@ -197,7 +197,7 @@ public class AwsPriceImportLambda extends
 		setupMaper(context);
 		final var result = super.installSavingsPlanRates(context, serviceCode, term, previousOd, odTermCode, rates)
 				.filter(Objects::nonNull).toList();
-		
+
 		// Then persist the aggregated prices
 		saveAsNeededLambda(context, aggPrice -> {
 			final var csv = new AwsLambdaPrice();
@@ -239,7 +239,7 @@ public class AwsPriceImportLambda extends
 					price.setCostRequests(round3Decimals(aggPrice.getCostRequests() * 1e6d));
 					price.setCostRamRequestConcurrency(
 							round3Decimals(aggPrice.getCostRamRequestConcurrency() * context.getSecondsMonth()));
-					saveInitialCost(price, c);
+					saveInitialCost(context, price, c);
 				}, context.getPRepository()::save);
 	}
 

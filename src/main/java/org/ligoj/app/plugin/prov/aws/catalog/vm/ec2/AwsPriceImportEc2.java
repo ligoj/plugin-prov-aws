@@ -5,6 +5,9 @@ package org.ligoj.app.plugin.prov.aws.catalog.vm.ec2;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -17,6 +20,7 @@ import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
 import org.ligoj.app.plugin.prov.aws.catalog.AwsPriceImportBase;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVmOs;
+import org.ligoj.app.plugin.prov.catalog.Co2Data;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
 import org.ligoj.app.plugin.prov.model.ProvInstanceType;
@@ -74,6 +78,11 @@ public class AwsPriceImportEc2 extends
 	public static final String CONF_ITYPE = ProvAwsPluginResource.KEY + ":instance-type";
 
 	/**
+	 * Configuration key used for AWS URL CO2 dataset.
+	 */
+	public static final String CONF_URL_CO2 = ProvAwsPluginResource.KEY + ":co2-url";
+
+	/**
 	 * Mapping from AWS software to standard form.
 	 */
 	private final Map<String, String> mapSoftware = new HashMap<>();
@@ -82,6 +91,9 @@ public class AwsPriceImportEc2 extends
 	public void install(final UpdateContext context) throws IOException {
 		context.setValidOs(Pattern.compile(configuration.get(CONF_OS, ".*"), Pattern.CASE_INSENSITIVE));
 		context.setValidInstanceType(Pattern.compile(configuration.get(CONF_ITYPE, ".*"), Pattern.CASE_INSENSITIVE));
+
+		// Get CO2 dataset
+		fetchCo2Data(context);
 
 		// Install OnDemand and reserved prices
 		installPrices(context, API, SERVICE_CODE, TERM_ON_DEMAND, TERM_RESERVED);
@@ -92,6 +104,38 @@ public class AwsPriceImportEc2 extends
 				SpotPrices.class, r -> newProxy().installSpotPrices(context, r));
 
 		nextStep(context, API_SPOT, null, 1);
+	}
+
+	private void fetchCo2Data(final UpdateContext context) {
+		final var endpoint = configuration.get(CONF_URL_CO2);
+		if (endpoint == null) {
+			log.info("No provided CO2 dataset, if you have one, set the CSV URL to configuration '{}'", CONF_URL_CO2);
+			// No provided CO2 dataset, ingore this step
+			return;
+		}
+
+		// Get the remote CO2 stream
+		var co2DataSet = new HashMap<String, Co2Data>();
+		try (var reader = new BufferedReader(new InputStreamReader(new URI(endpoint).toURL().openStream()))) {
+			// Pipe to the CSV reader
+			final var csvReader = newCo2Reader(reader);
+
+			// Build the AWS instance prices from the CSV
+			var csv = csvReader.read();
+			while (csv != null) {
+				co2DataSet.put(csv.getType(), csv);
+
+				// Read the next one
+				csv = csvReader.read();
+			}
+			context.setCo2DataSet(co2DataSet);
+		} catch (final IOException | URISyntaxException use) {
+			// Something goes wrong for this region, stop for this region
+			log.warn("AWS CO2 dataset fetch failed", use);
+		} finally {
+			// Report
+			log.info("AWS CO2 dataset fetch succed ({})", context.getCo2DataSet().size());
+		}
 	}
 
 	@Override
@@ -204,6 +248,10 @@ public class AwsPriceImportEc2 extends
 					final var cost = Double.parseDouble(op.getPrices().get("USD"));
 					saveAsNeeded(context, price, cost * context.getHoursMonth(), ipRepository);
 				});
+	}
+
+	private CsvForBeanCo2 newCo2Reader(final BufferedReader reader) throws IOException {
+		return new CsvForBeanCo2(reader);
 	}
 
 	@Override

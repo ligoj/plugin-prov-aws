@@ -63,13 +63,24 @@ public abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 			if (values.isEmpty()) {
 				throw new TechnicalException("Premature end of CSV file, headers were not found");
 			}
-			if (values.get(0).equals("SKU")) {
+			if (isHeaderRow(values)) {
 				// The real CSV header has be reached
 				this.beanReader = newCsvReader(reader,
 						values.stream().map(v -> mMapping.getOrDefault(v, "drop")).toArray(String[]::new), beanType);
 				break;
 			}
 		} while (true);
+	}
+
+	/**
+	 * Return <code>true</code> when the given values corresponds to the headers row. This function is called until it
+	 * returns <code>true</code>.
+	 * 
+	 * @param values The split row values according to the CSV separator.
+	 * @return <code>true</code> when the given values corresponds to the headers row.
+	 */
+	protected boolean isHeaderRow(final List<String> values) {
+		return values.get(0).equals("SKU");
 	}
 
 	protected abstract CsvBeanReader<T> newCsvReader(final Reader reader, final String[] headers,

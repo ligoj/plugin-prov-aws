@@ -608,6 +608,11 @@ class AwsPriceImportTest extends AbstractServerTest {
 		configuration.put(AwsPriceImportBase.CONF_REGIONS, "eu-west-1"); // Only one region for UTs
 		configuration.put(AwsPriceImportEc2.CONF_OS, "LINUX"); // Only one OS for UTs
 
+		// Mock CO2
+		configuration.put(AwsPriceImportEc2.CONF_URL_CO2, "http://localhost:" + MOCK_PORT + "/carbon.csv");
+		mock("/carbon.csv", "mock-server/aws/carbon.csv");
+		startMockServer();
+
 		// Only "r4.large" and "t2.*","i.*,c1" for UTs
 		configuration.put(AwsPriceImportEc2.CONF_ITYPE, "(r4|t2|i1|c1)\\..*");
 		configuration.put(AwsPriceImportRds.CONF_DTYPE, "db\\.(r5|t2).*");
@@ -629,6 +634,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("Spot", instance2.getTerm().getName());
 		Assertions.assertTrue(instance2.getTerm().isEphemeral());
 		Assertions.assertEquals("r4.large", instance2.getType().getName());
+		Assertions.assertEquals(37.4, instance2.getCo2());
 	}
 
 	/**
@@ -643,7 +649,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		mock("/offers/v1.0/aws/index.json", "mock-server/aws/offers/v1.0/aws/index-only-savings-plan.json");
 		startMockServer();
 
-		Assertions.assertThrows(IOException.class, ()-> resource.install(false));
+		Assertions.assertThrows(IOException.class, () -> resource.install(false));
 	}
 
 	/**

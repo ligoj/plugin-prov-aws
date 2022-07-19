@@ -134,6 +134,17 @@
       },
       "rates" : [ {
         "discountedSku" : "K4EXFQ5YFQCP98EN",
+        "discountedUsageType" : "IGNORE:perCPU",
+        "discountedOperation" : "",
+        "discountedServiceCode" : "AmazonIGNORE",
+        "rateCode" : "ZGC49G7XS8QA54BQ.K4EXFQ5YFQCP98EN",
+        "unit" : "Hrs",
+        "discountedRate" : {
+          "price" : "0.024288",
+          "currency" : "USD"
+        }
+      }, {
+        "discountedSku" : "K4EXFQ5YFQCP98EN",
         "discountedUsageType" : "EU-Fargate-vCPU-Hours:perCPU",
         "discountedOperation" : "",
         "discountedServiceCode" : "AmazonECS",
@@ -141,6 +152,17 @@
         "unit" : "Hrs",
         "discountedRate" : {
           "price" : "0.024288",
+          "currency" : "USD"
+        }
+      }, {
+        "discountedSku" : "UP5ETC3QSW2QZGEY",
+        "discountedUsageType" : "IGNORE-GB-Hours",
+        "discountedOperation" : "",
+        "discountedServiceCode" : "AmazonIGNORE",
+        "rateCode" : "ZGC49G7XS8QA54BQ.UP5ETC3QSW2QZGEY",
+        "unit" : "Hrs",
+        "discountedRate" : {
+          "price" : "0.002667",
           "currency" : "USD"
         }
       }, {

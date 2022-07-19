@@ -139,8 +139,15 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 */
 	private void handlePartialCost(final X context, final C one, final C two) {
 		// Up-front part
-		final C quantity = "Quantity".equals(one.getPriceUnit()) ? one : two;
-		final C hourly = "Quantity".equals(one.getPriceUnit()) ? two : one;
+		final C quantity;
+		final C hourly;
+		if ("Quantity".equals(one.getPriceUnit())) {
+			quantity = one;
+			hourly = two;
+		} else {
+			quantity = two;
+			hourly = one;
+		}
 
 		// Price code is based on the hourly term code
 		final var price = newPrice(context, hourly);

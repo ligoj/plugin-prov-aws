@@ -21,10 +21,4 @@ public class AwsRdsPrice extends AbstractAwsVmPrice {
 	private String sizeMin;
 	private String sizeMax;
 	private String volume;
-	
-	/**
-	 * Optional volume name reference.
-	 */
-	private String volumeName;
-
 }

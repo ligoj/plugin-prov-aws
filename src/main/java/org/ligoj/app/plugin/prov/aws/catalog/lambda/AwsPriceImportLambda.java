@@ -54,11 +54,8 @@ public class AwsPriceImportLambda extends
 
 	@Override
 	protected void installPrice(final LocalLambdaContext context, final AwsLambdaPrice csv) {
-		// Ignore Free Tier
-		if (!"Any".equals(csv.getLocation())) {
-			context.setLast(csv);
-			completePrices(context, csv.getGroup(), csv.getRateCode(), csv.getPricePerUnit());
-		}
+		context.setLast(csv);
+		completePrices(context, csv.getGroup(), csv.getRateCode(), csv.getPricePerUnit());
 	}
 
 	private void completePrices(final LocalLambdaContext context, final String rateType, final String code,
@@ -111,13 +108,6 @@ public class AwsPriceImportLambda extends
 		p.setIncrementDuration(1d);
 		p.setMinDuration(1d);
 		p.setMaxDuration(900000d); // 15min
-	}
-
-	@Override
-	protected void copySavingsPlan(final ProvFunctionPrice odPrice, final ProvFunctionPrice p) {
-		super.copySavingsPlan(odPrice, p);
-		copy(null, p);
-		p.setCostRequests(odPrice.getCostRequests());
 	}
 
 	@Override

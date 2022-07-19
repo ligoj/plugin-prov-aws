@@ -81,7 +81,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 	 * @return <code>true</code> when the configuration enable the given region.
 	 */
 	protected boolean isEnabledRegion(final UpdateContext context, final AwsRegionPrices region) {
-		return isEnabledRegion(context, region.getRegion()) && !"us-west-2-lax-1a".equals(region.getRegion());
+		return isEnabledRegion(context, region.getRegion());
 	}
 
 	/**

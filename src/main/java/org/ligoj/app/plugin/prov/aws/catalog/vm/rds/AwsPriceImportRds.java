@@ -134,24 +134,25 @@ public class AwsPriceImportRds extends
 				name = "rds-gp-aurora-mysql";
 				engine = "Aurora MySQL";
 			}
-		} else if ("Oracle".equals(csv.getEngine()) && StringUtils.startsWith(csv.getVolume(), "General Purpose")) {
-			name = "rds-gp-oracle";
-			engine = "Oracle";
-		} else if ("Any".equals(csv.getEngine())) {
-			engine = null;
+		} else {
+			final String nameSuffix;
+			if ("Any".equals(StringUtils.defaultIfBlank(csv.getEngine(), "Any"))) {
+				engine = null;
+				nameSuffix = "";
+			} else {
+				engine = csv.getEngine();
+				nameSuffix = "-" + engine.toLowerCase(Locale.ENGLISH).replace(' ', '-');
+			}
 			if ("General Purpose".equals(csv.getVolume())) {
-				name = "rds-gp";
+				name = "rds-gp" + nameSuffix;
 			} else if ("Provisioned IOPS".equals(csv.getVolume())) {
-				name = "rds-io";
+				name = "rds-io" + nameSuffix;
 			} else if ("Magnetic".equals(csv.getVolume())) {
-				name = "rds-magnetic";
+				name = "rds-magnetic" + nameSuffix;
 			} else {
 				log.error("Unknown RDS storage type {}/{}/{}", csv.getVolume(), csv.getEngine(), csv.getSku());
 				return null;
 			}
-		} else {
-			log.error("Unknown RDS storage type {}/{}/{}", csv.getVolume(), csv.getEngine(), csv.getSku());
-			return null;
 		}
 
 		// Create as needed
@@ -167,9 +168,8 @@ public class AwsPriceImportRds extends
 			final var ssd = StringUtils.contains(csv.getStorage(), "SSD");
 			t.setName(type.getCode());
 			t.setDescription(csv.getVolume());
-			final var ref = context.getStorageTypes().get(csv.getVolumeName());
-			t.setMinimal(ref == null ? toInteger(csv.getSizeMin()) : ref.getMinimal());
-			t.setMaximal(ref == null ? toInteger(csv.getSizeMax()) : ref.getMaximal());
+			t.setMinimal(toInteger(csv.getSizeMin()));
+			t.setMaximal(toInteger(csv.getSizeMax()));
 			t.setEngine(engine == null ? null : engine.toUpperCase(Locale.ENGLISH));
 			t.setDatabaseType("%");
 			t.setOptimized(ssd ? ProvStorageOptimized.IOPS : null);

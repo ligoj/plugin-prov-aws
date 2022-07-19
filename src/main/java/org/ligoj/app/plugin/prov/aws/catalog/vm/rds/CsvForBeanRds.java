@@ -26,7 +26,6 @@ public class CsvForBeanRds extends AbstractCsvForBeanEc2<AwsRdsPrice> {
 		HEADERS_MAPPING.put("Min Volume Size", "sizeMin");
 		HEADERS_MAPPING.put("Max Volume Size", "sizeMax");
 		HEADERS_MAPPING.put("Volume Type", "volume");
-		HEADERS_MAPPING.put("Volume Name", "volumeName");
 		HEADERS_MAPPING.put("Storage Media", "storage");
 	}
 

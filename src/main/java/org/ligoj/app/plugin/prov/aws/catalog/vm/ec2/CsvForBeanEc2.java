@@ -51,9 +51,8 @@ public class CsvForBeanEc2 extends AbstractCsvForBeanEc2<AwsEc2Price> {
 		return rawValues.size() > 49
 				&& ("AWS Region".equals(rawValues.get(17))
 						|| "AWS Region".equals(rawValues.get(18)) /* Location Type: No outpost */)
-				&& (ACCEPTED_FAMILY.contains(rawValues.get(15))
-						|| ACCEPTED_FAMILY.contains(rawValues.get(14)) /* Product Family */)
-				&& (!"Host".equals(rawValues.get(35)) && !"Host".equals(rawValues.get(36)) /* No dedicated host */);
+				&& ACCEPTED_FAMILY.contains(rawValues.get(15)) /* Product Family */
+				&& !"Host".equals(rawValues.get(36)) /* No dedicated host, new & old placement */;
 	}
 
 }

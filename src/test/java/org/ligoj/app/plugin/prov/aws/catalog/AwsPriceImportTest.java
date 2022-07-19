@@ -334,6 +334,14 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 	@Test
 	void installOffLine() throws Exception {
+
+		// Mock CO2 to invalid location
+		configuration.put(AwsPriceImportEc2.CONF_URL_CO2, "http://localhost:0/some.csv");
+		
+		// Ecludes some engine
+		configuration.put(AwsPriceImportRds.CONF_ETYPE, "(Oracle|SQL Server|Aurora.*|PostgreSQL|MySQL)");
+
+
 		// Install a new configuration
 		mockAll();
 		applicationContext.getBean(SystemConfigurationRepository.class).findAll();
@@ -1013,16 +1021,16 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("s3-z-ia", qsRepository.findOne(createS3.getId()).getPrice().getType().getName());
 
 		// Request a database
-		var bLookup = qbResource.lookup(subscription,
+		var dLookup = qbResource.lookup(subscription,
 				QuoteDatabaseQuery.builder().cpu(4).ram(1741).constant(false).engine("MYSQL").build());
-		Assertions.assertEquals("FQ2P47XZ3KZ97A3P.JRTCKXETXF.6YS6EN2CT7", bLookup.getPrice().getCode());
-		Assertions.assertFalse(bLookup.getPrice().getType().getConstant().booleanValue());
-		Assertions.assertNull(bLookup.getPrice().getLicense());
-		Assertions.assertEquals("MYSQL", bLookup.getPrice().getEngine());
-		Assertions.assertNull(bLookup.getPrice().getEdition());
-		Assertions.assertNull(bLookup.getPrice().getStorageEngine());
-		Assertions.assertEquals(0, bLookup.getPrice().getInitialCost());
-		Assertions.assertEquals("OnDemand", bLookup.getPrice().getTerm().getName());
+		Assertions.assertEquals("FQ2P47XZ3KZ97A3P.JRTCKXETXF.6YS6EN2CT7", dLookup.getPrice().getCode());
+		Assertions.assertFalse(dLookup.getPrice().getType().getConstant().booleanValue());
+		Assertions.assertNull(dLookup.getPrice().getLicense());
+		Assertions.assertEquals("MYSQL", dLookup.getPrice().getEngine());
+		Assertions.assertNull(dLookup.getPrice().getEdition());
+		Assertions.assertNull(dLookup.getPrice().getStorageEngine());
+		Assertions.assertEquals(0, dLookup.getPrice().getInitialCost());
+		Assertions.assertEquals("OnDemand", dLookup.getPrice().getTerm().getName());
 
 		final var qb1 = new QuoteDatabaseEditionVo();
 		qb1.setCpu(4);
@@ -1031,20 +1039,20 @@ class AwsPriceImportTest extends AbstractServerTest {
 		qb1.setPhysical(false);
 		qb1.setEngine("MYSQL");
 		qb1.setSubscription(subscription);
-		qb1.setPrice(bLookup.getPrice().getId());
+		qb1.setPrice(dLookup.getPrice().getId());
 		qb1.setName("database1");
 		final var createDb = qbResource.create(qb1);
 		Assertions.assertEquals("db.t2.xlarge", qbRepository.findOne(createDb.getId()).getPrice().getType().getName());
 
-		bLookup = qbResource.lookup(subscription, QuoteDatabaseQuery.builder().cpu(2).ram(1741).type("db.r5.large")
+		dLookup = qbResource.lookup(subscription, QuoteDatabaseQuery.builder().cpu(2).ram(1741).type("db.r5.large")
 				.license("BYOL").engine("ORACLE").edition("ENTERPRISE").build());
-		Assertions.assertEquals("68NGR9GHC49W62UR.JRTCKXETXF.6YS6EN2CT7", bLookup.getPrice().getCode());
-		Assertions.assertTrue(bLookup.getPrice().getType().getConstant().booleanValue());
-		Assertions.assertEquals("BYOL", bLookup.getPrice().getLicense());
-		Assertions.assertEquals("ORACLE", bLookup.getPrice().getEngine());
-		Assertions.assertEquals("ENTERPRISE", bLookup.getPrice().getEdition());
-		Assertions.assertNull(bLookup.getPrice().getStorageEngine());
-		Assertions.assertEquals(0, bLookup.getPrice().getInitialCost());
+		Assertions.assertEquals("68NGR9GHC49W62UR.JRTCKXETXF.6YS6EN2CT7", dLookup.getPrice().getCode());
+		Assertions.assertTrue(dLookup.getPrice().getType().getConstant().booleanValue());
+		Assertions.assertEquals("BYOL", dLookup.getPrice().getLicense());
+		Assertions.assertEquals("ORACLE", dLookup.getPrice().getEngine());
+		Assertions.assertEquals("ENTERPRISE", dLookup.getPrice().getEdition());
+		Assertions.assertNull(dLookup.getPrice().getStorageEngine());
+		Assertions.assertEquals(0, dLookup.getPrice().getInitialCost());
 
 		final var qb2 = new QuoteDatabaseEditionVo();
 		qb2.setCpu(2);
@@ -1054,7 +1062,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		qb2.setLicense("BYOL");
 		qb2.setType("db.r5.large");
 		qb2.setSubscription(subscription);
-		qb2.setPrice(bLookup.getPrice().getId());
+		qb2.setPrice(dLookup.getPrice().getId());
 		qb2.setName("database2");
 		final var createDb2 = qbResource.create(qb2);
 		Assertions.assertEquals("db.r5.large", qbRepository.findOne(createDb2.getId()).getPrice().getType().getName());

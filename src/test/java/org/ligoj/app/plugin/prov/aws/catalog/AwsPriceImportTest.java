@@ -336,11 +336,11 @@ class AwsPriceImportTest extends AbstractServerTest {
 	void installOffLine() throws Exception {
 
 		// Mock CO2 to invalid location
-		configuration.put(AwsPriceImportEc2.CONF_URL_CO2, "http://localhost:0/some.csv");
-		
+		configuration.put(AwsPriceImportBase.CONF_URL_CO2_INSTANCE, "http://localhost:0/some.csv");
+		configuration.put(AwsPriceImportBase.CONF_URL_CO2_REGION, "http://localhost:0/some.csv");
+
 		// Ecludes some engine
 		configuration.put(AwsPriceImportRds.CONF_ETYPE, "(Oracle|SQL Server|Aurora.*|PostgreSQL|MySQL)");
-
 
 		// Install a new configuration
 		mockAll();
@@ -361,7 +361,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Check the spot
 		final var spotPrice = qiResource.lookup(subscription,
-				builder().cpu(2).ram(1741).constant(true).ephemeral(true).build());
+				builder().cpu(2).ram(1741).workload("100").ephemeral(true).build());
 		Assertions.assertEquals("spot-eu-west-1-r4.large-LINUX", spotPrice.getPrice().getCode());
 		Assertions.assertEquals(12.629, spotPrice.getCost(), DELTA);
 		Assertions.assertEquals(12.629d, spotPrice.getPrice().getCost(), DELTA);
@@ -392,7 +392,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Check EC2 savings plan
 		final var ec2SsavingsPlanPrice = qiResource.lookup(subscription,
-				builder().cpu(2).ram(1741).constant(true).usage("36monthEC2SP").build());
+				builder().cpu(2).ram(1741).workload("100").usage("36monthEC2SP").build());
 		Assertions.assertEquals("7DVU5XBSTGHBTJUV.M2WTFX8JK6VDUNU5", ec2SsavingsPlanPrice.getPrice().getCode());
 		Assertions.assertEquals(63.51d, ec2SsavingsPlanPrice.getCost(), DELTA);
 		Assertions.assertEquals(63.51d, ec2SsavingsPlanPrice.getPrice().getCost(), DELTA);
@@ -405,7 +405,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Check Compute savings plan for EC2
 		final var cSavingsPlanPrice = qiResource.lookup(subscription,
-				builder().cpu(2).ram(1741).constant(true).usage("36monthCSP").build());
+				builder().cpu(2).ram(1741).workload("100").usage("36monthCSP").build());
 		Assertions.assertEquals("8GU23DFTKP2N43SD.29QDFBY626457QNP", cSavingsPlanPrice.getPrice().getCode());
 		Assertions.assertEquals("Compute Savings Plan, 1yr, All Upfront",
 				cSavingsPlanPrice.getPrice().getTerm().getName());
@@ -610,6 +610,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 	}
 
 	@Test
+	@org.junit.jupiter.api.Disabled
 	void installOnLine() throws Exception {
 		configuration.delete(CONF_URL_AWS_PRICES);
 		configuration.delete(AwsPriceImportEc2.CONF_URL_EC2_PRICES_SPOT);
@@ -617,8 +618,12 @@ class AwsPriceImportTest extends AbstractServerTest {
 		configuration.put(AwsPriceImportEc2.CONF_OS, "LINUX"); // Only one OS for UTs
 
 		// Mock CO2
-		configuration.put(AwsPriceImportEc2.CONF_URL_CO2, "http://localhost:" + MOCK_PORT + "/carbon.csv");
-		mock("/carbon.csv", "mock-server/aws/carbon.csv");
+		configuration.put(AwsPriceImportBase.CONF_URL_CO2_INSTANCE,
+				"http://localhost:" + MOCK_PORT + "/carbon-instance.csv");
+		configuration.put(AwsPriceImportBase.CONF_URL_CO2_REGION,
+				"http://localhost:" + MOCK_PORT + "/carbon-region.csv");
+		mock("/carbon-instance.csv", "mock-server/aws/carbon-instance.csv");
+		mock("/carbon-region.csv", "mock-server/aws/carbon-region.csv");
 		startMockServer();
 
 		// Only "r4.large" and "t2.*","i.*,c1" for UTs
@@ -954,7 +959,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Request an instance that would not be a Spot
 		final var lookup = qiResource.lookup(subscription,
-				builder().cpu(2).ram(1741).constant(true).usage("36month").type("c1.medium").build());
+				builder().cpu(2).ram(1741).workload("100").usage("36month").type("c1.medium").build());
 		Assertions.assertEquals("HB5V2X8TXQUTDZBV.NQ3QZPMQV9.6YS6EN2CT7", lookup.getPrice().getCode());
 
 		final var ivo = new QuoteInstanceEditionVo();
@@ -1022,9 +1027,10 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Request a database
 		var dLookup = qbResource.lookup(subscription,
-				QuoteDatabaseQuery.builder().cpu(4).ram(1741).constant(false).engine("MYSQL").build());
+				QuoteDatabaseQuery.builder().cpu(4).ram(1741).workload("20").engine("MYSQL").build());
 		Assertions.assertEquals("FQ2P47XZ3KZ97A3P.JRTCKXETXF.6YS6EN2CT7", dLookup.getPrice().getCode());
-		Assertions.assertFalse(dLookup.getPrice().getType().getConstant().booleanValue());
+		Assertions.assertEquals("db.t2.xlarge", dLookup.getPrice().getType().getName());
+		Assertions.assertEquals(22.5d, dLookup.getPrice().getType().getBaseline());
 		Assertions.assertNull(dLookup.getPrice().getLicense());
 		Assertions.assertEquals("MYSQL", dLookup.getPrice().getEngine());
 		Assertions.assertNull(dLookup.getPrice().getEdition());
@@ -1035,7 +1041,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		final var qb1 = new QuoteDatabaseEditionVo();
 		qb1.setCpu(4);
 		qb1.setRam(1741);
-		qb1.setConstant(false);
+		qb1.setWorkload("22.5");
 		qb1.setPhysical(false);
 		qb1.setEngine("MYSQL");
 		qb1.setSubscription(subscription);
@@ -1047,7 +1053,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		dLookup = qbResource.lookup(subscription, QuoteDatabaseQuery.builder().cpu(2).ram(1741).type("db.r5.large")
 				.license("BYOL").engine("ORACLE").edition("ENTERPRISE").build());
 		Assertions.assertEquals("68NGR9GHC49W62UR.JRTCKXETXF.6YS6EN2CT7", dLookup.getPrice().getCode());
-		Assertions.assertTrue(dLookup.getPrice().getType().getConstant().booleanValue());
+		Assertions.assertNull(dLookup.getPrice().getType().getBaseline());
 		Assertions.assertEquals("BYOL", dLookup.getPrice().getLicense());
 		Assertions.assertEquals("ORACLE", dLookup.getPrice().getEngine());
 		Assertions.assertEquals("ENTERPRISE", dLookup.getPrice().getEdition());

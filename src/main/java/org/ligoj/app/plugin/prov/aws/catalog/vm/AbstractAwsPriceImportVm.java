@@ -10,6 +10,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
@@ -32,9 +33,12 @@ import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlanProduct;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlanRate;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlanTerm;
+import org.ligoj.app.plugin.prov.catalog.AbstractUpdateContext;
+import org.ligoj.app.plugin.prov.catalog.Co2Data;
 import org.ligoj.app.plugin.prov.catalog.ImportCatalog;
 import org.ligoj.app.plugin.prov.model.AbstractInstanceType;
 import org.ligoj.app.plugin.prov.model.AbstractQuoteVm;
+import org.ligoj.app.plugin.prov.model.AbstractTermPrice;
 import org.ligoj.app.plugin.prov.model.AbstractTermPriceVm;
 import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
@@ -198,12 +202,12 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		t.setGpu(csv.getGpu());
 		t.setAutoScale(true);
 		t.setName(t.getCode());
-		t.setConstant(!t.getName().startsWith("t") && !t.getName().startsWith("db.t"));
 		t.setPhysical(t.getName().contains("metal"));
 		t.setProcessor(StringUtils
 				.trimToNull(RegExUtils.removeAll(csv.getPhysicalProcessor(), "(Variable|\\s*Family|\\([^)]*\\))")));
 		t.setDescription(ArrayUtils.toString(
 				ArrayUtils.removeAllOccurrences(new String[] { csv.getStorage(), csv.getNetworkPerformance() }, null)));
+		resolveBaseline(context, t);
 
 		// Convert GiB to MiB, and rounded
 		final var memoryStr = StringUtils.removeEndIgnoreCase(csv.getMemory(), " GiB").replace(",", "");
@@ -214,8 +218,25 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		t.setRamRate(getRate("ram", csv));
 		t.setNetworkRate(getRate("network", csv, csv.getNetworkPerformance()));
 		t.setStorageRate(toStorage(csv));
-		setCo2(context, t);
+		setWatt(context, t);
+	}
 
+	private void resolveBaseline(final X context, final T t) {
+		// Only burstable types have baseline value
+		final var baselines = context.getBaselines();
+		if (t.getName().matches("^(db\\.)?t[^.]+\\..*")) {
+			t.setBaseline(baselines.computeIfAbsent(t.getName().replace("db.", ""), n -> {
+				final var size = "." + StringUtils.split(n, '.')[1];
+				final var closest = baselines.keySet().stream().sorted(Comparator.reverseOrder())
+						.filter(ns -> ns.endsWith(size)).findFirst().orElse(null);
+				if (closest == null) {
+					log.warn("Unknown burstable type {}, and no similar type found, baseline is ignored", t);
+					return null;
+				}
+				log.warn("Unknown burstable type {}, use closest baseline of {}", t, closest);
+				return baselines.get(closest);
+			}));
+		}
 	}
 
 	/**
@@ -790,6 +811,13 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 */
 	protected boolean isEnabled(final X context, final C csv) {
 		return isEnabledType(context, csv.getInstanceType());
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	protected <P2 extends AbstractTermPrice<?>> void setCo2(final AbstractUpdateContext context, final P2 price,
+			final Co2Data v, final double conversion) {
+		super.setCo2Custom(context, (P) price, v, conversion);
 	}
 
 }

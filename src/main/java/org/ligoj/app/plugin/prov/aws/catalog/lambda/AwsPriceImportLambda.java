@@ -114,7 +114,6 @@ public class AwsPriceImportLambda extends
 	protected void copy(final LocalLambdaContext context, final AwsLambdaPrice csv, final ProvFunctionType t) {
 		final var provisioned = t.getCode().startsWith("provisioned");
 		t.setName(t.getCode());
-		t.setConstant(provisioned);
 		t.setAutoScale(true);
 		t.setCpu(0);
 		t.setProcessor(t.getCode().endsWith("-arm") ? "ARM" : "INTEL");

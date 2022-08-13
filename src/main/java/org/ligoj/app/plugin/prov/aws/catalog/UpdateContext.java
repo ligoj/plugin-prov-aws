@@ -5,6 +5,7 @@ package org.ligoj.app.plugin.prov.aws.catalog;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.ligoj.app.plugin.prov.catalog.AbstractUpdateContext;
 
@@ -36,5 +37,12 @@ public class UpdateContext extends AbstractUpdateContext {
 	@Getter
 	@Setter
 	private Map<String, AwsPriceOffer> offers;
+
+	/**
+	 * Efficient baseline per instance type.
+	 */
+	@Getter
+	@Setter
+	private Map<String, Double> baselines = new ConcurrentHashMap<>();
 
 }

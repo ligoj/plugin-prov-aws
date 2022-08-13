@@ -42,19 +42,34 @@ public abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 	 * Build the reader parsing the CSV file from AWS to build {@link AwsEc2Price} instances. Non AWS instances data are
 	 * skipped, and headers are ignored.
 	 *
+	 * @param reader    The original AWS CSV input.
+	 * @param mapping   The mapping table for header.
+	 * @param beanType  The target bean type.
+	 * @param separator The CSV separator.
+	 * @throws IOException When the CSV content cannot be read.
+	 */
+	protected AbstractAwsCsvForBean(final BufferedReader reader, final Map<String, String> mapping,
+			final Class<T> beanType) throws IOException {
+		this(reader, mapping, beanType, ',');
+	}
+
+	/**
+	 * Build the reader parsing the CSV file from AWS to build {@link AwsEc2Price} instances. Non AWS instances data are
+	 * skipped, and headers are ignored.
+	 *
 	 * @param reader   The original AWS CSV input.
 	 * @param mapping  The mapping table for header.
 	 * @param beanType The target bean type.
 	 * @throws IOException When the CSV content cannot be read.
 	 */
 	protected AbstractAwsCsvForBean(final BufferedReader reader, final Map<String, String> mapping,
-			final Class<T> beanType) throws IOException {
+			final Class<T> beanType, final char separator) throws IOException {
 
 		// Complete the standard mappings
 		final var mMapping = new HashMap<>(HEADERS_MAPPING);
 		mMapping.putAll(mapping);
 
-		final var csvReader = new CsvReader(reader, ',');
+		final var csvReader = new CsvReader(reader, separator);
 
 		// Skip until the header, to be skipped too
 		List<String> values;

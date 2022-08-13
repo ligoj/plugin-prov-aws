@@ -195,7 +195,6 @@ public class AwsPriceImportFargate extends
 	protected void copy(final LocalFargateContext context, final AwsFargatePrice csv, final ProvContainerType t) {
 		t.setAutoScale(true);
 		t.setName(t.getCode());
-		t.setConstant(true);
 		t.setPhysical(false);
 		t.setDescription("Fargate");
 		t.setCpu(csv.getCpu());

@@ -31,10 +31,23 @@ public abstract class AbstractAwsCsvReader<T> extends CsvBeanReader<T> {
 	 * @param beanType The target bean type.
 	 */
 	protected AbstractAwsCsvReader(final Reader reader, final String[] headers, final Class<T> beanType) {
+		this(reader, headers, beanType, ',');
+	}
+
+	/**
+	 * Build a CSV reader to build {@link AwsEc2Price} objects.
+	 *
+	 * @param reader    The CSV input, without headers and starting from the first raw.
+	 * @param headers   The header used to parse the CSV file.
+	 * @param beanType  The target bean type.
+	 * @param separator The CSV separator.
+	 */
+	protected AbstractAwsCsvReader(final Reader reader, final String[] headers, final Class<T> beanType,
+			final char separator) {
 		super(reader, beanType, headers);
 
 		// Makes visible this entry
-		this.csvReaderProxy = new CsvReader(reader, ',');
+		this.csvReaderProxy = new CsvReader(reader, separator);
 	}
 
 	@Override

@@ -6,18 +6,30 @@ package org.ligoj.app.plugin.prov.aws.catalog;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.Reader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
+import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
+import org.ligoj.app.plugin.prov.catalog.Co2Data;
+import org.ligoj.app.plugin.prov.catalog.Co2RegionData;
 import org.ligoj.app.plugin.prov.catalog.ImportCatalog;
 import org.ligoj.app.plugin.prov.model.AbstractCodedEntity;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.bootstrap.core.INamableBean;
+import org.ligoj.bootstrap.core.csv.CsvBeanReader;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -53,15 +65,54 @@ public class AwsPriceImportBase extends AbstractAwsImport implements ImportCatal
 	 */
 	public static final String CONF_URL_AWS_PRICES = String.format(CONF_URL_TMP_PRICES, "aws");
 
+	/**
+	 * Configuration key used for AWS URL CO2 dataset.
+	 */
+	public static final String CONF_URL_CO2_INSTANCE = ProvAwsPluginResource.KEY + ":co2-instance-url";
+	/**
+	 * Configuration key used for AWS URL CO2 regional (mix intensity) dataset.
+	 */
+	public static final String CONF_URL_CO2_REGION = ProvAwsPluginResource.KEY + ":co2-region-url";
+
 	private static final TypeReference<Map<String, ProvLocation>> MAP_LOCATION = new TypeReference<>() {
 		// Nothing to extend
 	};
+
+	private static final TypeReference<Map<String, Double>> MAP_BASELINE = new TypeReference<>() {
+		// Nothing to extend
+	};
+
+	/**
+	 * CO2 instance CSV Mapping to Java bean property
+	 */
+	private static final Map<String, String> CO2_INSTANCE_HEADERS_MAPPING = new HashMap<>();
+	static {
+		CO2_INSTANCE_HEADERS_MAPPING.put("Instance type", "type");
+		Stream.of("Pkg", "GPU", "RAM")
+				.forEach(t -> IntStream.range(0, 11)
+						.forEach(p -> CO2_INSTANCE_HEADERS_MAPPING.put(
+								"%sWatt @ %s".formatted(t, p == 0 ? "Idle" : "%s0%%".formatted(p)),
+								"%sWatt%d".formatted(StringUtils.lowerCase(t), p * 10))));
+		CO2_INSTANCE_HEADERS_MAPPING.put("Delta Full Machine", "extra");
+		CO2_INSTANCE_HEADERS_MAPPING.put("Instance Hourly Manufacturing Emissions (gCO₂eq)", "scope3");
+	}
+
+	/**
+	 * CO2 regional CSV Mapping to Java bean property
+	 */
+	private static final Map<String, String> CO2_REGION_HEADERS_MAPPING = new HashMap<>();
+	static {
+		CO2_REGION_HEADERS_MAPPING.put("Region", "region");
+		CO2_REGION_HEADERS_MAPPING.put("PUE", "pue");
+		CO2_REGION_HEADERS_MAPPING.put("CO2e (metric gram/kWh)", "gPerKWH");
+	}
 
 	@Override
 	public void install(final UpdateContext context) throws IOException {
 		importCatalogResource.nextStep(context.getNode().getId(), t -> t.setPhase("region"));
 		context.setValidRegion(Pattern.compile(configuration.get(CONF_REGIONS, ".*")));
 		context.getMapRegionById().putAll(toMap("aws-regions.json", MAP_LOCATION));
+		context.getBaselines().putAll(toMap("aws-baselines.json", MAP_BASELINE));
 
 		// Complete the by-name map
 		context.getMapStorageToApi().putAll(toMap("storage-to-api.json", MAP_STR));
@@ -78,7 +129,71 @@ public class AwsPriceImportBase extends AbstractAwsImport implements ImportCatal
 		installStorageTypes(context);
 		context.getMapSpotToNewRegion().putAll(toMap("spot-to-new-region.json", MAP_STR));
 		loadBaseIndex(context);
+
+		// Get CO2 dataset
+		fetchCo2Data(context);
+
 		nextStep(context, "region");
+	}
+
+	private void fetchCo2Data(final UpdateContext context) {
+		fetchCo2DataGeneric("instance", CONF_URL_CO2_INSTANCE, context::setCo2DataSet, CO2_INSTANCE_HEADERS_MAPPING,
+				Co2Data::getType, Co2Data.class);
+		fetchCo2DataGeneric("region", CONF_URL_CO2_REGION, context::setCo2RegionDataSet, CO2_REGION_HEADERS_MAPPING,
+				Co2RegionData::getRegion, Co2RegionData.class);
+		context.getCo2DataSet().values().forEach(Co2Data::compute);
+	}
+
+	private <X> void fetchCo2DataGeneric(final String type, final String cUrl, final Consumer<Map<String, X>> setter,
+			final Map<String, String> headersMapping, final Function<X, String> keyer, Class<X> clazz) {
+		final var endpoint = configuration.get(cUrl);
+		if (endpoint == null) {
+			log.info("No provided {} dataset, if you have one, set the CSV URL to configuration '{}'", type, cUrl);
+			// No provided CO2 dataset, ingore this step
+			return;
+		}
+
+		// Get the remote CO2 stream
+		final var co2DataSet = new HashMap<String, X>();
+		try (var reader = new BufferedReader(new InputStreamReader(new URI(endpoint).toURL().openStream()))) {
+			// Pipe to the CSV reader
+			final var csvReader = new AbstractAwsCsvForBean<>(reader, headersMapping, clazz, ';') {
+
+				@Override
+				protected CsvBeanReader<X> newCsvReader(final Reader reader, final String[] headers,
+						final Class<X> beanType) {
+					return new AbstractAwsCsvReader<>(reader, headers, beanType, ';') {
+
+						@Override
+						protected boolean isValidRaw(final List<String> rawValues) {
+							return rawValues.size() > 1;
+						}
+					};
+				}
+
+				@Override
+				protected boolean isHeaderRow(final List<String> values) {
+					// No extra padding before headers
+					return true;
+				}
+			};
+
+			// Build the AWS instance prices from the CSV
+			var csv = csvReader.read();
+			while (csv != null) {
+				co2DataSet.put(keyer.apply(csv), csv);
+
+				// Read the next one
+				csv = csvReader.read();
+			}
+			setter.accept(co2DataSet);
+		} catch (final IOException | URISyntaxException use) {
+			// Something goes wrong for this region, stop for this region
+			log.warn("AWS {} dataset fetch failed", type, use);
+		} finally {
+			// Report
+			log.info("AWS {} dataset fetch ({})", type, co2DataSet.size());
+		}
 	}
 
 	/**

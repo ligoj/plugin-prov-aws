@@ -87,6 +87,13 @@ public abstract class AbstractLocalContext<T extends AbstractInstanceType, P ext
 	protected Map<String, ProvInstancePriceTerm> localPriceTerms = new HashMap<>();
 
 	/**
+	 * Efficient baseline per instance type.
+	 */
+	@Getter
+	@Setter
+	private Map<String, Double> baselines;
+
+	/**
 	 * Context from the parent.
 	 *
 	 * @param parent        The parent context.
@@ -118,6 +125,7 @@ public abstract class AbstractLocalContext<T extends AbstractInstanceType, P ext
 		this.locals = pRepository.findByLocation(node.getId(), region.getName(), term1, term2B).stream()
 				.collect(Collectors.toMap(AbstractTermPrice::getCode, Function.identity()));
 		this.mapStorageToApi = parent.getMapStorageToApi();
+		this.baselines = parent.getBaselines();
 	}
 
 	/**

@@ -94,7 +94,7 @@ public class AwsPriceImportBase extends AbstractAwsImport implements ImportCatal
 								"%sWatt @ %s".formatted(t, p == 0 ? "Idle" : "%s0%%".formatted(p)),
 								"%sWatt%d".formatted(StringUtils.lowerCase(t), p * 10))));
 		CO2_INSTANCE_HEADERS_MAPPING.put("Delta Full Machine", "extra");
-		CO2_INSTANCE_HEADERS_MAPPING.put("Instance Hourly Manufacturing Emissions (gCO₂eq)", "scope3");
+		CO2_INSTANCE_HEADERS_MAPPING.put("Instance Hourly Manufacturing Emissions (gCO_eq)", "scope3");
 	}
 
 	/**
@@ -166,7 +166,7 @@ public class AwsPriceImportBase extends AbstractAwsImport implements ImportCatal
 
 						@Override
 						protected boolean isValidRaw(final List<String> rawValues) {
-							return rawValues.size() > 1;
+							return true;
 						}
 					};
 				}

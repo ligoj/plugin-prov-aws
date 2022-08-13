@@ -90,7 +90,6 @@ public abstract class AbstractLocalContext<T extends AbstractInstanceType, P ext
 	 * Efficient baseline per instance type.
 	 */
 	@Getter
-	@Setter
 	private Map<String, Double> baselines;
 
 	/**

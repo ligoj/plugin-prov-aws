@@ -374,7 +374,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("eu-west-1", spotPrice.getPrice().getLocation().getName());
 		Assertions.assertEquals("EU (Ireland)", spotPrice.getPrice().getLocation().getDescription());
 
-		Assertions.assertEquals(81, ipRepository.findAllBy("term.code", "JRTCKXETXF").size()); // EC2 OD
+		Assertions.assertEquals(83, ipRepository.findAllBy("term.code", "JRTCKXETXF").size()); // EC2 OD
 		Assertions.assertEquals(3, ipRepository.findAllBy("term.code", "NQ3QZPMQV9").size()); // EC2 Reserved 3y
 		Assertions.assertEquals(6, ipRepository.findAllBy("term.code", "spot").size()); // EC2 Spot
 		Assertions.assertEquals(1, ipRepository.findAllBy("term.code", "7DVU5XBSTGHBTJUV").size()); // EC2 SP
@@ -387,8 +387,8 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		Assertions.assertEquals(50, ctRepository.findAll().size()); // Fargate type
 
-		checkImportStatus(81 /* OD */ + 3 /* RI */ + 6 /* spot */ + 2 /* SP */ + 20 /* RDS */ + 200 /* Fargate */ ,
-				77 + 50 /* Fargate */ );
+		checkImportStatus(83 /* OD */ + 3 /* RI */ + 6 /* spot */ + 2 /* SP */ + 20 /* RDS */ + 200 /* Fargate */ ,
+				79 + 50 /* Fargate */ );
 
 		// Check EC2 savings plan
 		final var ec2SsavingsPlanPrice = qiResource.lookup(subscription,
@@ -461,7 +461,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		// Install again to check the update without change
 		resetImportTask();
 		resource.install(false);
-		checkImportStatus(312 /* same */, 77 + 50 /* Fargate */);
+		checkImportStatus(314 /* same */, 79 + 50 /* Fargate */);
 		checkType();
 
 		provResource.updateCost(subscription);
@@ -471,7 +471,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		resetImportTask();
 		resource.install(true);
 		check(provResource.getConfiguration(subscription), 448.793d, 46.667d);
-		checkImportStatus(312 /* same */, 77 + 50 /* Fargate */);
+		checkImportStatus(314 /* same */, 79 + 50 /* Fargate */);
 		checkType();
 
 		// Install again with force mode, with only specs changes in force mode
@@ -485,8 +485,8 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("{Moderate NEW}", dtype.getDescription());
 		Assertions.assertEquals(3, dtype.getCpu());
 		Assertions.assertEquals(7782, dtype.getRam());
-		checkImportStatus(312 - 1 /* purged RDS */ + 1 /* new RDS */
-				- 1 /* purged EC2 */ + 1 /* new EC2 */, 77 + 50 /* Fargate */ + 1 /* new type */);
+		checkImportStatus(314 - 1 /* purged RDS */ + 1 /* new RDS */
+				- 1 /* purged EC2 */ + 1 /* new EC2 */, 79 + 50 /* Fargate */ + 1 /* new type */);
 
 		// Check the v1 only prices are still available
 		bpRepository.findByExpected("code", "OLD_____________.JRTCKXETXF.6YS6EN2CT7");
@@ -554,7 +554,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Check status
 		checkImportStatus(310 + 2 /* saving plans */ + 1 - 1 /* purged RDS price */ /* new RDS price */
-				- 1 /* purged EC2 price */ + 1 /* new EC2 price */, 77 + 50 /* Fargate */ + 1);
+				- 1 /* purged EC2 price */ + 1 /* new EC2 price */, 79 + 50 /* Fargate */ + 1);
 	}
 
 	private void checkType() {
@@ -647,7 +647,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("Spot", instance2.getTerm().getName());
 		Assertions.assertTrue(instance2.getTerm().isEphemeral());
 		Assertions.assertEquals("r4.large", instance2.getType().getName());
-		Assertions.assertEquals(37.4, instance2.getCo2());
+		Assertions.assertEquals(6170.075, instance2.getCo2());
 	}
 
 	/**
@@ -726,7 +726,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), DELTA);
 
 		// Only OD+RI prices have been imported
-		Assertions.assertEquals(74, itRepository.findAll().size());
+		Assertions.assertEquals(76, itRepository.findAll().size());
 		Assertions.assertEquals(3, iptRepository.findAll().size()); // RI, OD, Spot
 	}
 
@@ -956,6 +956,16 @@ class AwsPriceImportTest extends AbstractServerTest {
 		em.persist(usageEC2SP);
 		em.flush();
 		em.clear();
+
+		// Request an instance with similar baseline
+		final var lookupB1 = qiResource.lookup(subscription, builder().type("t9.2xlarge").build());
+		Assertions.assertEquals("BASELINE_40_____.JRTCKXETXF.6YS6EN2CT7", lookupB1.getPrice().getCode());
+		Assertions.assertEquals(40d, lookupB1.getPrice().getType().getBaseline());
+
+		// Request an instance with unknown baseline
+		final var lookupB2 = qiResource.lookup(subscription, builder().type("t9.0xlarge").build());
+		Assertions.assertEquals("BASELINE_0______.JRTCKXETXF.6YS6EN2CT7", lookupB2.getPrice().getCode());
+		Assertions.assertNull(lookupB2.getPrice().getType().getBaseline());
 
 		// Request an instance that would not be a Spot
 		final var lookup = qiResource.lookup(subscription,

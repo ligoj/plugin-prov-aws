@@ -13,7 +13,6 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -137,14 +136,14 @@ public class AwsPriceImportBase extends AbstractAwsImport implements ImportCatal
 	}
 
 	private void fetchCo2Data(final UpdateContext context) {
-		fetchCo2DataGeneric("instance", CONF_URL_CO2_INSTANCE, context::setCo2DataSet, CO2_INSTANCE_HEADERS_MAPPING,
+		fetchCo2DataGeneric("instance", CONF_URL_CO2_INSTANCE, context.getCo2DataSet(), CO2_INSTANCE_HEADERS_MAPPING,
 				Co2Data::getType, Co2Data.class);
-		fetchCo2DataGeneric("region", CONF_URL_CO2_REGION, context::setCo2RegionDataSet, CO2_REGION_HEADERS_MAPPING,
+		fetchCo2DataGeneric("region", CONF_URL_CO2_REGION, context.getCo2RegionDataSet(), CO2_REGION_HEADERS_MAPPING,
 				Co2RegionData::getRegion, Co2RegionData.class);
 		context.getCo2DataSet().values().forEach(Co2Data::compute);
 	}
 
-	private <X> void fetchCo2DataGeneric(final String type, final String cUrl, final Consumer<Map<String, X>> setter,
+	private <X> void fetchCo2DataGeneric(final String type, final String cUrl, final Map<String, X> co2DataSet,
 			final Map<String, String> headersMapping, final Function<X, String> keyer, Class<X> clazz) {
 		final var endpoint = configuration.get(cUrl);
 		if (endpoint == null) {
@@ -154,7 +153,6 @@ public class AwsPriceImportBase extends AbstractAwsImport implements ImportCatal
 		}
 
 		// Get the remote CO2 stream
-		final var co2DataSet = new HashMap<String, X>();
 		try (var reader = new BufferedReader(new InputStreamReader(new URI(endpoint).toURL().openStream()))) {
 			// Pipe to the CSV reader
 			final var csvReader = new AbstractAwsCsvForBean<>(reader, headersMapping, clazz, ';') {
@@ -186,7 +184,6 @@ public class AwsPriceImportBase extends AbstractAwsImport implements ImportCatal
 				// Read the next one
 				csv = csvReader.read();
 			}
-			setter.accept(co2DataSet);
 		} catch (final IOException | URISyntaxException use) {
 			// Something goes wrong for this region, stop for this region
 			log.warn("AWS {} dataset fetch failed", type, use);

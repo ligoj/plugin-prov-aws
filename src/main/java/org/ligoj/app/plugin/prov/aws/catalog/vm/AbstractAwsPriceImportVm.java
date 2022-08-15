@@ -231,7 +231,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 						.filter(ns -> ns.endsWith(size)).findFirst().orElse(null);
 				if (closest == null) {
 					log.warn("Unknown burstable type {}, and no similar type found, baseline is ignored", t);
-					return null;
+					return 0d;
 				}
 				log.warn("Unknown burstable type {}, use closest baseline of {}", t, closest);
 				return baselines.get(closest);

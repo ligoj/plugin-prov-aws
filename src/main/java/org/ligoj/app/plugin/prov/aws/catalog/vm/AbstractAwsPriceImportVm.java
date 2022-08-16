@@ -293,8 +293,8 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 
 	private Rate toStorage(final C csv) {
 		var rate = getRate("storage", csv);
-		if (!"EBS only".equals(csv.getStorage())) {
-			// Upgrade for non EBS
+		if (!"EBS only".equalsIgnoreCase(csv.getStorage())) {
+			// Upgrade for non EBS: SSD or NVMe
 			rate = Rate.values()[Math.min(rate.ordinal(), rate.ordinal() + 1)];
 		}
 		return rate;

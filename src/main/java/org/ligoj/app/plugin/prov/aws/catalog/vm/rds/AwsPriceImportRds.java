@@ -212,6 +212,11 @@ public class AwsPriceImportRds extends
 	}
 
 	@Override
+	protected boolean isEnabledType(final AbstractUpdateContext context, final String type) {
+		return isEnabledDatabaseType(context, type);
+	}
+
+	@Override
 	protected CsvForBeanRds newReader(final BufferedReader reader) throws IOException {
 		return new CsvForBeanRds(reader);
 	}

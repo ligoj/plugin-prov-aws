@@ -28,6 +28,7 @@ import org.apache.commons.lang3.reflect.MethodUtils;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.ligoj.app.AbstractServerTest;
@@ -74,6 +75,7 @@ import org.ligoj.app.plugin.prov.model.ProvUsage;
 import org.ligoj.app.plugin.prov.model.Rate;
 import org.ligoj.app.plugin.prov.model.VmOs;
 import org.ligoj.app.plugin.prov.quote.container.ProvQuoteContainerResource;
+import org.ligoj.app.plugin.prov.quote.container.QuoteContainerEditionVo;
 import org.ligoj.app.plugin.prov.quote.container.QuoteContainerQuery;
 import org.ligoj.app.plugin.prov.quote.database.ProvQuoteDatabaseResource;
 import org.ligoj.app.plugin.prov.quote.database.QuoteDatabaseEditionVo;
@@ -358,7 +360,6 @@ class AwsPriceImportTest extends AbstractServerTest {
 		bpRepository.findByExpected("code", "OLD_____________.JRTCKXETXF.6YS6EN2CT7");
 		ipRepository.findByExpected("code", "OLD_____________.JRTCKXETXF.6YS6EN2CT7");
 
-
 		// Request an instance with similar baseline
 		final var lookupB1 = qiResource.lookup(subscription, builder().type("t9.2xlarge").build());
 		Assertions.assertEquals("BASELINE_40_____.JRTCKXETXF.6YS6EN2CT7", lookupB1.getPrice().getCode());
@@ -389,15 +390,15 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(6, ipRepository.findAllBy("term.code", "spot").size()); // EC2 Spot
 		Assertions.assertEquals(1, ipRepository.findAllBy("term.code", "7DVU5XBSTGHBTJUV").size()); // EC2 SP
 		Assertions.assertEquals(1, ipRepository.findAllBy("term.code", "8GU23DFTKP2N43SD").size()); // Compute SP
-		Assertions.assertEquals(50, cpRepository.findAllBy("term.code", "JRTCKXETXF").size()); // Fargate OD
+		Assertions.assertEquals(150, cpRepository.findAllBy("term.code", "JRTCKXETXF").size()); // Fargate OD
 		Assertions.assertEquals(50, cpRepository.findAllBy("term.code", "ZGC49G7XS8QA54BQ").size()); // Fargate Compute
 																										// SP
 		Assertions.assertEquals(100, cpRepository.findAllBy("term.code", "spot").size()); // Fargate Spot x 2 regions
 		Assertions.assertEquals(20, bpRepository.findAll().size()); // RDS
 
-		Assertions.assertEquals(50, ctRepository.findAll().size()); // Fargate type
+		Assertions.assertEquals(100, ctRepository.findAll().size()); // Fargate type
 
-		checkImportStatus(348, 159);
+		checkImportStatus(449, 210);
 
 		// Check EC2 savings plan
 		final var ec2SsavingsPlanPrice = qiResource.lookup(subscription,
@@ -436,13 +437,38 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("c1.medium", cRIPrice.getPrice().getType().getName());
 
 		// Check Fargate OnDemand
-		final var cPrice = qcResource.lookup(subscription, QuoteContainerQuery.builder().cpu(2).ram(1741).build());
+		var cPrice = qcResource.lookup(subscription,
+				QuoteContainerQuery.builder().cpu(2).ram(1741).processor("Intel").build());
 		Assertions.assertEquals(72.08d, cPrice.getCost(), DELTA);
 		Assertions.assertEquals(72.08d, cPrice.getPrice().getCost(), DELTA);
 		Assertions.assertEquals(72.08d, cPrice.getPrice().getCostPeriod(), DELTA);
+		Assertions.assertEquals(VmOs.LINUX, cPrice.getPrice().getOs());
 		Assertions.assertEquals("OnDemand", cPrice.getPrice().getTerm().getName());
 		Assertions.assertEquals("K4EXFQ5YFQCP98EN.JRTCKXETXF.6YS6EN2CT7|2.0|4.0", cPrice.getPrice().getCode());
 		Assertions.assertEquals("fargate-2.0-4.0", cPrice.getPrice().getType().getName());
+
+		// Check Fargate OnDemand ARM
+		cPrice = qcResource.lookup(subscription, QuoteContainerQuery.builder().cpu(2).ram(1741).build());
+		Assertions.assertEquals(57.67d, cPrice.getCost(), DELTA);
+		Assertions.assertEquals(57.67d, cPrice.getPrice().getCost(), DELTA);
+		Assertions.assertEquals(57.67d, cPrice.getPrice().getCostPeriod(), DELTA);
+		Assertions.assertEquals(VmOs.LINUX, cPrice.getPrice().getOs());
+		Assertions.assertEquals("OnDemand", cPrice.getPrice().getTerm().getName());
+		Assertions.assertEquals("KXC9CEUQGJQPNZPY.JRTCKXETXF.6YS6EN2CT7|2.0|4.0", cPrice.getPrice().getCode());
+		Assertions.assertEquals("fargate-2.0-4.0-arm", cPrice.getPrice().getType().getName());
+		Assertions.assertEquals("Graviton2", cPrice.getPrice().getType().getProcessor());
+
+		// Check Fargate OnDemand Windows
+		cPrice = qcResource.lookup(subscription,
+				QuoteContainerQuery.builder().cpu(2).ram(1741).os(VmOs.WINDOWS).build());
+		Assertions.assertEquals(230.067d, cPrice.getCost(), DELTA);
+		Assertions.assertEquals(230.067d, cPrice.getPrice().getCost(), DELTA);
+		Assertions.assertEquals(230.067d, cPrice.getPrice().getCostPeriod(), DELTA);
+		Assertions.assertEquals(VmOs.WINDOWS, cPrice.getPrice().getOs());
+		Assertions.assertEquals("OnDemand", cPrice.getPrice().getTerm().getName());
+		Assertions.assertEquals("3V9A5XTNJBY93V85.JRTCKXETXF.6YS6EN2CT7|2.0|4.0", cPrice.getPrice().getCode());
+		Assertions.assertEquals("fargate-2.0-4.0", cPrice.getPrice().getType().getName());
+		Assertions.assertEquals("Intel", cPrice.getPrice().getType().getProcessor());
 
 		// Check Fargate Saving Plan
 		final var cSPPrice = qcResource.lookup(subscription,
@@ -467,10 +493,31 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertNull(cSPrice.getPrice().getTerm().getLocation());
 		Assertions.assertEquals("fargate-2.0-4.0", cSPrice.getPrice().getType().getName());
 
+		final var cVo = new QuoteContainerEditionVo();
+		cVo.setCpu(2);
+		cVo.setRam(1741);
+		cVo.setSubscription(subscription);
+		cVo.setPrice(cPrice.getPrice().getId());
+		cVo.setName("Test Fargate Ephemeral Storage");
+		final var cId = qcResource.create(cVo).getId();
+
+		// Check Fargate ephemeral
+		final var ceSPrice = qsResource.lookup(subscription,
+				QuoteStorageQuery.builder().size(100).container(cId).optimized(ProvStorageOptimized.IOPS).build())
+				.get(0);
+		Assertions.assertEquals(7.12d, ceSPrice.getCost(), DELTA);
+		Assertions.assertEquals("fargate-ephemeral", ceSPrice.getPrice().getType().getName());
+		Assertions.assertEquals("eu-west-1-fargate-ephemeral", ceSPrice.getPrice().getCode());
+		em.flush();
+		em.clear();
+		qcResource.delete(cId);
+		em.flush();
+		em.clear();
+
 		// Install again to check the update without change
 		resetImportTask();
 		resource.install(false);
-		checkImportStatus(348 /* same */, 159);
+		checkImportStatus(449 /* same */, 210);
 		checkType();
 
 		provResource.updateCost(subscription);
@@ -480,7 +527,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		resetImportTask();
 		resource.install(true);
 		check(provResource.getConfiguration(subscription), 448.793d, 46.667d);
-		checkImportStatus(348 /* same */, 159);
+		checkImportStatus(449 /* same */, 210);
 		checkType();
 
 		// Install again with force mode, with only specs changes in force mode
@@ -494,8 +541,8 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("{Moderate NEW}", dtype.getDescription());
 		Assertions.assertEquals(3, dtype.getCpu());
 		Assertions.assertEquals(7782, dtype.getRam());
-		checkImportStatus(348 - 1 /* purged RDS */ + 1 /* new RDS */
-				- 1 /* purged EC2 */ + 1 /* new EC2 */, 159 /* Fargate */ + 1 /* new type */);
+		checkImportStatus(449 - 1 /* purged RDS */ + 1 /* new RDS */
+				- 1 /* purged EC2 */ + 1 /* new EC2 */, 210 /* Fargate */ + 1 /* new type */);
 
 		// Check the v1 only prices are still available
 		bpRepository.findByExpected("code", "OLD_____________.JRTCKXETXF.6YS6EN2CT7");
@@ -562,8 +609,8 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("{EBS only,20 Gigabit}", type.getDescription());
 
 		// Check status
-		checkImportStatus(348 + 2 /* saving plans */ + 1 - 1 /* purged RDS price */ /* new RDS price */
-				- 5 /* purged EC2 price */ + 1 /* new EC2 price */, 159 + 1);
+		checkImportStatus(449 + 2 /* saving plans */ + 1 - 1 /* purged RDS price */ /* new RDS price */
+				- 5 /* purged EC2 price */ + 1 /* new EC2 price */, 210 + 1);
 	}
 
 	private void checkType() {
@@ -770,7 +817,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), DELTA);
 
 		// No instance imported
-		Assertions.assertEquals(50, ctRepository.findAll().size());
+		Assertions.assertEquals(100, ctRepository.findAll().size()); // ARM+x86
 		Assertions.assertEquals(100, cpRepository.findAll().size()); // 2 spot regions
 	}
 

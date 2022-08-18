@@ -219,16 +219,23 @@ public class AwsPriceImportBase extends AbstractAwsImport implements ImportCatal
 			entity.setName(entity.getCode());
 			entity.setDescription(t.getDescription());
 			entity.setInstanceType(t.getInstanceType());
+			entity.setContainerType(t.getContainerType());
 			entity.setDatabaseType(t.getDatabaseType());
+			entity.setFunctionType(t.getFunctionType());
+			entity.setNotInstanceType(t.getNotInstanceType());
+			entity.setNotContainerType(t.getNotContainerType());
+			entity.setNotDatabaseType(t.getNotDatabaseType());
+			entity.setNotFunctionType(t.getNotFunctionType());
 			entity.setIops(t.getIops());
 			entity.setLatency(t.getLatency());
-			entity.setMaximal(t.getMaximal());
 			entity.setMinimal(t.getMinimal());
+			entity.setMaximal(t.getMaximal());
 			entity.setOptimized(t.getOptimized());
 			entity.setThroughput(t.getThroughput());
 			entity.setAvailability(t.getAvailability());
 			entity.setDurability9(t.getDurability9());
 			entity.setEngine(t.getEngine());
+			entity.setNetwork(t.getNetwork());
 			stRepository.save(entity);
 		});
 	}

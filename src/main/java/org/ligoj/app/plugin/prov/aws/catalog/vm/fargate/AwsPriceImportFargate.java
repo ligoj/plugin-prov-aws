@@ -26,6 +26,7 @@ import org.ligoj.app.plugin.prov.model.ProvContainerType;
 import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvQuoteContainer;
+import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
 import org.ligoj.app.plugin.prov.model.Rate;
 import org.ligoj.app.plugin.prov.model.VmOs;
 import org.ligoj.bootstrap.core.SpringUtils;
@@ -54,6 +55,8 @@ public class AwsPriceImportFargate extends
 	private static final String VCPU_HOURS_PER = VCPU_HOURS + ":perCPU";
 
 	private static final String GB_HOURS = "GB-Hours";
+	
+	private static final double FREE_EPHEMERAL_STORAGE = 20d; // GiB
 
 	/**
 	 * The EC2 spot price end-point, a JSON file. Contains the prices for all regions.
@@ -104,15 +107,53 @@ public class AwsPriceImportFargate extends
 	@Override
 	protected void installPrice(final LocalFargateContext context, final AwsFargatePrice csv) {
 		final var partialCost = context.getPartialCost();
-		partialCost.put(csv.getUsageType().replaceFirst(".*Fargate-", ""), csv);
-		if (partialCost.containsKey(GB_HOURS) && partialCost.containsKey(VCPU_HOURS_PER)) {
-			// All parts are read
-			final var csvRam = partialCost.get(GB_HOURS);
-			final var csvCpu = partialCost.get(VCPU_HOURS_PER);
-			final var costRam = csvRam.getPricePerUnit();
-			final var costCpu = csvCpu.getPricePerUnit();
-			installFargatePrice(context, csvCpu, costRam, costCpu);
+		final var usage = csv.getUsageType().replaceFirst(".*Fargate-", "");
+		if (!usage.contains("Anywhere") && !usage.contains("ECS-EC2")) {
+			// Only Ephemeral storage and Window/Linux/ARM OS/CPU/RAM compute are supported
+			partialCost.put(usage, csv);
 		}
+	}
+
+	@Override
+	protected void purgePrices(final LocalFargateContext context) {
+		final var partialCost = context.getPartialCost();
+		// Compute prices
+		partialCost.forEach((usage, csvCpu) -> {
+			if (usage.endsWith("vCPU-Hours:perCPU")) {
+				final var osPrefix = usage.replace("vCPU-Hours:perCPU", "");
+				final var csvRam = partialCost.get(osPrefix + "GB-Hours");
+				final var csvOsCpu = partialCost.get(osPrefix + "OS-Hours:perCPU");
+				final var costRam = csvRam.getPricePerUnit();
+				final var costCpu = csvCpu.getPricePerUnit() + (csvOsCpu == null ? 0 : csvOsCpu.getPricePerUnit());
+				installFargatePrice(context, csvCpu, costRam, costCpu);
+			}
+		});
+		context.getPRepository().flush();
+
+		// Ephemeral storage (+20GiB) price
+		final var csvStorage = partialCost.get("EphemeralStorage-GB-Hours");
+		if (csvStorage != null) {
+			final var type = context.getStorageTypes().get("fargate-ephemeral");
+			final var price = context.getPreviousStorage()
+					.computeIfAbsent(context.getRegion().getName() + "-fargate-ephemeral", c -> {
+						final var p = new ProvStoragePrice();
+						p.setCode(c);
+						return p;
+					});
+			copyAsNeeded(context, price, p -> {
+				p.setLocation(context.getRegion());
+				p.setType(type);
+			});
+			saveAsNeededInternal(context, price, price.getCostGb(),
+					csvStorage.getPricePerUnit() * context.getHoursMonth(), (cR, c) -> {
+						price.setCostGb(cR);
+						price.setCost(-round3Decimals(cR * FREE_EPHEMERAL_STORAGE));
+					}, spRepository::save);
+
+			stRepository.flush();
+		}
+
+		super.purgePrices(context, context.getLocals(), context.getPRepository(), context.getQRepository());
 	}
 
 	@Override
@@ -156,21 +197,27 @@ public class AwsPriceImportFargate extends
 		return rateCode + "|" + cpu + "|" + ram;
 	}
 
+	/**
+	 * Create a type code based on the architecture and resource configuration.
+	 */
+	private String toTypeCode(final double cpu, final double ramGb, final String processor) {
+		return API + "-" + cpu + "-" + ramGb + (processor == null ? "" : "-arm");
+	}
+
 	private ProvContainerPrice newPrice(final LocalFargateContext context, final AwsFargatePrice csv, final double cpu,
 			final double ram) {
 		final var code = toPriceCode(csv.getRateCode(), cpu, ram);
 		final var price = context.getLocals().computeIfAbsent(code, context::newPrice);
-		return copyAsNeeded(context, price, p -> copy(context, csv, p, installInstanceType(context, cpu, ram),
-				installInstancePriceTerm(context, csv)));
+		return copyAsNeeded(context, price,
+				p -> copy(context, csv, p,
+						installInstanceType(context, cpu, ram,
+								StringUtils.containsIgnoreCase(csv.getUsageType(), "arm") ? "arm" : null),
+						installInstancePriceTerm(context, csv)));
 	}
 
 	@Override
 	protected void copy(final AwsFargatePrice csv, final ProvContainerPrice p) {
-		p.setOs(VmOs.LINUX);
-	}
-
-	private String toCode(final double cpu, final double ramGb) {
-		return API + "-" + cpu + "-" + ramGb;
+		p.setOs(StringUtils.containsIgnoreCase(csv.getUsageType(), "windows") ? VmOs.WINDOWS : VmOs.LINUX);
 	}
 
 	/**
@@ -178,16 +225,19 @@ public class AwsPriceImportFargate extends
 	 */
 	private void installFargateTypes(final UpdateContext context) {
 		final LocalFargateContext localContext = newContext(context, new ProvLocation(), null, null);
-		CPU_TO_RAM.forEach(
-				(cpu, ramGbA) -> Arrays.stream(ramGbA).forEach(ram -> installInstanceType(localContext, cpu, ram)));
+		CPU_TO_RAM.forEach((cpu, ramGbA) -> Arrays.stream(ramGbA).forEach(ram -> {
+			installInstanceType(localContext, cpu, ram, null);
+			installInstanceType(localContext, cpu, ram, "arm");
+		}));
 	}
 
 	private ProvContainerType installInstanceType(final LocalFargateContext context, final double cpu,
-			final double ramGb) {
+			final double ramGb, final String processor) {
 		final var fakeCsv = new AwsFargatePrice();
-		fakeCsv.setInstanceType(toCode(cpu, ramGb));
+		fakeCsv.setInstanceType(toTypeCode(cpu, ramGb, processor));
 		fakeCsv.setCpu(cpu);
 		fakeCsv.setRamGb(ramGb);
+		fakeCsv.setPhysicalProcessor(processor == null ? "Intel" : processor);
 		return installInstanceType(context, fakeCsv);
 	}
 
@@ -199,6 +249,7 @@ public class AwsPriceImportFargate extends
 		t.setDescription("Fargate");
 		t.setCpu(csv.getCpu());
 		t.setRam(csv.getRamGb() * 1024d);
+		t.setProcessor("arm".equals(csv.getPhysicalProcessor()) ? "Graviton2" : csv.getPhysicalProcessor());
 
 		// Rating
 		t.setCpuRate(Rate.MEDIUM);

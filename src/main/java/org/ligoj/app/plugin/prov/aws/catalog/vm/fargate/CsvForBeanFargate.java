@@ -23,6 +23,7 @@ public class CsvForBeanFargate extends AbstractCsvForBeanEc2<AwsFargatePrice> {
 	private static final Map<String, String> HEADERS_MAPPING = new HashMap<>();
 	static {
 		HEADERS_MAPPING.put("usageType", "usageType");
+		HEADERS_MAPPING.put("Operating System", "os");
 	}
 
 	/**
@@ -38,7 +39,7 @@ public class CsvForBeanFargate extends AbstractCsvForBeanEc2<AwsFargatePrice> {
 
 	@Override
 	public boolean isValidRaw(final List<String> rawValues) {
-		return rawValues.size() > 20 && "hours".equals(rawValues.get(8));
+		return rawValues.size() > 20;
 	}
 
 }

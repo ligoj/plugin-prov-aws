@@ -94,6 +94,10 @@ public class AwsPriceImportBase extends AbstractAwsImport implements ImportCatal
 								"%sWatt%d".formatted(StringUtils.lowerCase(t), p * 10))));
 		CO2_INSTANCE_HEADERS_MAPPING.put("Delta Full Machine", "extra");
 		CO2_INSTANCE_HEADERS_MAPPING.put("Instance Hourly Manufacturing Emissions (gCO_eq)", "scope3");
+		CO2_INSTANCE_HEADERS_MAPPING.put("Instance Hourly Manufacturing Emissions (gCO2eq)", "scope3");
+		CO2_INSTANCE_HEADERS_MAPPING.put("Instance Hourly Manufacturing Emissions (gCO2e)", "scope3");
+		CO2_INSTANCE_HEADERS_MAPPING.put("Instance Hourly Manufacturing Emissions (CO2e)", "scope3");
+		CO2_INSTANCE_HEADERS_MAPPING.put("CO2e", "scope3");
 	}
 
 	/**
@@ -104,6 +108,10 @@ public class AwsPriceImportBase extends AbstractAwsImport implements ImportCatal
 		CO2_REGION_HEADERS_MAPPING.put("Region", "region");
 		CO2_REGION_HEADERS_MAPPING.put("PUE", "pue");
 		CO2_REGION_HEADERS_MAPPING.put("CO2e (metric gram/kWh)", "gPerKWH");
+		CO2_REGION_HEADERS_MAPPING.put("CO2e", "gPerKWH");
+		CO2_REGION_HEADERS_MAPPING.put("CO2eq", "gPerKWH");
+		CO2_REGION_HEADERS_MAPPING.put("gCO2eq", "gPerKWH");
+		CO2_REGION_HEADERS_MAPPING.put("gCO2e", "gPerKWH");
 	}
 
 	@Override

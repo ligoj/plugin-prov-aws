@@ -119,7 +119,7 @@ public abstract class AbstractLocalContext<T extends AbstractInstanceType, P ext
 				.collect(Collectors.toMap(AbstractCodedEntity::getCode, Function.identity()));
 
 		final var term2B = term2 == null ? term1 : term2;
-		this.localPriceTerms = ptRepository.findByLocation(node.getId(), region.getName(), term1, term2B).stream()
+		this.localPriceTerms = ptRepository.findByName(node.getId(), term1, term2B).stream()
 				.collect(Collectors.toMap(ProvInstancePriceTerm::getCode, Function.identity()));
 		this.locals = pRepository.findByLocation(node.getId(), region.getName(), term1, term2B).stream()
 				.collect(Collectors.toMap(AbstractTermPrice::getCode, Function.identity()));

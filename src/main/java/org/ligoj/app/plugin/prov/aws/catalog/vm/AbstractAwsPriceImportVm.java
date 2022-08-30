@@ -349,7 +349,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * @return The updated {@link ProvInstancePriceTerm} corresponding to the CSV row.
 	 */
 	protected ProvInstancePriceTerm installInstancePriceTerm(final X context, final C csv) {
-		final var term = getLocalTerm(context, csv.getOfferTermCode());
+		final var term = newTermAsNedded(context, csv.getOfferTermCode());
 
 		// Update the properties only once
 		return copyAsNeeded(context, term, t -> {
@@ -382,7 +382,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		});
 	}
 
-	protected ProvInstancePriceTerm getLocalTerm(final X context, final String code) {
+	protected ProvInstancePriceTerm newTermAsNedded(final X context, final String code) {
 		return syncAdd(context.getPriceTerms(), code, k -> {
 			final var newTerm = new ProvInstancePriceTerm();
 			newTerm.setNode(context.getNode());
@@ -484,28 +484,28 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * Create or update the savings plan term and return it.
 	 */
 	private ProvInstancePriceTerm newSavingsPlanTerm(final X context, final SavingsPlanTerm sp) {
-		final var term = getLocalTerm(context, sp.getSku());
+		final var description = sp.getDescription();
+		final boolean computePlan;
+		final String name;
+		final String code;
+		if (sp.getDescription().contains(TERM_COMPUTE_SP)) {
+			// Sample: "3 year No Upfront Compute Savings Plan"
+			// Sample: "1 year All Upfront Compute Savings Plan"
+			name = RegExUtils.replaceAll(description, "(\\d+) year\\s+(.*)\\s+Compute Savings Plan",
+					TERM_COMPUTE_SP + ", $1yr, $2");
+			computePlan = true;
+			code = sp.getSku();
+		} else {
+			// Sample: "3 year Partial Upfront r5 EC2 Instance Savings Plan in eu-west-3"
+			name = RegExUtils.replaceAll(description, "(\\d+) year (.*)\\s+(.+)\\s+EC2 Instance Savings Plan (.*)",
+					TERM_EC2_SP + ", $1yr, $2");
+			computePlan = false;
+			code = name;
+		}
+		final var term = newTermAsNedded(context,code);
 
 		// Update the properties only once
 		return copyAsNeeded(context, term, t -> {
-			var name = sp.getDescription();
-			final boolean computePlan;
-			if (sp.getDescription().contains(TERM_COMPUTE_SP)) {
-				// Sample: "3 year No Upfront Compute Savings Plan"
-				// Sample: "1 year All Upfront Compute Savings Plan"
-				name = RegExUtils.replaceAll(name, "(\\d+) year\\s+(.*)\\s+Compute Savings Plan",
-						TERM_COMPUTE_SP + ", $1yr, $2");
-				computePlan = true;
-			} else {
-				// Sample: "3 year Partial Upfront r5 EC2 Instance Savings Plan in eu-west-3"
-				name = RegExUtils.replaceAll(name, "(\\d+) year (.*)\\s+(.+)\\s+EC2 Instance Savings Plan (.*)",
-						TERM_EC2_SP + ", $1yr, $2, $3 $4");
-				computePlan = false;
-
-				// This term is only available for a specific region
-				term.setLocation(context.getRegion());
-			}
-
 			term.setName(name);
 			term.setReservation(false);
 			term.setConvertibleLocation(computePlan);
@@ -513,7 +513,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			term.setConvertibleType(true);
 			term.setConvertibleOs(true);
 			term.setConvertibleEngine(false);
-			term.setDescription(sp.getDescription());
+			term.setDescription(description);
 			term.setPeriod(Math.round(sp.getLeaseContractLength().getDuration() * 12d));
 			term.setInitialCost(name.matches(".*(All|Partial) Upfront.*"));
 		});
@@ -640,7 +640,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * Create as needed a new {@link ProvInstancePriceTerm} for Spot.
 	 */
 	protected ProvInstancePriceTerm newSpotInstanceTerm(final X context) {
-		final var term = getLocalTerm(context, TERM_SPOT_CODE);
+		final var term = newTermAsNedded(context, TERM_SPOT_CODE);
 
 		// Update the properties only once
 		return copyAsNeeded(context, term, t -> {

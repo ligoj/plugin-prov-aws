@@ -409,7 +409,6 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("EC2 Savings Plan, 1yr, No Upfront, c1 in eu-west-1",
 				ec2SsavingsPlanPrice.getPrice().getTerm().getName());
 		Assertions.assertFalse(ec2SsavingsPlanPrice.getPrice().getTerm().getInitialCost().booleanValue());
-		Assertions.assertEquals("eu-west-1", ec2SsavingsPlanPrice.getPrice().getTerm().getLocation().getName());
 		Assertions.assertEquals("c1.medium", ec2SsavingsPlanPrice.getPrice().getType().getName());
 
 		// Check Compute savings plan for EC2
@@ -422,7 +421,6 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(71.54d, cSavingsPlanPrice.getPrice().getCost(), DELTA);
 		Assertions.assertEquals(858.48d, cSavingsPlanPrice.getPrice().getCostPeriod(), DELTA);
 		Assertions.assertTrue(cSavingsPlanPrice.getPrice().getTerm().getInitialCost().booleanValue());
-		Assertions.assertNull(cSavingsPlanPrice.getPrice().getTerm().getLocation());
 		Assertions.assertEquals("c1.medium", cSavingsPlanPrice.getPrice().getType().getName());
 
 		// Check EC2 RI
@@ -432,7 +430,6 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(1680.0d, cRIPrice.getPrice().getCostPeriod(), DELTA);
 		Assertions.assertEquals("Reserved, 3yr, All Upfront", cRIPrice.getPrice().getTerm().getName());
 		Assertions.assertTrue(cRIPrice.getPrice().getTerm().getInitialCost().booleanValue());
-		Assertions.assertNull(cRIPrice.getPrice().getTerm().getLocation());
 		Assertions.assertEquals("c1.medium", cRIPrice.getPrice().getType().getName());
 
 		// Check Fargate OnDemand
@@ -478,7 +475,6 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("ZGC49G7XS8QA54BQ.K4EXFQ5YFQCP98EN|2.0|4.0", cSPPrice.getPrice().getCode());
 		Assertions.assertEquals("Compute Savings Plan, 3yr, No Upfront", cSPPrice.getPrice().getTerm().getName());
 		Assertions.assertFalse(cSPPrice.getPrice().getTerm().getInitialCost().booleanValue());
-		Assertions.assertNull(cSPPrice.getPrice().getTerm().getLocation());
 		Assertions.assertEquals("fargate-2.0-4.0", cSPPrice.getPrice().getType().getName());
 
 		// Check Fargate Spot
@@ -489,7 +485,6 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(24.566d, cSPrice.getPrice().getCostPeriod(), DELTA);
 		Assertions.assertEquals("Spot", cSPrice.getPrice().getTerm().getName());
 		Assertions.assertFalse(cSPrice.getPrice().getTerm().getInitialCost().booleanValue());
-		Assertions.assertNull(cSPrice.getPrice().getTerm().getLocation());
 		Assertions.assertEquals("fargate-2.0-4.0", cSPrice.getPrice().getType().getName());
 
 		final var cVo = new QuoteContainerEditionVo();

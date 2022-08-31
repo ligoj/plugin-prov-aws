@@ -387,7 +387,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(83, ipRepository.findAllBy("term.code", "JRTCKXETXF").size()); // EC2 OD
 		Assertions.assertEquals(3, ipRepository.findAllBy("term.code", "NQ3QZPMQV9").size()); // EC2 Reserved 3y
 		Assertions.assertEquals(6, ipRepository.findAllBy("term.code", "spot").size()); // EC2 Spot
-		Assertions.assertEquals(1, ipRepository.findAllBy("term.code", "7DVU5XBSTGHBTJUV").size()); // EC2 SP
+		Assertions.assertEquals(1, ipRepository.findAllBy("term.code", "EC2 Savings Plan, 1yr, No Upfront").size()); // EC2 SP
 		Assertions.assertEquals(1, ipRepository.findAllBy("term.code", "8GU23DFTKP2N43SD").size()); // Compute SP
 		Assertions.assertEquals(150, cpRepository.findAllBy("term.code", "JRTCKXETXF").size()); // Fargate OD
 		Assertions.assertEquals(50, cpRepository.findAllBy("term.code", "ZGC49G7XS8QA54BQ").size()); // Fargate Compute
@@ -406,7 +406,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(63.51d, ec2SsavingsPlanPrice.getCost(), DELTA);
 		Assertions.assertEquals(63.51d, ec2SsavingsPlanPrice.getPrice().getCost(), DELTA);
 		Assertions.assertEquals(762.12d, ec2SsavingsPlanPrice.getPrice().getCostPeriod(), DELTA);
-		Assertions.assertEquals("EC2 Savings Plan, 1yr, No Upfront, c1 in eu-west-1",
+		Assertions.assertEquals("EC2 Savings Plan, 1yr, No Upfront",
 				ec2SsavingsPlanPrice.getPrice().getTerm().getName());
 		Assertions.assertFalse(ec2SsavingsPlanPrice.getPrice().getTerm().getInitialCost().booleanValue());
 		Assertions.assertEquals("c1.medium", ec2SsavingsPlanPrice.getPrice().getType().getName());

@@ -178,7 +178,7 @@ public class ProvAwsTerraformService {
 				.forEach(instances::add);
 		final var modes = new EnumMap<InstanceMode, List<ProvQuoteInstance>>(InstanceMode.class);
 		Arrays.stream(InstanceMode.values()).forEach(m -> modes.put(m, new ArrayList<>()));
-		instances.stream().forEach(i -> modes.get(toMode(i)).add(i));
+		instances.forEach(i -> modes.get(toMode(i)).add(i));
 		context.setModes(modes);
 
 		writeRegionStatics(context);
@@ -330,7 +330,7 @@ public class ProvAwsTerraformService {
 	 * Write instances configuration.
 	 */
 	private void writeRegionInstances(final TerraformContext context) throws IOException {
-		// Write the the region bootstrap module : will be persistent to handle emptied
+		// Write the region bootstrap module : will be persistent to handle emptied
 		// region
 		templateFromTo(context, "my-region.tf", context.getLocation() + ".keep.tf");
 
@@ -405,7 +405,7 @@ public class ProvAwsTerraformService {
 		}
 		final var format = mappingOsEbsDevice.getOrDefault(os, DEFAULT_EBS_DEVICE);
 		return format.substring(0, format.length() - 1)
-				+ String.valueOf((char) (format.charAt(format.length() - 1) + index - 1));
+				+ (char) (format.charAt(format.length() - 1) + index - 1);
 	}
 
 	/**

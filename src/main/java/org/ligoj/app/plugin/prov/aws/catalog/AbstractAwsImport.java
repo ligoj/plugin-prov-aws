@@ -117,7 +117,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 			eRegions.forEach(r -> installRegion(context, r.getRegion()));
 
 			// Install the prices for each region
-			newStream(eRegions).forEach(mapper::accept);
+			newStream(eRegions).forEach(mapper);
 		} finally {
 			// Report
 			log.info("AWS {} import finished", api);
@@ -129,7 +129,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 	 * 
 	 * @param context     The update context.
 	 * @param api         The API name, only for logging.
-	 * @param serviceCode The AWS service code ie. <code>AmazonEC2</code>.
+	 * @param serviceCode The AWS service code, like <code>AmazonEC2</code>.
 	 * @return The regions with the corresponding prices file. The key corresponds to the API region code.
 	 * @throws IOException When the index cannot be retrieved.
 	 */
@@ -144,7 +144,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 	 * 
 	 * @param context     The update context.
 	 * @param api         The API name, only for logging.
-	 * @param serviceCode The AWS service code ie. <code>AmazonEC2</code>.
+	 * @param serviceCode The AWS service code, like <code>AmazonEC2</code>.
 	 * @return The regions with the corresponding savings plan prices file. The key corresponds to the API region code.
 	 * @throws IOException When the index cannot be retrieved.
 	 */
@@ -159,7 +159,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 	 * 
 	 * @param context     The update context.
 	 * @param api         The API name, only for logging.
-	 * @param serviceCode The AWS service code ie. <code>AmazonEC2</code>.
+	 * @param serviceCode The AWS service code, like <code>AmazonEC2</code>.
 	 * @param toUrl       The URL extractor from the offer configuration.
 	 * @param classifier  The kind of prices to retrieve. Only for logging.
 	 * @return The regions with the corresponding savings plan prices file. The key corresponds to the API region code.

@@ -53,7 +53,7 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * The compute part of AWS catalog import.
+ * The computing part of AWS catalog import.
  *
  * @param <T> The instance type's type.
  * @param <P> The price's type.
@@ -137,9 +137,8 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * Handle partial up-front prices split into multiple price entries.
 	 *
 	 * @param context    The regional update context.
-	 * @param csv        The current CSV price entry.
-	 * @param other      The previous CSV price entry.
-	 * @param repository The repository managing the price entity.
+	 * @param one        The current CSV price entry.
+	 * @param two      The previous CSV price entry.
 	 */
 	private void handlePartialCost(final X context, final C one, final C two) {
 		// Up-front part
@@ -270,7 +269,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	}
 
 	/**
-	 * Install a new EC2/RDS instance type. The previous entries will contains this type at the end of this operation.
+	 * Install a new EC2/RDS instance type. The previous entries will contain this type at the end of this operation.
 	 *
 	 * @param context The regional update context.
 	 * @param csv     The current CSV entry.
@@ -306,7 +305,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * @param type The rating mapping name.
 	 * @param csv  The CSV price row.
 	 * @return The direct [class, generation, size] rate association, or the [class, generation] rate association, or
-	 *         the [class] association, of the explicit "default association or {@link Rate#MEDIUM} value.
+	 *         the [class] association, of the explicit default association or {@link Rate#MEDIUM} value.
 	 */
 	private Rate getRate(final String type, final C csv) {
 		return getRate(type, csv, csv.getInstanceType());
@@ -319,7 +318,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * @param name The name to map.
 	 * @param csv  The CSV price row.
 	 * @return The direct [class, generation, size] rate association, or the [class, generation] rate association, or
-	 *         the [class] association, of the explicit "default association or {@link Rate#MEDIUM} value. Previous
+	 *         the [class] association, of the explicit default association or {@link Rate#MEDIUM} value. Previous
 	 *         generations types are downgraded.
 	 */
 	protected Rate getRate(final String type, final C csv, final String name) {
@@ -521,7 +520,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 
 	/**
 	 * Install the SP prices related to a term. The instance price type is reused from the discounted OnDemand price,
-	 * and must exists.
+	 * and must exist.
 	 * 
 	 * @param context    The regional update context.
 	 * @param term       The current term.
@@ -568,7 +567,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		final var costPeriod = cost * Math.max(1, price.getTerm().getPeriod());
 		price.setCostPeriod(round3Decimals(costPeriod));
 
-		if (!price.getTerm().getInitialCost().booleanValue()) {
+		if (!price.getTerm().getInitialCost()) {
 			// No up-front
 			price.setInitialCost(0d);
 		} else if (price.getTerm().getName().contains("Partial")) {

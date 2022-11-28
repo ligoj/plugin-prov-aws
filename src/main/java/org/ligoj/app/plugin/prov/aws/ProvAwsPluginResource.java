@@ -73,7 +73,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	public static final String PARAMETER_SECRET_ACCESS_KEY = KEY + ":secret-access-key";
 
 	/**
-	 * AWS Account Id.
+	 * AWS Account identifier.
 	 */
 	public static final String PARAMETER_ACCOUNT = KEY + ":account";
 
@@ -133,7 +133,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	}
 
 	@Override
-	public void updateCatalog(final String node, final boolean force) throws IOException, URISyntaxException {
+	public void updateCatalog(final String node, final boolean force) throws IOException {
 		// AWS catalog is shared with all instances, require tool level access
 		nodeResource.checkWritableNode(KEY);
 		priceImport.install(force);

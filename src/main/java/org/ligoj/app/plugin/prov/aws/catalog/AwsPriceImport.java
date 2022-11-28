@@ -4,7 +4,6 @@
 package org.ligoj.app.plugin.prov.aws.catalog;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
 import org.ligoj.app.plugin.prov.aws.catalog.efs.AwsPriceImportEfs;
@@ -56,9 +55,8 @@ public class AwsPriceImport extends AbstractImportCatalogResource {
 	 *
 	 * @param force When <code>true</code>, all cost attributes are update.
 	 * @throws IOException        When CSV or XML files cannot be read.
-	 * @throws URISyntaxException When CSV or XML files cannot be read.
 	 */
-	public void install(final boolean force) throws IOException, URISyntaxException {
+	public void install(final boolean force) throws IOException {
 		final var context = initContext(new UpdateContext(), ProvAwsPluginResource.KEY, force);
 
 		base.install(context);

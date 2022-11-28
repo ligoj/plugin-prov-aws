@@ -29,7 +29,7 @@ public class CsvForBeanEc2 extends AbstractCsvForBeanEc2<AwsEc2Price> {
 		HEADERS_MAPPING.put("Capacity Status", "capacityStatus");
 	}
 
-	private Set<String> ACCEPTED_FAMILY = Set.of("Provisioned Throughput", "Storage", "System Operation",
+	private static final Set<String> ACCEPTED_FAMILY = Set.of("Provisioned Throughput", "Storage", "System Operation",
 			"Storage Snapshot", "Compute Instance", "Compute Instance (bare metal)");
 
 	/**

@@ -42,6 +42,6 @@ public class UpdateContext extends AbstractUpdateContext {
 	 * Efficient baseline per instance type.
 	 */
 	@Getter
-	private Map<String, Double> baselines = new ConcurrentHashMap<>();
+	private final Map<String, Double> baselines = new ConcurrentHashMap<>();
 
 }

@@ -22,7 +22,7 @@ public class SpotRegion extends AwsRegionPrices {
 	private Collection<SpotInstanceType> instanceTypes;
 
 	/**
-	 * The Spot prices container.
+	 * The Spot prices' container.
 	 */
 	@Getter
 	@Setter

@@ -38,7 +38,7 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * The provisioning price service for AWS. Manage install or update of prices.
  *
- * @see https://aws.amazon.com/fargate/pricing/
+ * @see <a href="https://aws.amazon.com/fargate/pricing/">Farget prices</a>
  */
 @Slf4j
 @Component
@@ -55,7 +55,7 @@ public class AwsPriceImportFargate extends
 	private static final String VCPU_HOURS_PER = VCPU_HOURS + ":perCPU";
 
 	private static final String GB_HOURS = "GB-Hours";
-	
+
 	private static final double FREE_EPHEMERAL_STORAGE = 20d; // GiB
 
 	/**
@@ -79,9 +79,9 @@ public class AwsPriceImportFargate extends
 			// | .CPU | Memory Values |
 			// |----- | --------------|
 			// | 0.25 | {0.5,1,2}
-			0.25d, new double[] { 0.5d, 1d, 2d },
+			0.25d, new double[]{0.5d, 1d, 2d},
 			// | 0.50 | [1-4]
-			0.5d, new double[] { 1d, 2d, 3d, 4d },
+			0.5d, new double[]{1d, 2d, 3d, 4d},
 			// | 1.00 | [2-8]
 			1d, DoubleStream.iterate(2, n -> n <= 8, n -> n + 1).toArray(),
 			// | 2.00 | [4-16]
@@ -163,8 +163,8 @@ public class AwsPriceImportFargate extends
 
 	@Override
 	protected Stream<String> installSavingsPlanRates(final LocalFargateContext context, final String serviceCode,
-			final ProvInstancePriceTerm term, final Map<String, ProvContainerPrice> previousOd, final String odCode,
-			final Collection<SavingsPlanRate> rates) {
+	                                                 final ProvInstancePriceTerm term, final Map<String, ProvContainerPrice> previousOd, final String odCode,
+	                                                 final Collection<SavingsPlanRate> rates) {
 		final var rateCpu = findSavingsPlanCost(rates, VCPU_HOURS_PER);
 		final var rateRam = findSavingsPlanCost(rates, GB_HOURS);
 		if (ObjectUtils.allNotNull(rateCpu, rateRam)) {
@@ -178,8 +178,8 @@ public class AwsPriceImportFargate extends
 	}
 
 	private void installSavingsPlanPrices(final LocalFargateContext context, final ProvInstancePriceTerm term,
-			final SavingsPlanRate rateCpu, final SavingsPlanRate rateRam,
-			final Map<String, ProvContainerPrice> previousOd, final String odCode) {
+	                                      final SavingsPlanRate rateCpu, final SavingsPlanRate rateRam,
+	                                      final Map<String, ProvContainerPrice> previousOd, final String odCode) {
 		final var costCpu = rateCpu.getDiscountedRate().getPrice();
 		final var costRam = rateRam.getDiscountedRate().getPrice();
 		final var cpuRateCode = rateCpu.getRateCode();
@@ -205,7 +205,7 @@ public class AwsPriceImportFargate extends
 	}
 
 	private ProvContainerPrice newPrice(final LocalFargateContext context, final AwsFargatePrice csv, final double cpu,
-			final double ram) {
+	                                    final double ram) {
 		final var code = toPriceCode(csv.getRateCode(), cpu, ram);
 		final var price = context.getLocals().computeIfAbsent(code, context::newPrice);
 		return copyAsNeeded(context, price,
@@ -232,7 +232,7 @@ public class AwsPriceImportFargate extends
 	}
 
 	private ProvContainerType installInstanceType(final LocalFargateContext context, final double cpu,
-			final double ramGb, final String processor) {
+	                                              final double ramGb, final String processor) {
 		final var fakeCsv = new AwsFargatePrice();
 		fakeCsv.setInstanceType(toTypeCode(cpu, ramGb, processor));
 		fakeCsv.setCpu(cpu);
@@ -270,7 +270,7 @@ public class AwsPriceImportFargate extends
 
 	@Override
 	protected LocalFargateContext newContext(final UpdateContext gContext, final ProvLocation region,
-			final String term1, final String term2) {
+	                                         final String term1, final String term2) {
 		return new LocalFargateContext(gContext, iptRepository, ctRepository, cpRepository, qcRepository, region, term1,
 				term2);
 	}
@@ -278,7 +278,7 @@ public class AwsPriceImportFargate extends
 	/**
 	 * Install AWS Spot prices from a JSON file.
 	 *
-	 * @param context  The update context.
+	 * @param gContext The global context.
 	 * @param endpoint The prices end-point JSON URL.
 	 * @throws IOException When JSON content cannot be parsed.
 	 */
@@ -320,7 +320,7 @@ public class AwsPriceImportFargate extends
 	 * Find the first cost corresponding to the required unit.
 	 */
 	private double findSpotCost(final ProvLocation region, final Set<SpotPrice> prices, final String unit) {
-		var cost = prices.stream().filter(p -> unit.equals(p.getUnit())).findFirst()
+		var cost = (double) prices.stream().filter(p -> unit.equals(p.getUnit())).findFirst()
 				.map(p -> Double.parseDouble(p.getPrice().get("USD"))).orElse(0d);
 		if (cost == 0d) {
 			log.warn("Missing {} cost for AWS Fargate@{}", unit, region.getName());
@@ -329,7 +329,7 @@ public class AwsPriceImportFargate extends
 	}
 
 	private void installSpotPrices(final UpdateContext gContext, final ProvLocation region,
-			final Set<SpotPrice> prices) {
+	                               final Set<SpotPrice> prices) {
 		log.info("AWS Fargate Spot prices@{}...", region.getName());
 		final var costRam = findSpotCost(region, prices, GB_HOURS);
 		final var costCpu = findSpotCost(region, prices, VCPU_HOURS);
@@ -351,7 +351,7 @@ public class AwsPriceImportFargate extends
 	}
 
 	private void installFargatePrice(final LocalFargateContext context, final AwsFargatePrice csvCpu,
-			final double costRam, final double costCpu) {
+	                                 final double costRam, final double costCpu) {
 		CPU_TO_RAM.forEach((cpu, ramGbA) -> Arrays.stream(ramGbA).forEach(ram -> {
 			final var price = newPrice(context, csvCpu, cpu, ram);
 			final var cost = (costCpu * cpu + ram * costRam) * context.getHoursMonth();

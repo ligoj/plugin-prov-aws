@@ -16,7 +16,6 @@ import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVm;
 import org.ligoj.app.plugin.prov.catalog.AbstractUpdateContext;
 import org.ligoj.app.plugin.prov.catalog.Co2Data;
-import org.ligoj.app.plugin.prov.dao.ProvQuoteDatabaseRepository;
 import org.ligoj.app.plugin.prov.model.AbstractCodedEntity;
 import org.ligoj.app.plugin.prov.model.ProvDatabasePrice;
 import org.ligoj.app.plugin.prov.model.ProvDatabaseType;
@@ -27,7 +26,6 @@ import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.model.Rate;
 import org.ligoj.bootstrap.core.SpringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import lombok.extern.slf4j.Slf4j;
@@ -63,12 +61,9 @@ public class AwsPriceImportRds extends
 
 	/**
 	 * <code>db.r5b.2xlarge</code> instance type like. See
-	 * https://aws.amazon.com/about-aws/whats-new/2021/09/amazon-rds-r5b-mysql-postgresql-databases/
+	 * <a href="https://aws.amazon.com/about-aws/whats-new/2021/09/amazon-rds-r5b-mysql-postgresql-databases/">RDS</a>
 	 */
 	private static final Pattern RDS_B_INSTANCE_TYPE = Pattern.compile("db\\.[^.]+b\\..*$");
-
-	@Autowired
-	protected ProvQuoteDatabaseRepository qbRepository;
 
 	@Override
 	public void install(final UpdateContext context) throws IOException {

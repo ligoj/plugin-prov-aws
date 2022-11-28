@@ -27,8 +27,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * The provisioning Lambda price service for AWS. Manage install and update of prices.
- * 
- * @see {@link https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSLambda/20210304163809/af-south-1/index.csv}
+ *
+ * @see <a href="https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSLambda/20210304163809/af-south-1/index.csv">price sample</a>
  */
 @Component
 public class AwsPriceImportLambda extends
@@ -59,8 +59,8 @@ public class AwsPriceImportLambda extends
 	}
 
 	private void completePrices(final LocalLambdaContext context, final String rateType, final String code,
-			final double price) {
-		context.getMapper().entrySet().stream().filter(e -> e.getKey().stream().anyMatch(f -> rateType.endsWith(f)))
+	                            final double price) {
+		context.getMapper().entrySet().stream().filter(e -> e.getKey().stream().anyMatch(rateType::endsWith))
 				.findFirst().ifPresent(e -> e.getValue().accept(code, price));
 	}
 
@@ -128,14 +128,14 @@ public class AwsPriceImportLambda extends
 
 	@Override
 	protected LocalLambdaContext newContext(final UpdateContext gContext, final ProvLocation region, final String term1,
-			String term2) {
+	                                        String term2) {
 		final var context = new LocalLambdaContext(gContext, iptRepository, ftRepository, fpRepository, qfRepository,
 				region, term1, term2);
-		setupMaper(context);
+		setupMapper(context);
 		return context;
 	}
 
-	private void setupMaper(final LocalLambdaContext context) {
+	private void setupMapper(final LocalLambdaContext context) {
 		final var stdPrice = new ProvFunctionPrice();
 		final var edgePrice = new ProvFunctionPrice();
 		final var stdPriceArm = new ProvFunctionPrice();
@@ -149,41 +149,40 @@ public class AwsPriceImportLambda extends
 
 		// Prepare the mapping to aggregate CSV and JSON entries related to specific term and region
 		context.setMapper(Map.of(Set.of("AWS-Lambda-Duration-Provisioned", "Lambda-Provisioned-GB-Second"), (c, p) -> {
-			provPrice.setCostRamRequestConcurrency(p);
-			provPrice.setCode(c);
-		}, Set.of("AWS-Lambda-Duration-Provisioned-ARM", "Lambda-Provisioned-GB-Second-ARM"), (c, p) -> {
-			provPriceArm.setCostRamRequestConcurrency(p);
-			provPriceArm.setCode(c);
-		}, Set.of("AWS-Lambda-Duration", "Lambda-GB-Second"), (c, p) -> {
-			provPrice.setCostRamRequest(p);
-			stdPrice.setCostRamRequest(p);
-			stdPrice.setCode(c);
-		}, Set.of("AWS-Lambda-Edge-Duration"), (c, p) -> {
-			edgePrice.setCostRamRequest(p);
-			edgePrice.setCode(c);
-		}, Set.of("AWS-Lambda-Duration-ARM", "Lambda-GB-Second-ARM"), (c, p) -> {
-			provPriceArm.setCostRamRequest(p);
-			stdPriceArm.setCostRamRequest(p);
-			stdPriceArm.setCode(c);
-		}, Set.of("AWS-Lambda-Edge-Requests"), (c, p) -> {
-			edgePrice.setCostRequests(p);
-		}, Set.of("AWS-Lambda-Requests", "Request"), (c, p) -> {
-			provPrice.setCostRequests(p);
-			stdPrice.setCostRequests(p);
-		}, Set.of("AWS-Lambda-Requests-ARM", "Request-ARM"), (c, p) -> {
-			provPriceArm.setCostRequests(p);
-			stdPriceArm.setCostRequests(p);
-		}, Set.of("Lambda-Provisioned-Concurrency"), (c, p) -> provPrice.setCostRam(p),
+					provPrice.setCostRamRequestConcurrency(p);
+					provPrice.setCode(c);
+				}, Set.of("AWS-Lambda-Duration-Provisioned-ARM", "Lambda-Provisioned-GB-Second-ARM"), (c, p) -> {
+					provPriceArm.setCostRamRequestConcurrency(p);
+					provPriceArm.setCode(c);
+				}, Set.of("AWS-Lambda-Duration", "Lambda-GB-Second"), (c, p) -> {
+					provPrice.setCostRamRequest(p);
+					stdPrice.setCostRamRequest(p);
+					stdPrice.setCode(c);
+				}, Set.of("AWS-Lambda-Edge-Duration"), (c, p) -> {
+					edgePrice.setCostRamRequest(p);
+					edgePrice.setCode(c);
+				}, Set.of("AWS-Lambda-Duration-ARM", "Lambda-GB-Second-ARM"), (c, p) -> {
+					provPriceArm.setCostRamRequest(p);
+					stdPriceArm.setCostRamRequest(p);
+					stdPriceArm.setCode(c);
+				}, Set.of("AWS-Lambda-Edge-Requests"), (c, p) -> edgePrice.setCostRequests(p),
+				Set.of("AWS-Lambda-Requests", "Request"), (c, p) -> {
+					provPrice.setCostRequests(p);
+					stdPrice.setCostRequests(p);
+				}, Set.of("AWS-Lambda-Requests-ARM", "Request-ARM"), (c, p) -> {
+					provPriceArm.setCostRequests(p);
+					stdPriceArm.setCostRequests(p);
+				}, Set.of("Lambda-Provisioned-Concurrency"), (c, p) -> provPrice.setCostRam(p),
 				Set.of("Lambda-Provisioned-Concurrency-ARM"), (c, p) -> provPriceArm.setCostRam(p)));
 	}
 
 	@Override
 	protected Stream<String> installSavingsPlanRates(final LocalLambdaContext context, final String serviceCode,
-			final ProvInstancePriceTerm term, final Map<String, ProvFunctionPrice> previousOd, final String odTermCode,
-			final Collection<SavingsPlanRate> rates) {
+	                                                 final ProvInstancePriceTerm term, final Map<String, ProvFunctionPrice> previousOd, final String odTermCode,
+	                                                 final Collection<SavingsPlanRate> rates) {
 
 		// First pass, collect and aggregate prices
-		setupMaper(context);
+		setupMapper(context);
 		final var result = super.installSavingsPlanRates(context, serviceCode, term, previousOd, odTermCode, rates)
 				.filter(Objects::nonNull).toList();
 
@@ -197,7 +196,7 @@ public class AwsPriceImportLambda extends
 	}
 
 	private void saveAsNeededLambda(final LocalLambdaContext context,
-			final Function<ProvFunctionPrice, AwsLambdaPrice> csvProvider) {
+	                                final Function<ProvFunctionPrice, AwsLambdaPrice> csvProvider) {
 		TYPE_TO_OD_PRICE.forEach((typeName, p) -> {
 			final var aggPrice = p.apply(context);
 			if (aggPrice.getCode() != null) {
@@ -213,7 +212,7 @@ public class AwsPriceImportLambda extends
 
 	/**
 	 * Save the price from the aggregated price.
-	 * 
+	 *
 	 * @param context  The regional update context.
 	 * @param price    The target price entity to save.
 	 * @param aggPrice The aggregated price from request, GB.s and provisioning costs. This not the actual price to be
@@ -221,7 +220,7 @@ public class AwsPriceImportLambda extends
 	 * @return The persisted entity.
 	 */
 	private ProvFunctionPrice saveAsNeeded(final LocalLambdaContext context, final ProvFunctionPrice price,
-			final ProvFunctionPrice aggPrice) {
+	                                       final ProvFunctionPrice aggPrice) {
 		return saveAsNeeded(context, price, price.getCostRamRequest(),
 				aggPrice.getCostRamRequest() * context.getSecondsMonth(), (cR, c) -> {
 					price.setCostRamRequest(cR);
@@ -234,7 +233,7 @@ public class AwsPriceImportLambda extends
 
 	@Override
 	protected String installSavingsPlanPrice(final LocalLambdaContext context, final ProvInstancePriceTerm term,
-			final SavingsPlanRate jsonPrice, final Map<String, ProvFunctionPrice> previousOd, final String odTermCode) {
+	                                         final SavingsPlanRate jsonPrice, final Map<String, ProvFunctionPrice> previousOd, final String odTermCode) {
 		completePrices(context, jsonPrice.getDiscountedUsageType(), jsonPrice.getRateCode(),
 				jsonPrice.getDiscountedRate().getPrice());
 		return null;

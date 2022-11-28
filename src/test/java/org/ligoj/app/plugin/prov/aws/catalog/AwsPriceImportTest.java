@@ -156,15 +156,15 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 	protected int subscription;
 
-	private static Properties initialProperties = (Properties) System.getProperties().clone();
+	private static final Properties initialProperties = (Properties) System.getProperties().clone();
 
 	@BeforeEach
 	void prepareData() throws IOException {
 		persistSystemEntities();
 		persistEntities("csv",
-				new Class[] { Node.class, Project.class, CacheCompany.class, CacheUser.class, DelegateNode.class,
+				new Class[]{Node.class, Project.class, CacheCompany.class, CacheUser.class, DelegateNode.class,
 						Parameter.class, ProvLocation.class, Subscription.class, ParameterValue.class,
-						ProvQuote.class },
+						ProvQuote.class},
 				StandardCharsets.UTF_8.name());
 		this.subscription = getSubscription("gStack");
 
@@ -303,10 +303,10 @@ class AwsPriceImportTest extends AbstractServerTest {
 		}
 	}
 
-	private Set<String> SERVICES_MULTI_REGION = Set.of("AmazonS3", "AmazonEFS");
-	private Set<String> SERVICES_REGION = Set.of("AWSLambda", "AmazonEC2", "AmazonECS", "AmazonRDS", "AmazonS3",
+	private static final Set<String> SERVICES_MULTI_REGION = Set.of("AmazonS3", "AmazonEFS");
+	private static final Set<String> SERVICES_REGION = Set.of("AWSLambda", "AmazonEC2", "AmazonECS", "AmazonRDS", "AmazonS3",
 			"AmazonEFS");
-	private Set<String> SERVICES = Stream.concat(SERVICES_MULTI_REGION.stream(), SERVICES_REGION.stream())
+	private static final Set<String> SERVICES = Stream.concat(SERVICES_MULTI_REGION.stream(), SERVICES_REGION.stream())
 			.collect(Collectors.toSet());
 
 	private void mockServices(final String version) throws IOException {
@@ -391,7 +391,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(1, ipRepository.findAllBy("term.code", "8GU23DFTKP2N43SD").size()); // Compute SP
 		Assertions.assertEquals(150, cpRepository.findAllBy("term.code", "JRTCKXETXF").size()); // Fargate OD
 		Assertions.assertEquals(50, cpRepository.findAllBy("term.code", "ZGC49G7XS8QA54BQ").size()); // Fargate Compute
-																										// SP
+		// SP
 		Assertions.assertEquals(100, cpRepository.findAllBy("term.code", "spot").size()); // Fargate Spot x 2 regions
 		Assertions.assertEquals(20, bpRepository.findAll().size()); // RDS
 
@@ -408,7 +408,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(762.12d, ec2SsavingsPlanPrice.getPrice().getCostPeriod(), DELTA);
 		Assertions.assertEquals("EC2 Savings Plan, 1yr, No Upfront",
 				ec2SsavingsPlanPrice.getPrice().getTerm().getName());
-		Assertions.assertFalse(ec2SsavingsPlanPrice.getPrice().getTerm().getInitialCost().booleanValue());
+		Assertions.assertFalse(ec2SsavingsPlanPrice.getPrice().getTerm().getInitialCost());
 		Assertions.assertEquals("c1.medium", ec2SsavingsPlanPrice.getPrice().getType().getName());
 
 		// Check Compute savings plan for EC2
@@ -420,7 +420,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(71.54d, cSavingsPlanPrice.getCost(), DELTA);
 		Assertions.assertEquals(71.54d, cSavingsPlanPrice.getPrice().getCost(), DELTA);
 		Assertions.assertEquals(858.48d, cSavingsPlanPrice.getPrice().getCostPeriod(), DELTA);
-		Assertions.assertTrue(cSavingsPlanPrice.getPrice().getTerm().getInitialCost().booleanValue());
+		Assertions.assertTrue(cSavingsPlanPrice.getPrice().getTerm().getInitialCost());
 		Assertions.assertEquals("c1.medium", cSavingsPlanPrice.getPrice().getType().getName());
 
 		// Check EC2 RI
@@ -474,7 +474,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(1556.932d, cSPPrice.getPrice().getCostPeriod(), DELTA);
 		Assertions.assertEquals("ZGC49G7XS8QA54BQ.K4EXFQ5YFQCP98EN|2.0|4.0", cSPPrice.getPrice().getCode());
 		Assertions.assertEquals("Compute Savings Plan, 3yr, No Upfront", cSPPrice.getPrice().getTerm().getName());
-		Assertions.assertFalse(cSPPrice.getPrice().getTerm().getInitialCost().booleanValue());
+		Assertions.assertFalse(cSPPrice.getPrice().getTerm().getInitialCost());
 		Assertions.assertEquals("fargate-2.0-4.0", cSPPrice.getPrice().getType().getName());
 
 		// Check Fargate Spot
@@ -497,7 +497,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Check Fargate ephemeral
 		final var ceSPrice = qsResource.lookup(subscription,
-				QuoteStorageQuery.builder().size(100).container(cId).optimized(ProvStorageOptimized.IOPS).build())
+						QuoteStorageQuery.builder().size(100).container(cId).optimized(ProvStorageOptimized.IOPS).build())
 				.get(0);
 		Assertions.assertEquals(7.12d, ceSPrice.getCost(), DELTA);
 		Assertions.assertEquals("fargate-ephemeral", ceSPrice.getPrice().getType().getName());
@@ -717,7 +717,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 	 * No prices found
 	 */
 	@Test
-	void installIndexNotFound() throws Exception {
+	void installIndexNotFound() {
 		// Install a new configuration
 		applicationContext.getBean(SystemConfigurationRepository.class).findAll();
 		initSpringSecurityContext(DEFAULT_USER);
@@ -825,9 +825,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		startMockServer();
 
 		Assertions.assertEquals("Premature end of CSV file, headers were not found",
-				Assertions.assertThrows(TechnicalException.class, () -> {
-					resource.install(false);
-				}).getMessage());
+				Assertions.assertThrows(TechnicalException.class, () -> resource.install(false)).getMessage());
 	}
 
 	/**
@@ -840,9 +838,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		startMockServer();
 
 		Assertions.assertEquals("Premature end of CSV file, headers were not found",
-				Assertions.assertThrows(TechnicalException.class, () -> {
-					resource.install(false);
-				}).getMessage());
+				Assertions.assertThrows(TechnicalException.class, () -> resource.install(false)).getMessage());
 	}
 
 	/**
@@ -915,7 +911,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 	}
 
 	/**
-	 * Spot refers to a non existing/not available instance
+	 * Spot refers to a non-existing/unavailable instance
 	 */
 	@Test
 	void installSpotInstanceBrokenReference() throws Exception {
@@ -953,7 +949,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 	/**
 	 * Install and check
 	 */
-	private QuoteVo installAndConfigure() throws IOException, URISyntaxException, Exception {
+	private QuoteVo installAndConfigure() throws Exception {
 		resource.install(false);
 		em.flush();
 		em.clear();
@@ -1041,7 +1037,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Add storage (EFS) to this quote
 		sLookup = qsResource.lookup(subscription,
-				QuoteStorageQuery.builder().latency(Rate.GOOD).optimized(ProvStorageOptimized.THROUGHPUT).build())
+						QuoteStorageQuery.builder().latency(Rate.GOOD).optimized(ProvStorageOptimized.THROUGHPUT).build())
 				.get(0);
 		Assertions.assertEquals("eu-west-1-efs-z", sLookup.getPrice().getCode());
 		final var svo2 = new QuoteStorageEditionVo();
@@ -1056,7 +1052,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Add storage (S3) to this quote
 		sLookup = qsResource.lookup(subscription,
-				QuoteStorageQuery.builder().latency(Rate.MEDIUM).optimized(ProvStorageOptimized.DURABILITY).build())
+						QuoteStorageQuery.builder().latency(Rate.MEDIUM).optimized(ProvStorageOptimized.DURABILITY).build())
 				.get(0);
 		Assertions.assertEquals("eu-west-1-s3-z-ia", sLookup.getPrice().getCode());
 		final var type = sLookup.getPrice().getType();

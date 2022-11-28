@@ -204,9 +204,6 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 
 	/**
 	 * generate a quote instance for test purpose
-	 *
-	 * @param type instance type (Spot or OnDemand
-	 * @return quote instance
 	 */
 	private ProvQuoteInstance newQuoteInstance(final String name, final VmOs os, final Double maxVariableCost,
 			final int min, final Integer max, int... storages) {
@@ -276,7 +273,7 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 		configuration.setLocation(location);
 		Arrays.stream(instances).forEach(i -> {
 			i.setConfiguration(configuration);
-			i.getStorages().stream().forEach(s -> s.setConfiguration(configuration));
+			i.getStorages().forEach(s -> s.setConfiguration(configuration));
 		});
 		quoteVo.setLocation(location);
 		return quoteVo;

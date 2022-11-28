@@ -13,8 +13,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * The provisioning EFS price service for AWS. Manage install or update of prices.
- * 
- * @see https://docs.aws.amazon.com/efs/latest/ug/storage-classes.html
+ *
+ * @see <a href="https://docs.aws.amazon.com/efs/latest/ug/storage-classes.html">EFS classes</a>
  */
 @Component
 public class AwsPriceImportEfs extends AbstractAwsPriceImportMultiRegion<AwsEfsPrice, CsvForBeanEfs> {

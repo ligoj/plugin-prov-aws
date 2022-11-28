@@ -65,9 +65,9 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 	void prepareData() throws IOException {
 		persistSystemEntities();
 		persistEntities("csv",
-				new Class[] { Node.class, Project.class, CacheCompany.class, CacheUser.class, DelegateNode.class,
+				new Class[]{Node.class, Project.class, CacheCompany.class, CacheUser.class, DelegateNode.class,
 						Parameter.class, ProvLocation.class, Subscription.class, ParameterValue.class,
-						ProvQuote.class },
+						ProvQuote.class},
 				StandardCharsets.UTF_8.name());
 		this.subscription = getSubscription("gStack");
 	}
@@ -104,9 +104,8 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 		initSpringSecurityContext("any");
 
 		// Re-Install a new configuration
-		Assertions.assertEquals("read-only-node", Assertions.assertThrows(BusinessException.class, () -> {
-			resource.updateCatalog("service:prov:aws:account", false);
-		}).getMessage());
+		Assertions.assertEquals("read-only-node", Assertions.assertThrows(BusinessException.class,
+				() -> resource.updateCatalog("service:prov:aws:account", false)).getMessage());
 	}
 
 	@Test
@@ -128,8 +127,6 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 
 	/**
 	 * retrieve keys from AWS
-	 *
-	 * @throws Exception exception
 	 */
 	@SuppressWarnings("unchecked")
 	@Test
@@ -157,8 +154,6 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 
 	/**
 	 * error when we retrieve keys from AWS
-	 *
-	 * @throws Exception exception
 	 */
 	@Test
 	void getEC2KeysError() {
@@ -167,8 +162,6 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 
 	/**
 	 * prepare call to AWS
-	 *
-	 * @throws Exception exception
 	 */
 	@Test
 	void newRequest() {
@@ -199,7 +192,7 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 
 	@Test
 	void checkSubscriptionStatusUp() {
-		final var status = resource.checkSubscriptionStatus(subscription, null, new HashMap<String, String>());
+		final var status = resource.checkSubscriptionStatus(subscription, null, new HashMap<>());
 		Assertions.assertTrue(status.getStatus().isUp());
 	}
 
@@ -207,7 +200,7 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 	void checkSubscriptionStatusDown() {
 		final var resource = newSpyResource();
 		Mockito.doReturn(false).when(resource).validateAccess(ArgumentMatchers.anyInt());
-		final var status = resource.checkSubscriptionStatus(subscription, null, new HashMap<String, String>());
+		final var status = resource.checkSubscriptionStatus(subscription, null, new HashMap<>());
 		Assertions.assertFalse(status.getStatus().isUp());
 	}
 

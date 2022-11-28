@@ -11,7 +11,7 @@ import org.ligoj.app.plugin.prov.model.AbstractQuoteVmOs;
 import org.ligoj.app.plugin.prov.model.AbstractTermPriceVmOs;
 
 /**
- * The compute part of AWS catalog import.
+ * The computing part of AWS catalog import having an OS.
  *
  * @param <T> The instance type's type.
  * @param <P> The price's type.

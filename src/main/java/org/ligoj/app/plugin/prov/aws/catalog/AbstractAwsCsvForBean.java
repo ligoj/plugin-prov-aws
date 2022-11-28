@@ -45,7 +45,6 @@ public abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 	 * @param reader    The original AWS CSV input.
 	 * @param mapping   The mapping table for header.
 	 * @param beanType  The target bean type.
-	 * @param separator The CSV separator.
 	 * @throws IOException When the CSV content cannot be read.
 	 */
 	protected AbstractAwsCsvForBean(final BufferedReader reader, final Map<String, String> mapping,
@@ -88,11 +87,11 @@ public abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 	}
 
 	/**
-	 * Return <code>true</code> when the given values corresponds to the headers row. This function is called until it
+	 * Return <code>true</code> when the given values correspond to the headers row. This function is called until it
 	 * returns <code>true</code>.
 	 * 
 	 * @param values The split row values according to the CSV separator.
-	 * @return <code>true</code> when the given values corresponds to the headers row.
+	 * @return <code>true</code> when the given values correspond to the headers row.
 	 */
 	protected boolean isHeaderRow(final List<String> values) {
 		return values.get(0).equals("SKU");

@@ -1,9 +1,6 @@
 /*
  * Licensed under MIT (https://github.com/ligoj/ligoj/blob/master/LICENSE)
  */
-/**
- *
- */
 package org.ligoj.app.plugin.prov.aws.auth;
 
 import java.util.HashMap;
@@ -46,7 +43,7 @@ class AWS4SignerBaseTest {
 	 */
 	@Test
 	void testGetCanonicalizedHeaderStringWithoutHeaders() {
-		final var headerNames = signer.getCanonicalizedHeaderString(new HashMap<String, String>());
+		final var headerNames = signer.getCanonicalizedHeaderString(new HashMap<>());
 		Assertions.assertEquals("", headerNames);
 	}
 

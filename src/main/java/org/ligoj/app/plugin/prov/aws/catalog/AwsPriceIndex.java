@@ -12,8 +12,8 @@ import lombok.Setter;
 
 /**
  * Root AWS bulk prices.
- * 
- * @see {@link https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/comprehend/current/index.json}
+ *
+ * @see <a href="https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/comprehend/current/index.json">Sample</a>
  */
 @Getter
 @Setter

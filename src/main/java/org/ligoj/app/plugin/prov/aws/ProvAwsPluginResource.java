@@ -128,7 +128,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	 * Fetch the prices from the AWS server. Install or update the prices
 	 */
 	@Override
-	public void install() throws IOException, URISyntaxException {
+	public void install() throws IOException {
 		priceImport.install(false);
 	}
 

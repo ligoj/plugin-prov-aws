@@ -348,7 +348,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * @return The updated {@link ProvInstancePriceTerm} corresponding to the CSV row.
 	 */
 	protected ProvInstancePriceTerm installInstancePriceTerm(final X context, final C csv) {
-		final var term = newTermAsNedded(context, csv.getOfferTermCode());
+		final var term = newTermAsNeeded(context, csv.getOfferTermCode());
 
 		// Update the properties only once
 		return copyAsNeeded(context, term, t -> {
@@ -381,7 +381,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		});
 	}
 
-	protected ProvInstancePriceTerm newTermAsNedded(final X context, final String code) {
+	protected ProvInstancePriceTerm newTermAsNeeded(final X context, final String code) {
 		return syncAdd(context.getPriceTerms(), code, k -> {
 			final var newTerm = new ProvInstancePriceTerm();
 			newTerm.setNode(context.getNode());
@@ -501,7 +501,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			computePlan = false;
 			code = name;
 		}
-		final var term = newTermAsNedded(context,code);
+		final var term = newTermAsNeeded(context,code);
 
 		// Update the properties only once
 		return copyAsNeeded(context, term, t -> {
@@ -639,7 +639,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * Create as needed a new {@link ProvInstancePriceTerm} for Spot.
 	 */
 	protected ProvInstancePriceTerm newSpotInstanceTerm(final X context) {
-		final var term = newTermAsNedded(context, TERM_SPOT_CODE);
+		final var term = newTermAsNeeded(context, TERM_SPOT_CODE);
 
 		// Update the properties only once
 		return copyAsNeeded(context, term, t -> {

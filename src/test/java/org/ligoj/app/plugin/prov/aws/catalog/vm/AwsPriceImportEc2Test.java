@@ -19,7 +19,7 @@ class AwsPriceImportEc2Test {
 
 	@Test
 	void getOnDemandCode() {
-		Assertions.assertNull(new AwsPriceImportEc2().getOnDemandCode(new HashMap<String, ProvInstancePrice>()));
+		Assertions.assertNull(new AwsPriceImportEc2().getOnDemandCode(new HashMap<>()));
 		var term1 = new ProvInstancePriceTerm();
 		term1.setName("Reserved");
 		var term2 = new ProvInstancePriceTerm();

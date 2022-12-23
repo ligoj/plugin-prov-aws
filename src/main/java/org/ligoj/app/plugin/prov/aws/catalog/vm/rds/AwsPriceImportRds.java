@@ -220,7 +220,7 @@ public class AwsPriceImportRds extends
 	protected void copy(final LocalRdsContext context, final AwsRdsPrice csv, final ProvDatabaseType t) {
 		super.copy(context, csv, t);
 		if (RDS_B_INSTANCE_TYPE.matcher(t.getName()).matches()) {
-			// Overrid storage rate for r5b like type instances
+			// Override storage rate for r5b like type instances
 			t.setStorageRate(Rate.BEST);
 		}
 	}

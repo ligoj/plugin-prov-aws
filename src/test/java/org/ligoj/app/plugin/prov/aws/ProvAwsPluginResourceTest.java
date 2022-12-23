@@ -83,14 +83,14 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	void install() throws IOException, URISyntaxException {
+	void install() throws IOException {
 		final var resource2 = new ProvAwsPluginResource();
 		resource2.priceImport = Mockito.mock(AwsPriceImport.class);
 		resource2.install();
 	}
 
 	@Test
-	void updateCatalog() throws IOException, URISyntaxException {
+	void updateCatalog() throws IOException {
 		// Re-Install a new configuration
 		final var resource2 = new ProvAwsPluginResource();
 		super.applicationContext.getAutowireCapableBeanFactory().autowireBean(resource2);
@@ -185,9 +185,7 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 		final var resource = newSpyResource();
 		Mockito.doReturn(false).when(resource).validateAccess(ArgumentMatchers.anyInt());
 		Assertions.assertEquals("Cannot access to AWS services with these parameters",
-				Assertions.assertThrows(BusinessException.class, () -> {
-					resource.create(-1);
-				}).getMessage());
+				Assertions.assertThrows(BusinessException.class, () -> resource.create(-1)).getMessage());
 	}
 
 	@Test

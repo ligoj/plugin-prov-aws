@@ -156,7 +156,7 @@ public class AwsPriceImportBase extends AbstractAwsImport implements ImportCatal
 		final var endpoint = configuration.get(cUrl);
 		if (endpoint == null) {
 			log.info("No provided {} dataset, if you have one, set the CSV URL to configuration '{}'", type, cUrl);
-			// No provided CO2 dataset, ingore this step
+			// No provided CO2 dataset, ignore this step
 			return;
 		}
 

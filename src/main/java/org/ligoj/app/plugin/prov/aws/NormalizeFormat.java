@@ -22,7 +22,7 @@ public class NormalizeFormat extends org.ligoj.app.resource.NormalizeFormat {
 	public StringBuffer format(final Object obj, final StringBuffer toAppendTo, final FieldPosition pos) {
 		toAppendTo.append(StringUtils.replaceChars(
 				org.ligoj.app.api.Normalizer.normalize(obj.toString()).toLowerCase(Locale.ENGLISH),
-				" ,./\\\"\';%+=^(){}&#@?`*$<>|", "_"));
+				" ,./\\\"';%+=^(){}&#@?`*$<>|", "_"));
 		return toAppendTo;
 	}
 

@@ -3,26 +3,6 @@
  */
 package org.ligoj.app.plugin.prov.aws.catalog;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
-import static org.ligoj.app.plugin.prov.aws.catalog.AwsPriceImportBase.CONF_URL_AWS_PRICES;
-import static org.ligoj.app.plugin.prov.quote.instance.QuoteInstanceQuery.builder;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.StringReader;
-import java.lang.reflect.InvocationTargetException;
-import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
-import java.util.Properties;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import javax.annotation.PostConstruct;
-import javax.transaction.Transactional;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.apache.http.HttpStatus;
@@ -33,12 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.ligoj.app.AbstractServerTest;
 import org.ligoj.app.iam.model.CacheCompany;
 import org.ligoj.app.iam.model.CacheUser;
-import org.ligoj.app.model.DelegateNode;
-import org.ligoj.app.model.Node;
-import org.ligoj.app.model.Parameter;
-import org.ligoj.app.model.ParameterValue;
-import org.ligoj.app.model.Project;
-import org.ligoj.app.model.Subscription;
+import org.ligoj.app.model.*;
 import org.ligoj.app.plugin.prov.ProvResource;
 import org.ligoj.app.plugin.prov.QuoteVo;
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
@@ -53,26 +28,8 @@ import org.ligoj.app.plugin.prov.aws.catalog.vm.fargate.AwsPriceImportFargate;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.rds.AwsPriceImportRds;
 import org.ligoj.app.plugin.prov.catalog.AbstractImportCatalogResource;
 import org.ligoj.app.plugin.prov.catalog.ImportCatalogResource;
-import org.ligoj.app.plugin.prov.dao.ProvContainerPriceRepository;
-import org.ligoj.app.plugin.prov.dao.ProvContainerTypeRepository;
-import org.ligoj.app.plugin.prov.dao.ProvDatabasePriceRepository;
-import org.ligoj.app.plugin.prov.dao.ProvInstancePriceRepository;
-import org.ligoj.app.plugin.prov.dao.ProvInstancePriceTermRepository;
-import org.ligoj.app.plugin.prov.dao.ProvInstanceTypeRepository;
-import org.ligoj.app.plugin.prov.dao.ProvQuoteDatabaseRepository;
-import org.ligoj.app.plugin.prov.dao.ProvQuoteInstanceRepository;
-import org.ligoj.app.plugin.prov.dao.ProvQuoteRepository;
-import org.ligoj.app.plugin.prov.dao.ProvQuoteStorageRepository;
-import org.ligoj.app.plugin.prov.model.ProvBudget;
-import org.ligoj.app.plugin.prov.model.ProvLocation;
-import org.ligoj.app.plugin.prov.model.ProvQuote;
-import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
-import org.ligoj.app.plugin.prov.model.ProvQuoteStorage;
-import org.ligoj.app.plugin.prov.model.ProvStorageOptimized;
-import org.ligoj.app.plugin.prov.model.ProvTenancy;
-import org.ligoj.app.plugin.prov.model.ProvUsage;
-import org.ligoj.app.plugin.prov.model.Rate;
-import org.ligoj.app.plugin.prov.model.VmOs;
+import org.ligoj.app.plugin.prov.dao.*;
+import org.ligoj.app.plugin.prov.model.*;
 import org.ligoj.app.plugin.prov.quote.container.ProvQuoteContainerResource;
 import org.ligoj.app.plugin.prov.quote.container.QuoteContainerEditionVo;
 import org.ligoj.app.plugin.prov.quote.container.QuoteContainerQuery;
@@ -92,6 +49,22 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+
+import javax.annotation.PostConstruct;
+import javax.transaction.Transactional;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.StringReader;
+import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.StandardCharsets;
+import java.util.Properties;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static org.ligoj.app.plugin.prov.aws.catalog.AwsPriceImportBase.CONF_URL_AWS_PRICES;
+import static org.ligoj.app.plugin.prov.quote.instance.QuoteInstanceQuery.builder;
 
 /**
  * Test class of {@link AwsPriceImport}
@@ -339,7 +312,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		configuration.put(AwsPriceImportBase.CONF_URL_CO2_INSTANCE, "http://localhost:0/some.csv");
 		configuration.put(AwsPriceImportBase.CONF_URL_CO2_REGION, "http://localhost:0/some.csv");
 
-		// Ecludes some engine
+		// Excludes some engine
 		configuration.put(AwsPriceImportRds.CONF_ETYPE, "(Oracle|SQL Server|Aurora.*|PostgreSQL|MySQL)");
 
 		// Install a new configuration
@@ -429,7 +402,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(46.667d, cRIPrice.getPrice().getCost(), DELTA);
 		Assertions.assertEquals(1680.0d, cRIPrice.getPrice().getCostPeriod(), DELTA);
 		Assertions.assertEquals("Reserved, 3yr, All Upfront", cRIPrice.getPrice().getTerm().getName());
-		Assertions.assertTrue(cRIPrice.getPrice().getTerm().getInitialCost().booleanValue());
+		Assertions.assertTrue(cRIPrice.getPrice().getTerm().getInitialCost());
 		Assertions.assertEquals("c1.medium", cRIPrice.getPrice().getType().getName());
 
 		// Check Fargate OnDemand
@@ -484,7 +457,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(24.566d, cSPrice.getPrice().getCost(), DELTA);
 		Assertions.assertEquals(24.566d, cSPrice.getPrice().getCostPeriod(), DELTA);
 		Assertions.assertEquals("Spot", cSPrice.getPrice().getTerm().getName());
-		Assertions.assertFalse(cSPrice.getPrice().getTerm().getInitialCost().booleanValue());
+		Assertions.assertFalse(cSPrice.getPrice().getTerm().getInitialCost());
 		Assertions.assertEquals("fargate-2.0-4.0", cSPrice.getPrice().getType().getName());
 
 		final var cVo = new QuoteContainerEditionVo();
@@ -649,13 +622,12 @@ class AwsPriceImportTest extends AbstractServerTest {
 		return instance;
 	}
 
-	private ProvQuoteStorage checkStorage(final ProvQuoteStorage storage) {
+	private void checkStorage(final ProvQuoteStorage storage) {
 		Assertions.assertEquals(0.44d, storage.getCost(), DELTA);
 		Assertions.assertEquals(5, storage.getSize(), DELTA);
 		Assertions.assertNotNull(storage.getQuoteInstance());
 		Assertions.assertEquals("gp3", storage.getPrice().getType().getName());
 		Assertions.assertEquals(Rate.BEST, storage.getPrice().getType().getLatency());
-		return storage;
 	}
 
 	@Test
@@ -767,7 +739,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		httpServer.start();
 	}
 
-	private void checkNoSavingsPlan() throws IOException, URISyntaxException {
+	private void checkNoSavingsPlan() throws IOException {
 		resource.install(false);
 		em.flush();
 		em.clear();
@@ -851,9 +823,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		startMockServer();
 
 		Assertions.assertEquals("Premature end of CSV file, headers were not found",
-				Assertions.assertThrows(TechnicalException.class, () -> {
-					resource.install(false);
-				}).getMessage());
+				Assertions.assertThrows(TechnicalException.class, () -> resource.install(false)).getMessage());
 	}
 
 	/**
@@ -889,9 +859,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Parse error expected
 		Assertions.assertEquals("For input string: \"AAAAAA\"",
-				Assertions.assertThrows(NumberFormatException.class, () -> {
-					resource.install(false);
-				}).getMessage());
+				Assertions.assertThrows(NumberFormatException.class, () -> resource.install(false)).getMessage());
 	}
 
 	/**
@@ -905,9 +873,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Parse error expected
 		Assertions.assertEquals("For input string: \"AAAAAA\"",
-				Assertions.assertThrows(NumberFormatException.class, () -> {
-					resource.install(false);
-				}).getMessage());
+				Assertions.assertThrows(NumberFormatException.class, () -> resource.install(false)).getMessage());
 	}
 
 	/**

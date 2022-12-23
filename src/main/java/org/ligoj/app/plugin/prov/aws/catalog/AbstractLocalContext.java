@@ -78,19 +78,19 @@ public abstract class AbstractLocalContext<T extends AbstractInstanceType, P ext
 	 */
 	@Getter
 	@Setter
-	protected Map<String, T> localTypes = new HashMap<>();
+	protected Map<String, T> localTypes;
 
 	/**
 	 * The previously installed price term's codes.
 	 */
 	@Getter
-	protected Map<String, ProvInstancePriceTerm> localPriceTerms = new HashMap<>();
+	protected final Map<String, ProvInstancePriceTerm> localPriceTerms;
 
 	/**
 	 * Efficient baseline per instance type.
 	 */
 	@Getter
-	private Map<String, Double> baselines;
+	private final Map<String, Double> baselines;
 
 	/**
 	 * Context from the parent.

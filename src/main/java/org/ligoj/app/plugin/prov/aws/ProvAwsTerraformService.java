@@ -3,12 +3,7 @@
  */
 package org.ligoj.app.plugin.prov.aws;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
@@ -201,14 +196,14 @@ public class ProvAwsTerraformService {
 
 		// Markdown
 		templateFromTo(context.add("alb", getMd(modes.get(InstanceMode.AUTO_SCALING),
-				"ALB|[${alb{{i}}_name}](/ec2/v2/home?region=${region}#LoadBalancers:search=${alb{{i}}_dns})|[http](http://${alb{{i}}_dns})"))
+				"| ALB | [${alb{{i}}_name}](/ec2/v2/home?region=${region}#LoadBalancers:search=${alb{{i}}_dns}) | [http](http://${alb{{i}}_dns}) |"))
 				.add("ec2", getMd(modes.get(InstanceMode.VM),
-						"EC2|[${ec2{{i}}_name}](/ec2/v2/home?region=${region}#Instances:search=${ec2{{i}}})|[http](http://${ec2{{i}}_ip})"))
+						"| EC2 | [${ec2{{i}}_name}](/ec2/v2/home?region=${region}#Instances:search=${ec2{{i}}}) | [http](http://${ec2{{i}}_ip}) |"))
 				.add("spot",
 						getMd(modes.get(InstanceMode.EPHEMERAL),
-								"EC2|[${spot{{i}}_name}](/ec2sp/v1/spot/home?region=${region}#)|${spot{{i}}_price}"))
+								"| EC2 | [${spot{{i}}_name}](/ec2sp/v1/spot/home?region=${region}#) | ${spot{{i}}_price} |"))
 				.add("asg", getMd(modes.get(InstanceMode.AUTO_SCALING),
-						"EC2/AS|[${asg{{i}}_name}](/ec2/autoscaling/home?region=${region}#AutoScalingGroups:id=${asg{{i}}};view=details)|")),
+						"| EC2/AS | [${asg{{i}}_name}](/ec2/autoscaling/home?region=${region}#AutoScalingGroups:id=${asg{{i}}};view=details) | |")),
 				"my-region/dashboard-widgets.tpl.md", context.getLocation(), "dashboard-widgets.tpl.md");
 
 		// References for MD template and CloudWatch widgets
@@ -465,10 +460,15 @@ public class ProvAwsTerraformService {
 	private String replace(String source, final TerraformContext context) {
 		var result = source;
 		for (final var entry : context.getContext().entrySet()) {
-			result = StringUtils.replace(result, String.format("{{%s}}", entry.getKey()), entry.getValue());
+			result = StringUtils.replace(cleanupMd(result), cleanupMd(String.format("{{%s}}", entry.getKey())), cleanupMd(entry.getValue()));
 		}
 		return result;
 	}
+
+	protected String cleanupMd(final String mdFile) {
+		return mdFile.replaceAll("[ \t]{2,}", " ").replaceAll("-{2,}", "-").replaceAll("\\s+\n", "\n");
+	}
+
 
 	private InstanceMode toMode(final ProvQuoteInstance instance) {
 		// xLB

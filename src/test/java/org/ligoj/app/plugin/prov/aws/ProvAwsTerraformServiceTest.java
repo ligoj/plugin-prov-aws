@@ -72,9 +72,7 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	@BeforeEach
 	void prepareData() throws IOException {
 		persistSystemEntities();
-		persistEntities("csv",
-				new Class[] { Node.class, Project.class, Parameter.class, Subscription.class, ParameterValue.class },
-				StandardCharsets.UTF_8.name());
+		persistEntities("csv", new Class[]{Node.class, Project.class, Parameter.class, Subscription.class, ParameterValue.class}, StandardCharsets.UTF_8.name());
 		subscription = subscriptionRepository.findBy("node.id", "service:prov:aws:test");
 	}
 
@@ -189,6 +187,7 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 		assertTrue(new File(new File(MOCK_PATH, "eu-west-3"), "ami-amazon.tf").exists());
 	}
 
+
 	/**
 	 * Call Terraform generation and check the result is same as input file content
 	 *
@@ -205,8 +204,7 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	/**
 	 * generate a quote instance for test purpose
 	 */
-	private ProvQuoteInstance newQuoteInstance(final String name, final VmOs os, final Double maxVariableCost,
-			final int min, final Integer max, int... storages) {
+	private ProvQuoteInstance newQuoteInstance(final String name, final VmOs os, final Double maxVariableCost, final int min, final Integer max, int... storages) {
 		final var quoteInstance = new ProvQuoteInstance();
 		final var instance = new ProvInstanceType();
 		instance.setName("t2.micro");
@@ -260,8 +258,12 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 		assertTrue(expected2.exists());
 		final var generatedFile = new File(MOCK_PATH, generated).getAbsoluteFile();
 		assertTrue(generatedFile.exists());
-		Assertions.assertEquals(IOUtils.toString(expected2.toURI(), StandardCharsets.UTF_8),
-				IOUtils.toString(generatedFile.toURI(), StandardCharsets.UTF_8));
+		Assertions.assertEquals(cleanupMd(expected2), cleanupMd(generatedFile));
+	}
+
+	protected String cleanupMd(final File mdFile) throws IOException {
+		final var resource = new ProvAwsTerraformService();
+		return resource.cleanupMd(IOUtils.toString(mdFile.toURI(), StandardCharsets.UTF_8));
 	}
 
 	private QuoteVo newQuoteVo(final ProvQuoteInstance... instances) {

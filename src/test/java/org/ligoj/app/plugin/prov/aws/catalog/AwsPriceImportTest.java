@@ -41,6 +41,8 @@ import org.ligoj.app.plugin.prov.quote.instance.QuoteInstanceEditionVo;
 import org.ligoj.app.plugin.prov.quote.storage.ProvQuoteStorageResource;
 import org.ligoj.app.plugin.prov.quote.storage.QuoteStorageEditionVo;
 import org.ligoj.app.plugin.prov.quote.storage.QuoteStorageQuery;
+import org.ligoj.app.plugin.prov.quote.support.ProvQuoteSupportResource;
+import org.ligoj.app.plugin.prov.quote.support.QuoteSupportEditionVo;
 import org.ligoj.bootstrap.core.resource.TechnicalException;
 import org.ligoj.bootstrap.dao.system.SystemConfigurationRepository;
 import org.ligoj.bootstrap.resource.system.configuration.ConfigurationResource;
@@ -93,6 +95,9 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 	@Autowired
 	private ProvQuoteStorageResource qsResource;
+
+	@Autowired
+	private ProvQuoteSupportResource qs2Resource;
 
 	@Autowired
 	private ProvInstancePriceTermRepository iptRepository;
@@ -307,10 +312,12 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 	@Test
 	void installOffLine() throws Exception {
-
-		// Mock CO2 to invalid location
-		configuration.put(AwsPriceImportBase.CONF_URL_CO2_INSTANCE, "http://localhost:0/some.csv");
-		configuration.put(AwsPriceImportBase.CONF_URL_CO2_REGION, "http://localhost:0/some.csv");
+		configuration.put(AwsPriceImportBase.CONF_URL_CO2_INSTANCE,
+				"http://localhost:" + MOCK_PORT + "/carbon-instance.csv");
+		configuration.put(AwsPriceImportBase.CONF_URL_CO2_REGION,
+				"http://localhost:" + MOCK_PORT + "/carbon-region.csv");
+		mock("/carbon-instance.csv", "mock-server/aws/carbon-instance.csv");
+		mock("/carbon-region.csv", "mock-server/aws/carbon-region.csv");
 
 		// Excludes some engine
 		configuration.put(AwsPriceImportRds.CONF_ETYPE, "(Oracle|SQL Server|Aurora.*|PostgreSQL|MySQL)");
@@ -578,6 +585,36 @@ class AwsPriceImportTest extends AbstractServerTest {
 		// Check status
 		checkImportStatus(449 + 2 /* saving plans */ + 1 - 1 /* purged RDS price */ /* new RDS price */
 				- 5 /* purged EC2 price */ + 1 /* new EC2 price */, 210 + 1);
+
+
+		// Check Support
+		final var s2Lookup = qs2Resource.lookup(subscription,
+				1,
+				SupportType.ALL,
+				SupportType.ALL,
+				SupportType.ALL,
+				SupportType.ALL, Rate.GOOD).get(0);
+		Assertions.assertEquals(5500d, s2Lookup.getCost(), DELTA); // Minimal price
+		Assertions.assertEquals(0d, s2Lookup.getCo2());
+		final var s2Price = s2Lookup.getPrice();
+		Assertions.assertEquals("aws-enterprise-on-ramp", s2Price.getCode());
+		final var s2Vo = new QuoteSupportEditionVo();
+		s2Vo.setSubscription(subscription);
+		s2Vo.setAccessEmail(SupportType.ALL);
+		s2Vo.setAccessPhone(SupportType.ALL);
+		s2Vo.setName("Support1");
+		s2Vo.setType(s2Price.getType().getName());
+		final var s2Cost = qs2Resource.create(s2Vo);
+		Assertions.assertEquals(5500d, s2Cost.getCost().getMin(), DELTA);
+		Assertions.assertEquals(5948.736d, s2Cost.getTotal().getMin(), DELTA);
+		final var quoteWithSupport = provResource.getConfiguration(subscription);
+		Assertions.assertEquals(5500d, quoteWithSupport.getCostSupport().getMin(), DELTA);
+		Assertions.assertEquals(448.736d, quoteWithSupport.getCostNoSupport().getMin(), DELTA);
+		em.flush();
+		em.clear();
+		qs2Resource.delete(s2Cost.getId());
+		em.flush();
+		em.clear();
 	}
 
 	private void checkType() {
@@ -668,6 +705,35 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertTrue(instance2.getTerm().isEphemeral());
 		Assertions.assertEquals("r4.large", instance2.getType().getName());
 		Assertions.assertEquals(6170.075, instance2.getCo2());
+
+		// Check Support
+		final var s2Lookup = qs2Resource.lookup(subscription,
+				1,
+				SupportType.ALL,
+				SupportType.ALL,
+				SupportType.ALL,
+				SupportType.ALL, Rate.GOOD).get(0);
+		Assertions.assertEquals(5500d, s2Lookup.getCost(), DELTA); // Minimal price
+		Assertions.assertEquals(0d, s2Lookup.getCo2());
+		final var s2Price = s2Lookup.getPrice();
+		Assertions.assertEquals("aws-enterprise-on-ramp", s2Price.getCode());
+		final var s2Vo = new QuoteSupportEditionVo();
+		s2Vo.setSubscription(subscription);
+		s2Vo.setAccessEmail(SupportType.ALL);
+		s2Vo.setAccessPhone(SupportType.ALL);
+		s2Vo.setName("Support1");
+		s2Vo.setType(s2Price.getType().getName());
+		final var s2Cost = qs2Resource.create(s2Vo);
+		Assertions.assertEquals(5500d, s2Cost.getCost().getMin(), DELTA);
+		Assertions.assertEquals(5948.793d, s2Cost.getTotal().getMin(), DELTA);
+		final var quoteWithSupport = provResource.getConfiguration(subscription);
+		Assertions.assertEquals(5500d, quoteWithSupport.getCostSupport().getMin(), DELTA);
+		Assertions.assertEquals(448.793d, quoteWithSupport.getCostNoSupport().getMin(), DELTA);
+		em.flush();
+		em.clear();
+		qs2Resource.delete(s2Cost.getId());
+		em.flush();
+		em.clear();
 	}
 
 	/**

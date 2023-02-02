@@ -5,7 +5,7 @@ package org.ligoj.app.plugin.prov.aws.catalog.vm.ec2;
 
 import java.util.Map;
 
-import javax.persistence.Transient;
+import jakarta.persistence.Transient;
 
 import org.ligoj.app.plugin.prov.model.VmOs;
 

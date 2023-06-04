@@ -76,6 +76,7 @@ public class AwsPriceImportFargate extends
 			API_SPOT);
 
 	private static final Map<Double, double[]> CPU_TO_RAM = Map.of(
+			// See https://docs.aws.amazon.com/AmazonECS/latest/developerguide/AWS_Fargate.html
 			// | .CPU | Memory Values |
 			// |----- | --------------|
 			// | 0.25 | {0.5,1,2}
@@ -87,7 +88,11 @@ public class AwsPriceImportFargate extends
 			// | 2.00 | [4-16]
 			2d, DoubleStream.iterate(4, n -> n <= 16, n -> n + 1).limit(16).toArray(),
 			// | 4.00 | [8-30]
-			4d, DoubleStream.iterate(8, n -> n <= 30, n -> n + 1).limit(30).toArray());
+			4d, DoubleStream.iterate(8, n -> n <= 30, n -> n + 1).limit(30).toArray(),
+			// | 8.00 | [16-60]
+			8d, DoubleStream.iterate(16, n -> n <= 60, n -> n + 4).limit(60).toArray(),
+			// | 16.00 | [16-60]
+			16d, DoubleStream.iterate(32, n -> n <= 120, n -> n + 8).limit(120).toArray());
 
 	@Override
 	public void install(final UpdateContext context) throws IOException {
@@ -163,8 +168,8 @@ public class AwsPriceImportFargate extends
 
 	@Override
 	protected Stream<String> installSavingsPlanRates(final LocalFargateContext context, final String serviceCode,
-	                                                 final ProvInstancePriceTerm term, final Map<String, ProvContainerPrice> previousOd, final String odCode,
-	                                                 final Collection<SavingsPlanRate> rates) {
+			final ProvInstancePriceTerm term, final Map<String, ProvContainerPrice> previousOd, final String odCode,
+			final Collection<SavingsPlanRate> rates) {
 		final var rateCpu = findSavingsPlanCost(rates, VCPU_HOURS_PER);
 		final var rateRam = findSavingsPlanCost(rates, GB_HOURS);
 		if (ObjectUtils.allNotNull(rateCpu, rateRam)) {
@@ -178,8 +183,8 @@ public class AwsPriceImportFargate extends
 	}
 
 	private void installSavingsPlanPrices(final LocalFargateContext context, final ProvInstancePriceTerm term,
-	                                      final SavingsPlanRate rateCpu, final SavingsPlanRate rateRam,
-	                                      final Map<String, ProvContainerPrice> previousOd, final String odCode) {
+			final SavingsPlanRate rateCpu, final SavingsPlanRate rateRam,
+			final Map<String, ProvContainerPrice> previousOd, final String odCode) {
 		final var costCpu = rateCpu.getDiscountedRate().getPrice();
 		final var costRam = rateRam.getDiscountedRate().getPrice();
 		final var cpuRateCode = rateCpu.getRateCode();
@@ -205,7 +210,7 @@ public class AwsPriceImportFargate extends
 	}
 
 	private ProvContainerPrice newPrice(final LocalFargateContext context, final AwsFargatePrice csv, final double cpu,
-	                                    final double ram) {
+			final double ram) {
 		final var code = toPriceCode(csv.getRateCode(), cpu, ram);
 		final var price = context.getLocals().computeIfAbsent(code, context::newPrice);
 		return copyAsNeeded(context, price,
@@ -213,11 +218,6 @@ public class AwsPriceImportFargate extends
 						installInstanceType(context, cpu, ram,
 								StringUtils.containsIgnoreCase(csv.getUsageType(), "arm") ? "arm" : null),
 						installInstancePriceTerm(context, csv)));
-	}
-
-	@Override
-	protected void copy(final AwsFargatePrice csv, final ProvContainerPrice p) {
-		p.setOs(StringUtils.containsIgnoreCase(csv.getUsageType(), "windows") ? VmOs.WINDOWS : VmOs.LINUX);
 	}
 
 	/**
@@ -232,7 +232,7 @@ public class AwsPriceImportFargate extends
 	}
 
 	private ProvContainerType installInstanceType(final LocalFargateContext context, final double cpu,
-	                                              final double ramGb, final String processor) {
+			final double ramGb, final String processor) {
 		final var fakeCsv = new AwsFargatePrice();
 		fakeCsv.setInstanceType(toTypeCode(cpu, ramGb, processor));
 		fakeCsv.setCpu(cpu);
@@ -270,7 +270,7 @@ public class AwsPriceImportFargate extends
 
 	@Override
 	protected LocalFargateContext newContext(final UpdateContext gContext, final ProvLocation region,
-	                                         final String term1, final String term2) {
+			final String term1, final String term2) {
 		return new LocalFargateContext(gContext, iptRepository, ctRepository, cpRepository, qcRepository, region, term1,
 				term2);
 	}
@@ -329,7 +329,7 @@ public class AwsPriceImportFargate extends
 	}
 
 	private void installSpotPrices(final UpdateContext gContext, final ProvLocation region,
-	                               final Set<SpotPrice> prices) {
+			final Set<SpotPrice> prices) {
 		log.info("AWS Fargate Spot prices@{}...", region.getName());
 		final var costRam = findSpotCost(region, prices, GB_HOURS);
 		final var costCpu = findSpotCost(region, prices, VCPU_HOURS);
@@ -351,12 +351,20 @@ public class AwsPriceImportFargate extends
 	}
 
 	private void installFargatePrice(final LocalFargateContext context, final AwsFargatePrice csvCpu,
-	                                 final double costRam, final double costCpu) {
-		CPU_TO_RAM.forEach((cpu, ramGbA) -> Arrays.stream(ramGbA).forEach(ram -> {
-			final var price = newPrice(context, csvCpu, cpu, ram);
-			final var cost = (costCpu * cpu + ram * costRam) * context.getHoursMonth();
-			saveAsNeeded(context, price, cost, context.getPRepository());
-		}));
+			final double costRam, final double costCpu) {
+		CPU_TO_RAM.forEach((cpu, ramGbA) -> {
+			final var os = StringUtils.containsIgnoreCase(csvCpu.getUsageType(), "windows") ? VmOs.WINDOWS : VmOs.LINUX;
+			if (os == VmOs.WINDOWS && (cpu < 1d || cpu >= 8)) {
+				// This CPU configuration is not supported for Windows
+				return;
+			}
+			csvCpu.setOs(os.name());
+			Arrays.stream(ramGbA).forEach(ram -> {
+				final var cost = (costCpu * cpu + ram * costRam) * context.getHoursMonth();
+				final var price = newPrice(context, csvCpu, cpu, ram);
+				saveAsNeeded(context, price, cost, context.getPRepository());
+			});
+		});
 	}
 
 	@Override

@@ -5,7 +5,7 @@ package org.ligoj.app.plugin.prov.aws.catalog;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
-import org.apache.http.HttpStatus;
+import org.apache.hc.core5.http.HttpStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -143,7 +143,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 				new Class[]{Node.class, Project.class, CacheCompany.class, CacheUser.class, DelegateNode.class,
 						Parameter.class, ProvLocation.class, Subscription.class, ParameterValue.class,
 						ProvQuote.class},
-				StandardCharsets.UTF_8.name());
+				StandardCharsets.UTF_8);
 		this.subscription = getSubscription("gStack");
 
 		// Disable inner transaction

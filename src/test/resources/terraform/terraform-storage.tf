@@ -10,7 +10,7 @@ resource "aws_ebs_volume" "backup" {
   type = "gp2"
   size = 40
   tags = {
-    Project = "gStack"
-    Name = "gStack-backup"
+    Project = "Jupiter"
+    Name = "Jupiter-backup"
   }
 }

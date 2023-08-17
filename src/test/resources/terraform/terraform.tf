@@ -18,7 +18,7 @@ resource "aws_subnet" "PUBLIC" {
   cidr_block = "10.0.1.0/24"
   map_public_ip_on_launch = true
   tags = {
-    Project = "gStack"
+    Project = "Jupiter"
     Name = "PUBLIC"
   }
 }
@@ -32,7 +32,7 @@ resource "aws_route_table" "PUBLIC" {
     gateway_id = "${aws_internet_gateway.default.id}"
   }
   tags = {
-    Project = "gStack"
+    Project = "Jupiter"
     Name = "PUBLIC"
   }
 }
@@ -42,7 +42,7 @@ resource "aws_route_table_association" "PUBLIC" {
 }
 /* security group */
 resource "aws_security_group" "vm-sg" {
-  name        = "gStack-sg"
+  name        = "Jupiter-sg"
   description = "Allow ssh inbound traffic, all inbound traffic in security group and all outbund traffic"
   vpc_id     = "${aws_vpc.terraform.id}"
   ingress {
@@ -64,13 +64,13 @@ resource "aws_security_group" "vm-sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
   tags = {
-    Project = "gStack"
-    Name = "gStack"
+    Project = "Jupiter"
+    Name = "Jupiter"
   }
 }
 /* key pair*/
 resource "aws_key_pair" "vm-keypair" {
-  key_name   = "gStack-key"
+  key_name   = "Jupiter-key"
   public_key = "${var.publickey}"
 }
 /* instance */
@@ -78,7 +78,7 @@ resource "aws_instance" "vm-dev" {
   ami           = "${data.aws_ami.ami-LINUX.id}"
   name    		= "dev"
   instance_type = "t2.micro"
-  key_name    	= "gStack-key"
+  key_name    	= "Jupiter-key"
   vpc_security_group_ids = [ "${aws_security_group.vm-sg.id}" ]
   root_block_device {
     volume_type = "gp2"
@@ -91,8 +91,8 @@ resource "aws_instance" "vm-dev" {
   }
   subnet_id     = "${aws_subnet.PUBLIC.id}"
   tags = {
-    Project = "gStack"
-    Name = "gStack-dev"
+    Project = "Jupiter"
+    Name = "Jupiter-dev"
   }
 }
 /* search ami id */

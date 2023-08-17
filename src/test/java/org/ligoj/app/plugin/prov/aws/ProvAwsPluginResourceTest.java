@@ -59,7 +59,7 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 						Parameter.class, ProvLocation.class, Subscription.class, ParameterValue.class,
 						ProvQuote.class},
 				StandardCharsets.UTF_8);
-		this.subscription = getSubscription("gStack");
+		this.subscription = getSubscription("Jupiter");
 	}
 
 	@Test

@@ -209,7 +209,7 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 		Mockito.doReturn(MOCK_URL).when(resource).toUrl(ArgumentMatchers.any());
 		final var parameters = new HashMap<String, String>();
 		parameters.put("service:prov:aws:access-key-id", "12345678901234567890");
-		parameters.put("service:prov:aws:secret-access-key", "abcdefghtiklmnopqrstuvwxyz");
+		parameters.put("service:prov:aws:secret-access-key", "secret_secret_secret");
 		parameters.put("service:prov:aws:account", "123456789");
 		Assertions.assertTrue(resource.checkStatus(null, parameters));
 	}

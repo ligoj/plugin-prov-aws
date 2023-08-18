@@ -1,4 +1,4 @@
 parameter.id;data;node.id;subscription.id!
 service:prov:aws:access-key-id;12345678901234567890;service:prov:aws:test;1
-service:prov:aws:secret-access-key;abcdefghtiklmnopqrstuvwxyz;service:prov:aws:test;1
+service:prov:aws:secret-access-key;secret_secret_secret;service:prov:aws:test;1
 service:prov:aws:account;123456789;service:prov:aws:test;1

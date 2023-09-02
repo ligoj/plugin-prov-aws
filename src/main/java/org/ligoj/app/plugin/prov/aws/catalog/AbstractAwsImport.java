@@ -3,19 +3,7 @@
  */
 package org.ligoj.app.plugin.prov.aws.catalog;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.plugin.prov.ProvResource;
 import org.ligoj.app.plugin.prov.catalog.AbstractImportCatalogResource;
@@ -23,7 +11,15 @@ import org.ligoj.app.plugin.prov.model.ImportCatalogStatus;
 import org.ligoj.bootstrap.core.curl.CurlProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import lombok.extern.slf4j.Slf4j;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * The provisioning price service for AWS. Manage install or update of prices.
@@ -103,7 +99,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 		log.info("AWS {} prices...", api);
 		try (var curl = new CurlProcessor()) {
 			// Get the remote prices stream
-			final var rawJson = StringUtils.defaultString(curl.get(endpoint), "any({\"config\":{\"regions\":[]}});");
+			final var rawJson = Objects.toString(curl.get(endpoint), "any({\"config\":{\"regions\":[]}});");
 
 			// All regions are considered
 			final var configIndex = rawJson.indexOf('{');

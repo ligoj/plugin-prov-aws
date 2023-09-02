@@ -3,16 +3,7 @@
  */
 package org.ligoj.app.plugin.prov.aws.catalog.vm.fargate;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.DoubleStream;
-import java.util.stream.Stream;
-
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.plugin.prov.aws.catalog.AwsPriceImportBase;
@@ -21,19 +12,17 @@ import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVmOs;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlanProduct;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlanRate;
 import org.ligoj.app.plugin.prov.catalog.AbstractUpdateContext;
-import org.ligoj.app.plugin.prov.model.ProvContainerPrice;
-import org.ligoj.app.plugin.prov.model.ProvContainerType;
-import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
-import org.ligoj.app.plugin.prov.model.ProvLocation;
-import org.ligoj.app.plugin.prov.model.ProvQuoteContainer;
-import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
-import org.ligoj.app.plugin.prov.model.Rate;
-import org.ligoj.app.plugin.prov.model.VmOs;
+import org.ligoj.app.plugin.prov.model.*;
 import org.ligoj.bootstrap.core.SpringUtils;
 import org.ligoj.bootstrap.core.curl.CurlProcessor;
 import org.springframework.stereotype.Component;
 
-import lombok.extern.slf4j.Slf4j;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
+import java.util.stream.Stream;
 
 /**
  * The provisioning price service for AWS. Manage install or update of prices.
@@ -286,7 +275,7 @@ public class AwsPriceImportFargate extends
 		log.info("AWS Fargate Spot prices...");
 		try (var curl = new CurlProcessor()) {
 			// Get the remote prices stream
-			final var rawJson = StringUtils.defaultString(curl.get(endpoint), "{\"prices\":[]}");
+			final var rawJson = Objects.toString(curl.get(endpoint), "{\"prices\":[]}");
 			final var prices = objectMapper.readValue(rawJson, SpotPrices.class);
 
 			// Install the enabled regions as needed

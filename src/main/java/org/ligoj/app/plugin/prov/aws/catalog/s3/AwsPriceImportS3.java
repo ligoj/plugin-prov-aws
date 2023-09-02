@@ -3,9 +3,6 @@
  */
 package org.ligoj.app.plugin.prov.aws.catalog.s3;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-
 import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsPriceImportMultiRegion;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
@@ -13,6 +10,10 @@ import org.ligoj.app.plugin.prov.model.ProvStorageOptimized;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.app.plugin.prov.model.Rate;
 import org.springframework.stereotype.Component;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.util.Objects;
 
 /**
  * The provisioning S3 price service for AWS. Manage install or update of prices.
@@ -36,7 +37,7 @@ public class AwsPriceImportS3 extends AbstractAwsPriceImportMultiRegion<AwsS3Pri
 	protected void update(final AwsS3Price csv, final ProvStorageType t) {
 		t.setName(t.getCode());
 		t.setAvailability(toPercent(csv.getAvailability()));
-		t.setDurability9(StringUtils.countMatches(StringUtils.defaultString(csv.getDurability()), '9'));
+		t.setDurability9(StringUtils.countMatches(Objects.toString(csv.getDurability()), '9'));
 		t.setOptimized(ProvStorageOptimized.DURABILITY);
 		t.setNetwork("443/tcp");
 		t.setLatency(t.getCode().equals("glacier") ? Rate.WORST : Rate.MEDIUM);

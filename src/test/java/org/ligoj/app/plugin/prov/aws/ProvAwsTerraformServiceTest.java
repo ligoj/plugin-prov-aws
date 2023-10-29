@@ -72,7 +72,7 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	@BeforeEach
 	void prepareData() throws IOException {
 		persistSystemEntities();
-		persistEntities("csv", new Class[]{Node.class, Project.class, Parameter.class, Subscription.class, ParameterValue.class}, StandardCharsets.UTF_8.name());
+		persistEntities("csv", new Class<?>[]{Node.class, Project.class, Parameter.class, Subscription.class, ParameterValue.class}, StandardCharsets.UTF_8);
 		subscription = subscriptionRepository.findBy("node.id", "service:prov:aws:test");
 	}
 

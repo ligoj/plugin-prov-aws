@@ -140,7 +140,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 	void prepareData() throws IOException {
 		persistSystemEntities();
 		persistEntities("csv",
-				new Class[]{Node.class, Project.class, CacheCompany.class, CacheUser.class, DelegateNode.class,
+				new Class<?>[]{Node.class, Project.class, CacheCompany.class, CacheUser.class, DelegateNode.class,
 						Parameter.class, ProvLocation.class, Subscription.class, ParameterValue.class,
 						ProvQuote.class},
 				StandardCharsets.UTF_8);

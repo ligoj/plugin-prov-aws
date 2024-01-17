@@ -3,8 +3,6 @@
  */
 package org.ligoj.app.plugin.prov.aws.auth;
 
-import java.util.HashMap;
-
 import org.apache.commons.codec.EncoderException;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.net.URLCodec;
@@ -15,7 +13,8 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import com.google.common.collect.ImmutableMap;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Test class of {@link AWS4SignerBase}
@@ -33,7 +32,7 @@ class AWS4SignerBaseTest {
 	 */
 	@Test
 	void testGetCanonicalizeHeaderNames() {
-		final var headerNames = signer.getCanonicalizeHeaderNames(ImmutableMap.of("header2", "h2", "header1", "h1"));
+		final var headerNames = signer.getCanonicalizeHeaderNames(Map.of("header2", "h2", "header1", "h1"));
 		Assertions.assertEquals("header1;header2", headerNames);
 	}
 
@@ -54,7 +53,7 @@ class AWS4SignerBaseTest {
 	@Test
 	void testGetCanonicalizedHeaderString() {
 		final var headerNames = signer
-				.getCanonicalizedHeaderString(ImmutableMap.of("header2", "h  2", "header1", "h1"));
+				.getCanonicalizedHeaderString(Map.of("header2", "h  2", "header1", "h1"));
 		Assertions.assertEquals("header1:h1\nheader2:h 2\n", headerNames);
 	}
 
@@ -126,7 +125,7 @@ class AWS4SignerBaseTest {
 	 */
 	@Test
 	void testGetCanonicalizedQueryStringEmpty() {
-		Assertions.assertEquals("", signer.getCanonicalizedQueryString(ImmutableMap.of()));
+		Assertions.assertEquals("", signer.getCanonicalizedQueryString(Map.of()));
 	}
 
 	/**
@@ -136,7 +135,7 @@ class AWS4SignerBaseTest {
 	@Test
 	void testGetCanonicalizedQueryString() {
 		Assertions.assertEquals("q1=v1&q2=v2",
-				signer.getCanonicalizedQueryString(ImmutableMap.of("q2", "v2", "q1", "v1")));
+				signer.getCanonicalizedQueryString(Map.of("q2", "v2", "q1", "v1")));
 	}
 
 	/**
@@ -147,7 +146,7 @@ class AWS4SignerBaseTest {
 	void testGetCanonicalizedQueryStringException() throws EncoderException {
 		final var signer = new AWS4SignerForAuthorizationHeader();
 		final var urlCodec = Mockito.mock(URLCodec.class);
-		final var str = ImmutableMap.of("q2", "v2", "q1", "v1");
+		final var str = Map.of("q2", "v2", "q1", "v1");
 		ReflectionTestUtils.setField(signer, "urlCodec", urlCodec);
 		Mockito.when(urlCodec.encode(ArgumentMatchers.anyString())).thenThrow(new EncoderException());
 		Assertions.assertEquals("Error during parameters encoding", Assertions

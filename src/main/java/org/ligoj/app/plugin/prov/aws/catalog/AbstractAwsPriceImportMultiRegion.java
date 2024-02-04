@@ -3,19 +3,18 @@
  */
 package org.ligoj.app.plugin.prov.aws.catalog;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
+import lombok.extern.slf4j.Slf4j;
 import org.ligoj.app.plugin.prov.catalog.ImportCatalog;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
 import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
 import org.ligoj.app.plugin.prov.model.ProvStorageType;
 
-import lombok.extern.slf4j.Slf4j;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URI;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * The provisioning S3 price service for AWS. Manage install or update of prices.
@@ -29,7 +28,7 @@ public abstract class AbstractAwsPriceImportMultiRegion<C extends AbstractAwsSto
 	 * 
 	 * @param context     The current global catalog context
 	 * @param api         The related API code.
-	 * @param serviceCode The related service code. ie. <code>AmazonS3</code>.
+	 * @param serviceCode The related service code. i.e. <code>AmazonS3</code>.
 	 * @throws IOException When the CSV file cannot be read.
 	 */
 	protected void installPrices(final UpdateContext context, final String api, final String serviceCode)
@@ -45,7 +44,7 @@ public abstract class AbstractAwsPriceImportMultiRegion<C extends AbstractAwsSto
 		var priceCounter = 0;
 		// Get the remote prices stream
 		final var url = getCsvUrl(context, context.getOffers().get(serviceCode).getCurrentVersionUrl());
-		try (var reader = new BufferedReader(new InputStreamReader(new URL(url).openStream()))) {
+		try (var reader = new BufferedReader(new InputStreamReader(URI.create(url).toURL().openStream()))) {
 			// Pipe to the CSV reader
 			final var csvReader = newReader(reader);
 

@@ -14,7 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.URL;
+import java.net.URI;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -171,7 +171,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 		}
 		final var indexUrl = context.getUrl(path);
 		log.info("AWS {} import: download regional {} index >{}", api, classifier, indexUrl);
-		try (var reader2 = new BufferedReader(new InputStreamReader(new URL(indexUrl).openStream()))) {
+		try (var reader2 = new BufferedReader(new InputStreamReader(URI.create(indexUrl).toURL().openStream()))) {
 			return objectMapper.readValue(reader2, clazz).getPRegions().entrySet().stream()
 					.filter(e -> isEnabledRegion(context, e.getKey()))
 					.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));

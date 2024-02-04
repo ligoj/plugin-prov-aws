@@ -3,22 +3,8 @@
  */
 package org.ligoj.app.plugin.prov.aws.catalog;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-
+import com.fasterxml.jackson.core.type.TypeReference;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
 import org.ligoj.app.plugin.prov.catalog.Co2Data;
@@ -31,9 +17,20 @@ import org.ligoj.bootstrap.core.INamableBean;
 import org.ligoj.bootstrap.core.csv.CsvBeanReader;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-
-import lombok.extern.slf4j.Slf4j;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /**
  * The base import data.
@@ -152,7 +149,7 @@ public class AwsPriceImportBase extends AbstractAwsImport implements ImportCatal
 	}
 
 	private <X> void fetchCo2DataGeneric(final String type, final String cUrl, final Map<String, X> co2DataSet,
-			final Map<String, String> headersMapping, final Function<X, String> keyer, Class<X> clazz) {
+			final Map<String, String> headersMapping, final Function<X, String> keyProvider, Class<X> clazz) {
 		final var endpoint = configuration.get(cUrl);
 		if (endpoint == null) {
 			log.info("No provided {} dataset, if you have one, set the CSV URL to configuration '{}'", type, cUrl);
@@ -187,7 +184,7 @@ public class AwsPriceImportBase extends AbstractAwsImport implements ImportCatal
 			// Build the AWS instance prices from the CSV
 			var csv = csvReader.read();
 			while (csv != null) {
-				co2DataSet.put(keyer.apply(csv), csv);
+				co2DataSet.put(keyProvider.apply(csv), csv);
 
 				// Read the next one
 				csv = csvReader.read();
@@ -209,7 +206,7 @@ public class AwsPriceImportBase extends AbstractAwsImport implements ImportCatal
 		context.setBaseUrl(basePrice);
 		final var baseUrl = basePrice + AWS_PRICES_PATH;
 		log.info("AWS {} import: download root index {}", "lambda", baseUrl);
-		try (var reader = new BufferedReader(new InputStreamReader(new URL(baseUrl).openStream()))) {
+		try (var reader = new BufferedReader(new InputStreamReader(URI.create(baseUrl).toURL().openStream()))) {
 			context.setOffers(objectMapper.readValue(reader, AwsPriceIndex.class).getOffers());
 		}
 	}

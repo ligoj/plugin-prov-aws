@@ -3,20 +3,6 @@
  */
 package org.ligoj.app.plugin.prov.aws;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.EnumMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.function.UnaryOperator;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.FileWriterWithEncoding;
 import org.apache.commons.lang3.ObjectUtils;
@@ -33,6 +19,13 @@ import org.ligoj.app.resource.subscription.SubscriptionResource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.util.*;
+import java.util.function.UnaryOperator;
 
 /**
  * Service in charge of Terraform generation for AWS.
@@ -79,9 +72,9 @@ public class ProvAwsTerraformService {
 	 * Note that the root device does not use this format. The first non root EBS device has index <code>0</code>.
 	 *
 	 * @see <a href= "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html">device_naming.html</a> for
-	 *      recommendations.
+	 * recommendations.
 	 * @see <a href= "https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/device_naming.html">device_naming.html</a>
-	 *      for recommendations.
+	 * for recommendations.
 	 */
 	private final Map<VmOs, String> mappingOsEbsDevice = new EnumMap<>(VmOs.class);
 
@@ -196,14 +189,14 @@ public class ProvAwsTerraformService {
 
 		// Markdown
 		templateFromTo(context.add("alb", getMd(modes.get(InstanceMode.AUTO_SCALING),
-				"| ALB | [${alb{{i}}_name}](/ec2/v2/home?region=${region}#LoadBalancers:search=${alb{{i}}_dns}) | [http](http://${alb{{i}}_dns}) |"))
-				.add("ec2", getMd(modes.get(InstanceMode.VM),
-						"| EC2 | [${ec2{{i}}_name}](/ec2/v2/home?region=${region}#Instances:search=${ec2{{i}}}) | [http](http://${ec2{{i}}_ip}) |"))
-				.add("spot",
-						getMd(modes.get(InstanceMode.EPHEMERAL),
-								"| EC2 | [${spot{{i}}_name}](/ec2sp/v1/spot/home?region=${region}#) | ${spot{{i}}_price} |"))
-				.add("asg", getMd(modes.get(InstanceMode.AUTO_SCALING),
-						"| EC2/AS | [${asg{{i}}_name}](/ec2/autoscaling/home?region=${region}#AutoScalingGroups:id=${asg{{i}}};view=details) | |")),
+								"| ALB | [${alb{{i}}_name}](/ec2/v2/home?region=${region}#LoadBalancers:search=${alb{{i}}_dns}) | [http](http://${alb{{i}}_dns}) |"))
+						.add("ec2", getMd(modes.get(InstanceMode.VM),
+								"| EC2 | [${ec2{{i}}_name}](/ec2/v2/home?region=${region}#Instances:search=${ec2{{i}}}) | [http](http://${ec2{{i}}_ip}) |"))
+						.add("spot",
+								getMd(modes.get(InstanceMode.EPHEMERAL),
+										"| EC2 | [${spot{{i}}_name}](/ec2sp/v1/spot/home?region=${region}#) | ${spot{{i}}_price} |"))
+						.add("asg", getMd(modes.get(InstanceMode.AUTO_SCALING),
+								"| EC2/AS | [${asg{{i}}_name}](/ec2/autoscaling/home?region=${region}#AutoScalingGroups:id=${asg{{i}}};view=details) | |")),
 				"my-region/dashboard-widgets.tpl.md", context.getLocation(), "dashboard-widgets.tpl.md");
 
 		// References for MD template and CloudWatch widgets
@@ -254,29 +247,29 @@ public class ProvAwsTerraformService {
 	private String getDashboardNetwork(final TerraformContext context) throws IOException {
 		final var format = toString("my-region/dashboard-widgets-line.json");
 		return newMetric(context, format, CLOUD_WATCH_ELB, "LoadBalancer", "${alb{{i}}}",
-				new String[][] { { "ProcessedBytes", "-", "-", "${alb{{i}}_name}" } });
+				new String[][]{{"ProcessedBytes", "-", "-", "${alb{{i}}_name}"}});
 	}
 
 	private String getDashboardLatency(final TerraformContext context) throws IOException {
 		final var format = toString("my-region/dashboard-widgets-line.json");
 		return newMetric(context, format, CLOUD_WATCH_ELB, "LoadBalancer", "${alb{{i}}}",
-				new String[][] { { "TargetResponseTime", "-", "-", "${alb{{i}}_name}" } });
+				new String[][]{{"TargetResponseTime", "-", "-", "${alb{{i}}_name}"}});
 	}
 
 	private String getDashboardScaling(final TerraformContext context) throws IOException {
 		final var format = toString("my-region/dashboard-widgets-area.json");
 		return newMetric(context, format, "AWS/AutoScaling", "AutoScalingGroupName", "${asg{{i}}}",
-				new String[][] { { "GroupInServiceInstances", "2ca02c", "left", "${asg{{i}}_name}" },
-						{ "GroupPendingInstances", "ff7f0e", RIGHT, "Pending ${asg{{i}}_name}" },
-						{ "GroupTerminatingInstances", "d62728", RIGHT, "Term. ${asg{{i}}_name}" } });
+				new String[][]{{"GroupInServiceInstances", "2ca02c", "left", "${asg{{i}}_name}"},
+						{"GroupPendingInstances", "ff7f0e", RIGHT, "Pending ${asg{{i}}_name}"},
+						{"GroupTerminatingInstances", "d62728", RIGHT, "Term. ${asg{{i}}_name}"}});
 	}
 
 	private String getDashboardBalancing(final TerraformContext context) throws IOException {
 		final var format = toString("my-region/dashboard-widgets-area.json");
 		return newMetric(context, format, CLOUD_WATCH_ELB, "TargetGroup",
 				"${alb{{i}}_tg}\", \"LoadBalancer\", \"${alb{{i}}}",
-				new String[][] { { "HealthyHostCount", "2ca02c", "left", "OK ${alb{{i}}_name}" },
-						{ "UnHealthyHostCount", "d62728", RIGHT, "KO ${alb{{i}}_name}" } });
+				new String[][]{{"HealthyHostCount", "2ca02c", "left", "OK ${alb{{i}}_name}"},
+						{"UnHealthyHostCount", "d62728", RIGHT, "KO ${alb{{i}}_name}"}});
 	}
 
 	private String newMetric(final TerraformContext context, final String format, final String service, final String idProperty,
@@ -286,7 +279,7 @@ public class ProvAwsTerraformService {
 		final var serviceFmt = replace(format, "{{service}}", service);
 		Arrays.stream(variants).forEach(variant -> {
 			for (var index = 0; index < instances.size(); index++) {
-				if (buffer.length() > 0) {
+				if (!buffer.isEmpty()) {
 					buffer.append(',');
 				}
 				buffer.append('\n');
@@ -410,8 +403,8 @@ public class ProvAwsTerraformService {
 	 * @throws IOException When secret cannot be written.
 	 */
 	public void writeSecrets(final Subscription subscription) throws IOException {
-		try (final var out = new FileWriterWithEncoding(utils.toFile(subscription, "secrets.auto.tfvars"),
-				StandardCharsets.UTF_8)) {
+		try (final var out = FileWriterWithEncoding.builder().setFile(utils.toFile(subscription, "secrets.auto.tfvars")).setCharset(
+				StandardCharsets.UTF_8).get()) {
 			final var parameters = subscriptionResource.getParametersNoCheck(subscription.getId());
 			out.write("access_key = \"");
 			out.write(parameters.get(ProvAwsPluginResource.PARAMETER_ACCESS_KEY_ID));
@@ -434,8 +427,8 @@ public class ProvAwsTerraformService {
 	private void template(final TerraformContext context, final UnaryOperator<String> formatter, final String... fragments)
 			throws IOException {
 		try (var source = toInput(String.join("/", fragments));
-				var target = new FileOutputStream(utils.toFile(context.getSubscription(), fragments));
-				Writer targetW = new OutputStreamWriter(target)) {
+		     var target = new FileOutputStream(utils.toFile(context.getSubscription(), fragments));
+		     Writer targetW = new OutputStreamWriter(target)) {
 			targetW.write(formatter.apply(IOUtils.toString(source, StandardCharsets.UTF_8)));
 		}
 	}
@@ -443,8 +436,8 @@ public class ProvAwsTerraformService {
 	private void templateFromTo(final TerraformContext context, final String from, final String... toFragments)
 			throws IOException {
 		try (var source = toInput(from);
-				var target = new FileOutputStream(utils.toFile(context.getSubscription(), toFragments));
-				var targetW = new OutputStreamWriter(target)) {
+		     var target = new FileOutputStream(utils.toFile(context.getSubscription(), toFragments));
+		     var targetW = new OutputStreamWriter(target)) {
 			targetW.write(replace(IOUtils.toString(source, StandardCharsets.UTF_8), context));
 		}
 	}

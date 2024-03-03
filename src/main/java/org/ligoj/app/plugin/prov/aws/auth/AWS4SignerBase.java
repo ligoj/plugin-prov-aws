@@ -34,7 +34,7 @@ public abstract class AWS4SignerBase {
 	 * @param headers Current headers.
 	 * @return Appended headers names only.
 	 */
-	protected String getCanonicalizeHeaderNames(final Map<String, String> headers) {
+	protected String getCanonicalizedHeaderNames(final Map<String, String> headers) {
 		return headers.keySet().stream().sorted(String.CASE_INSENSITIVE_ORDER).map(String::toLowerCase)
 				.collect(Collectors.joining(";"));
 	}

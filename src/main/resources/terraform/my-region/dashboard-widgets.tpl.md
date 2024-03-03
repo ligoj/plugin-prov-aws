@@ -12,6 +12,7 @@ All resources, including this dashboard have been generated with Terraform. You 
 
 ## Inventory
 
+
 | Service                                                                                                                                                               | Name                                                      | Access                        |
 |-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|-------------------------------|
 | VPC                                                                                                                                                                   | [${vpc0}](/vpc/home?region=${region}#vpcs:filter=${vpc0}) | |{{alb}}{{ec2}}{{spot}}{{asg}}

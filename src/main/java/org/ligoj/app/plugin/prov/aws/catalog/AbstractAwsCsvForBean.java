@@ -94,7 +94,7 @@ public abstract class AbstractAwsCsvForBean<T> extends AbstractCsvManager {
 	 * @return <code>true</code> when the given values correspond to the headers row.
 	 */
 	protected boolean isHeaderRow(final List<String> values) {
-		return values.get(0).equals("SKU");
+		return values.getFirst().equals("SKU");
 	}
 
 	protected abstract CsvBeanReader<T> newCsvReader(final Reader reader, final String[] headers,

@@ -133,7 +133,7 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 		final var keys = resource.getEC2Keys(subscription);
 		Assertions.assertFalse(keys.isEmpty());
 		Assertions.assertEquals(1, keys.size());
-		Assertions.assertEquals("my-key", keys.get(0).getId());
+		Assertions.assertEquals("my-key", keys.getFirst().getId());
 	}
 
 	private ProvAwsPluginResource newSpyResource() {

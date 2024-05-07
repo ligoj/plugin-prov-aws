@@ -445,7 +445,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			if (!skuErrors.isEmpty()) {
 				// At least one SKU as not been resolved
 				log.warn("AWS {} Savings Plan import errors @{} with {} unresolved SKUs, first : {}", api,
-						region.getName(), skuErrors.size(), skuErrors.get(0));
+						region.getName(), skuErrors.size(), skuErrors.getFirst());
 			}
 
 			// Purge the SKUs

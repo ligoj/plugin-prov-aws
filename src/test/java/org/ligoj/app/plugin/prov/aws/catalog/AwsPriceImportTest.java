@@ -38,6 +38,7 @@ import org.ligoj.app.plugin.prov.quote.database.QuoteDatabaseEditionVo;
 import org.ligoj.app.plugin.prov.quote.database.QuoteDatabaseQuery;
 import org.ligoj.app.plugin.prov.quote.instance.ProvQuoteInstanceResource;
 import org.ligoj.app.plugin.prov.quote.instance.QuoteInstanceEditionVo;
+import org.ligoj.app.plugin.prov.quote.instance.QuoteInstanceQuery;
 import org.ligoj.app.plugin.prov.quote.storage.ProvQuoteStorageResource;
 import org.ligoj.app.plugin.prov.quote.storage.QuoteStorageEditionVo;
 import org.ligoj.app.plugin.prov.quote.storage.QuoteStorageQuery;
@@ -66,7 +67,6 @@ import java.util.stream.Stream;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.ligoj.app.plugin.prov.aws.catalog.AwsPriceImportBase.CONF_URL_AWS_PRICES;
-import static org.ligoj.app.plugin.prov.quote.instance.QuoteInstanceQuery.builder;
 
 /**
  * Test class of {@link AwsPriceImport}
@@ -340,18 +340,18 @@ class AwsPriceImportTest extends AbstractServerTest {
 		ipRepository.findByExpected("code", "OLD_____________.JRTCKXETXF.6YS6EN2CT7");
 
 		// Request an instance with similar baseline
-		final var lookupB1 = qiResource.lookup(subscription, builder().type("t9.2xlarge").build());
+		final var lookupB1 = qiResource.lookup(subscription, QuoteInstanceQuery.builder().type("t9.2xlarge").build());
 		Assertions.assertEquals("BASELINE_40_____.JRTCKXETXF.6YS6EN2CT7", lookupB1.getPrice().getCode());
 		Assertions.assertEquals(40d, lookupB1.getPrice().getType().getBaseline());
 
 		// Request an instance with unknown baseline
-		final var lookupB2 = qiResource.lookup(subscription, builder().type("t9.0xlarge").build());
+		final var lookupB2 = qiResource.lookup(subscription, QuoteInstanceQuery.builder().type("t9.0xlarge").build());
 		Assertions.assertEquals("BASELINE_0______.JRTCKXETXF.6YS6EN2CT7", lookupB2.getPrice().getCode());
 		Assertions.assertEquals(0d, lookupB2.getPrice().getType().getBaseline());
 
 		// Check the spot
 		final var spotPrice = qiResource.lookup(subscription,
-				builder().cpu(2).ram(1741).workload("100").ephemeral(true).build());
+				QuoteInstanceQuery.builder().cpu(2).ram(1741).workload("100").ephemeral(true).build());
 		Assertions.assertEquals("spot-eu-west-1-r4.large-LINUX", spotPrice.getPrice().getCode());
 		Assertions.assertEquals(12.629, spotPrice.getCost(), DELTA);
 		Assertions.assertEquals(12.629d, spotPrice.getPrice().getCost(), DELTA);
@@ -381,7 +381,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Check EC2 savings plan
 		final var ec2SsavingsPlanPrice = qiResource.lookup(subscription,
-				builder().cpu(2).ram(1741).workload("100").usage("36monthEC2SP").build());
+				QuoteInstanceQuery.builder().cpu(2).ram(1741).workload("100").usage("36monthEC2SP").build());
 		Assertions.assertEquals("7DVU5XBSTGHBTJUV.M2WTFX8JK6VDUNU5", ec2SsavingsPlanPrice.getPrice().getCode());
 		Assertions.assertEquals(63.51d, ec2SsavingsPlanPrice.getCost(), DELTA);
 		Assertions.assertEquals(63.51d, ec2SsavingsPlanPrice.getPrice().getCost(), DELTA);
@@ -393,7 +393,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Check Compute savings plan for EC2
 		final var cSavingsPlanPrice = qiResource.lookup(subscription,
-				builder().cpu(2).ram(1741).workload("100").usage("36monthCSP").build());
+				QuoteInstanceQuery.builder().cpu(2).ram(1741).workload("100").usage("36monthCSP").build());
 		Assertions.assertEquals("8GU23DFTKP2N43SD.29QDFBY626457QNP", cSavingsPlanPrice.getPrice().getCode());
 		Assertions.assertEquals("Compute Savings Plan, 1yr, All Upfront",
 				cSavingsPlanPrice.getPrice().getTerm().getName());
@@ -404,7 +404,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("c1.medium", cSavingsPlanPrice.getPrice().getType().getName());
 
 		// Check EC2 RI
-		final var cRIPrice = qiResource.lookup(subscription, builder().cpu(2).ram(1741).usage("36month").build());
+		final var cRIPrice = qiResource.lookup(subscription, QuoteInstanceQuery.builder().cpu(2).ram(1741).usage("36month").build());
 		Assertions.assertEquals(46.667d, cRIPrice.getCost(), DELTA);
 		Assertions.assertEquals(46.667d, cRIPrice.getPrice().getCost(), DELTA);
 		Assertions.assertEquals(1680.0d, cRIPrice.getPrice().getCostPeriod(), DELTA);
@@ -478,7 +478,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		// Check Fargate ephemeral
 		final var ceSPrice = qsResource.lookup(subscription,
 						QuoteStorageQuery.builder().size(100).container(cId).optimized(ProvStorageOptimized.IOPS).build())
-				.get(0);
+				.getFirst();
 		Assertions.assertEquals(7.12d, ceSPrice.getCost(), DELTA);
 		Assertions.assertEquals("fargate-ephemeral", ceSPrice.getPrice().getType().getName());
 		Assertions.assertEquals("eu-west-1-fargate-ephemeral", ceSPrice.getPrice().getCode());
@@ -552,7 +552,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(5, storage.getSize(), DELTA);
 
 		// Compute price is updated
-		final var instance2 = newQuote.getInstances().get(0);
+		final var instance2 = newQuote.getInstances().getFirst();
 		Assertions.assertEquals(46.611d, instance2.getCost(), DELTA);
 		final var price = instance2.getPrice();
 		Assertions.assertEquals(1678d, price.getInitialCost(), DELTA);
@@ -593,7 +593,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 				SupportType.ALL,
 				SupportType.ALL,
 				SupportType.ALL,
-				SupportType.ALL, Rate.GOOD).get(0);
+				SupportType.ALL, Rate.GOOD).getFirst();
 		Assertions.assertEquals(5500d, s2Lookup.getCost(), DELTA); // Minimal price
 		Assertions.assertEquals(0d, s2Lookup.getCo2());
 		final var s2Price = s2Lookup.getPrice();
@@ -639,8 +639,8 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 	private ProvQuoteInstance check(final QuoteVo quote, final double cost, final double computeCost) {
 		Assertions.assertEquals(cost, quote.getCost().getMin(), DELTA);
-		checkStorage(quote.getStorages().get(0));
-		return checkInstance(quote.getInstances().get(0), computeCost);
+		checkStorage(quote.getStorages().getFirst());
+		return checkInstance(quote.getInstances().getFirst(), computeCost);
 	}
 
 	private ProvQuoteInstance checkInstance(final ProvQuoteInstance instance, final double cost) {
@@ -691,11 +691,11 @@ class AwsPriceImportTest extends AbstractServerTest {
 		// https://aws.amazon.com/ec2/pricing/reserved-instances/pricing/
 		// Check the reserved
 		final var quote = installAndConfigure();
-		final var instance = quote.getInstances().get(0);
+		final var instance = quote.getInstances().getFirst();
 
 		// Check the spot
 		final var price = qiResource.lookup(instance.getConfiguration().getSubscription().getId(),
-				builder().cpu(2).ram(1741).type("r4.large").ephemeral(true).build());
+				QuoteInstanceQuery.builder().cpu(2).ram(1741).type("r4.large").ephemeral(true).build());
 		Assertions.assertTrue(price.getCost() > 5d);
 		Assertions.assertTrue(price.getCost() < 100d);
 		final var instance2 = price.getPrice();
@@ -712,7 +712,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 				SupportType.ALL,
 				SupportType.ALL,
 				SupportType.ALL,
-				SupportType.ALL, Rate.GOOD).get(0);
+				SupportType.ALL, Rate.GOOD).getFirst();
 		Assertions.assertEquals(5500d, s2Lookup.getCost(), DELTA); // Minimal price
 		Assertions.assertEquals(0d, s2Lookup.getCo2());
 		final var s2Price = s2Lookup.getPrice();
@@ -1035,7 +1035,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Request an instance that would not be a Spot
 		final var lookup = qiResource.lookup(subscription,
-				builder().cpu(2).ram(1741).workload("100").usage("36month").type("c1.medium").build());
+				QuoteInstanceQuery.builder().cpu(2).ram(1741).workload("100").usage("36month").type("c1.medium").build());
 		Assertions.assertEquals("HB5V2X8TXQUTDZBV.NQ3QZPMQV9.6YS6EN2CT7", lookup.getPrice().getCode());
 
 		final var ivo = new QuoteInstanceEditionVo();
@@ -1052,7 +1052,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Add storage to this instance
 		var sLookup = qsResource.lookup(subscription,
-				QuoteStorageQuery.builder().size(5).latency(Rate.GOOD).instance(server1()).build()).get(0);
+				QuoteStorageQuery.builder().size(5).latency(Rate.GOOD).instance(server1()).build()).getFirst();
 		Assertions.assertEquals("eu-west-1-gp3", sLookup.getPrice().getCode());
 		final var svo = new QuoteStorageEditionVo();
 		svo.setInstance(server1());
@@ -1070,7 +1070,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		// Add storage (EFS) to this quote
 		sLookup = qsResource.lookup(subscription,
 						QuoteStorageQuery.builder().latency(Rate.GOOD).optimized(ProvStorageOptimized.THROUGHPUT).build())
-				.get(0);
+				.getFirst();
 		Assertions.assertEquals("eu-west-1-efs-z", sLookup.getPrice().getCode());
 		final var svo2 = new QuoteStorageEditionVo();
 		svo2.setSize(1);
@@ -1085,7 +1085,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		// Add storage (S3) to this quote
 		sLookup = qsResource.lookup(subscription,
 						QuoteStorageQuery.builder().latency(Rate.MEDIUM).optimized(ProvStorageOptimized.DURABILITY).build())
-				.get(0);
+				.getFirst();
 		Assertions.assertEquals("eu-west-1-s3-z-ia", sLookup.getPrice().getCode());
 		final var type = sLookup.getPrice().getType();
 		Assertions.assertEquals(99.5d, type.getAvailability(), 0.000000001d);

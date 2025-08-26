@@ -5,7 +5,7 @@ package org.ligoj.app.plugin.prov.aws.catalog.vm.fargate;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.ligoj.app.plugin.prov.aws.catalog.AwsPriceImportBase;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVmOs;
@@ -205,7 +205,7 @@ public class AwsPriceImportFargate extends
 		return copyAsNeeded(context, price,
 				p -> copy(context, csv, p,
 						installInstanceType(context, cpu, ram,
-								StringUtils.containsIgnoreCase(csv.getUsageType(), "arm") ? "arm" : null),
+								Strings.CI.contains(csv.getUsageType(), "arm") ? "arm" : null),
 						installInstancePriceTerm(context, csv)));
 	}
 
@@ -342,7 +342,7 @@ public class AwsPriceImportFargate extends
 	private void installFargatePrice(final LocalFargateContext context, final AwsFargatePrice csvCpu,
 			final double costRam, final double costCpu) {
 		CPU_TO_RAM.forEach((cpu, ramGbA) -> {
-			final var os = StringUtils.containsIgnoreCase(csvCpu.getUsageType(), "windows") ? VmOs.WINDOWS : VmOs.LINUX;
+			final var os = Strings.CI.contains(csvCpu.getUsageType(), "windows") ? VmOs.WINDOWS : VmOs.LINUX;
 			if (os == VmOs.WINDOWS && (cpu < 1d || cpu >= 8)) {
 				// This CPU configuration is not supported for Windows
 				return;

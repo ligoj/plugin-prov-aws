@@ -6,7 +6,7 @@ package org.ligoj.app.plugin.prov.aws;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.FileWriterWithEncoding;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.ligoj.app.model.Subscription;
 import org.ligoj.app.plugin.prov.model.AbstractQuote;
 import org.ligoj.app.plugin.prov.model.ProvLocation;
@@ -333,7 +333,7 @@ public class ProvAwsTerraformService {
 						.add("type", instance.getPrice().getType().getName()).add("name", instance.getName())
 						.add("spot-price", String.valueOf(instance.getMaxVariableCost()))
 						.add("min", String.valueOf(instance.getMinQuantity()))
-						.add("max", String.valueOf(ObjectUtils.defaultIfNull(instance.getMaxQuantity(), 10)))
+						.add("max", String.valueOf(ObjectUtils.getIfNull(instance.getMaxQuantity(), 10)))
 						.add("root-device", getEbsDevices(instance, true, 0, 1)).add("user-data", getUserData(instance))
 						.add("ebs-devices", getEbsDevices(instance, entry.getKey() == InstanceMode.AUTO_SCALING, 1,
 								instance.getStorages().size()));
@@ -445,7 +445,7 @@ public class ProvAwsTerraformService {
 	private String replace(String source, String... replaces) {
 		var result = source;
 		for (var index = 0; index < replaces.length; index += 2) {
-			result = StringUtils.replace(result, replaces[index], replaces[index + 1]);
+			result = Strings.CS.replace(result, replaces[index], replaces[index + 1]);
 		}
 		return result;
 	}
@@ -453,7 +453,7 @@ public class ProvAwsTerraformService {
 	private String replace(String source, final TerraformContext context) {
 		var result = source;
 		for (final var entry : context.getContext().entrySet()) {
-			result = StringUtils.replace(cleanupMd(result), cleanupMd(String.format("{{%s}}", entry.getKey())), cleanupMd(entry.getValue()));
+			result = Strings.CS.replace(cleanupMd(result), cleanupMd(String.format("{{%s}}", entry.getKey())), cleanupMd(entry.getValue()));
 		}
 		return result;
 	}
@@ -471,7 +471,7 @@ public class ProvAwsTerraformService {
 		}
 
 		// Single EC2 but with a price condition
-		if (ObjectUtils.defaultIfNull(instance.getMaxVariableCost(), 0d) > 0) {
+		if (ObjectUtils.getIfNull(instance.getMaxVariableCost(), 0d) > 0) {
 			return InstanceMode.EPHEMERAL;
 		}
 		// Single EC2

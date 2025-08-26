@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVm;
@@ -167,7 +168,7 @@ public class AwsPriceImportRds extends
 
 		// Merge the updated statistics
 		return copyAsNeeded(context, type, t -> {
-			final var ssd = StringUtils.contains(csv.getStorage(), "SSD");
+			final var ssd = Strings.CS.contains(csv.getStorage(), "SSD");
 			t.setName(type.getCode());
 			t.setDescription(csv.getVolume());
 			t.setMinimal(toInteger(csv.getSizeMin()));
@@ -187,14 +188,14 @@ public class AwsPriceImportRds extends
 
 	@Override
 	protected Rate getRate(final String type, final AwsRdsPrice csv, final String name) {
-		return super.getRate(type, csv, StringUtils.replaceOnce(name, "db\\.", ""));
+		return super.getRate(type, csv, Strings.CS.replaceOnce(name, "db\\.", ""));
 	}
 
 	@Override
 	protected Co2Data getCo2(final AbstractUpdateContext context, final String type) {
 		if (!context.getCo2DataSet().containsKey(type)) {
 			// Try to resolve the type without the "db." prefix
-			return super.getCo2(context, StringUtils.removeStart(type, "db."));
+			return super.getCo2(context, Strings.CS.removeStart(type, "db."));
 		}
 		return super.getCo2(context, type);
 	}

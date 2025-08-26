@@ -3,35 +3,27 @@
  */
 package org.ligoj.app.plugin.prov.aws.catalog.vm.ec2;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.regex.Pattern;
-
 import jakarta.annotation.PostConstruct;
-
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.ligoj.app.plugin.prov.aws.ProvAwsPluginResource;
 import org.ligoj.app.plugin.prov.aws.catalog.AwsPriceImportBase;
 import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVmOs;
-import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
-import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
-import org.ligoj.app.plugin.prov.model.ProvInstanceType;
-import org.ligoj.app.plugin.prov.model.ProvLocation;
-import org.ligoj.app.plugin.prov.model.ProvQuoteInstance;
-import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
-import org.ligoj.app.plugin.prov.model.ProvTenancy;
-import org.ligoj.app.plugin.prov.model.VmOs;
+import org.ligoj.app.plugin.prov.model.*;
 import org.ligoj.bootstrap.core.SpringUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import lombok.extern.slf4j.Slf4j;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * The provisioning price service for AWS. Manage install or update of prices.
@@ -183,7 +175,7 @@ public class AwsPriceImportEc2 extends
 		final var region = context.getRegion();
 		final var type = context.getLocalTypes().get(json.getName());
 		final var baseCode = TERM_SPOT_CODE + "-" + region.getName() + "-" + type.getName() + "-";
-		json.getOsPrices().stream().filter(op -> !StringUtils.startsWithIgnoreCase(op.getPrices().get("USD"), "N/A"))
+		json.getOsPrices().stream().filter(op -> !Strings.CI.startsWith(op.getPrices().get("USD"), "N/A"))
 				.peek(op -> op.setOs(op.getName().equals("mswin") ? VmOs.WINDOWS : VmOs.LINUX))
 				.filter(op -> isEnabledOs(context, op.getOs())).forEach(op -> {
 
@@ -213,7 +205,7 @@ public class AwsPriceImportEc2 extends
 	@Override
 	protected void copy(final AwsEc2Price csv, final ProvInstancePrice p) {
 		super.copy(csv, p);
-		final var software = ObjectUtils.defaultIfNull(csv.getSoftware(), "");
+		final var software = ObjectUtils.getIfNull(csv.getSoftware(), "");
 		p.setSoftware(StringUtils.trimToNull(mapSoftware.computeIfAbsent(software, String::toUpperCase)));
 		p.setTenancy(ProvTenancy.valueOf(StringUtils.upperCase(csv.getTenancy())));
 	}

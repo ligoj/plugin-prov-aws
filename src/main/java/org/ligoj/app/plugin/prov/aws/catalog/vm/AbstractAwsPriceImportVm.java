@@ -3,27 +3,9 @@
  */
 package org.ligoj.app.plugin.prov.aws.catalog.vm;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.Objects;
-import java.util.function.Function;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import jakarta.annotation.PostConstruct;
-
-import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.RegExUtils;
-import org.apache.commons.lang3.StringUtils;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.*;
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsImport;
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractLocalContext;
 import org.ligoj.app.plugin.prov.aws.catalog.AwsPriceRegion;
@@ -36,21 +18,22 @@ import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlan
 import org.ligoj.app.plugin.prov.catalog.AbstractUpdateContext;
 import org.ligoj.app.plugin.prov.catalog.Co2Data;
 import org.ligoj.app.plugin.prov.catalog.ImportCatalog;
-import org.ligoj.app.plugin.prov.model.AbstractInstanceType;
-import org.ligoj.app.plugin.prov.model.AbstractQuoteVm;
-import org.ligoj.app.plugin.prov.model.AbstractTermPrice;
-import org.ligoj.app.plugin.prov.model.AbstractTermPriceVm;
-import org.ligoj.app.plugin.prov.model.ProvInstancePrice;
-import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
-import org.ligoj.app.plugin.prov.model.ProvLocation;
-import org.ligoj.app.plugin.prov.model.ProvStoragePrice;
-import org.ligoj.app.plugin.prov.model.Rate;
+import org.ligoj.app.plugin.prov.model.*;
 import org.ligoj.bootstrap.core.curl.CurlProcessor;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import lombok.extern.slf4j.Slf4j;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.*;
+import java.util.function.Function;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * The computing part of AWS catalog import.
@@ -209,7 +192,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		resolveBaseline(context, t);
 
 		// Convert GiB to MiB, and rounded
-		final var memoryStr = StringUtils.removeEndIgnoreCase(csv.getMemory(), " GiB").replace(",", "");
+		final var memoryStr = Strings.CI.removeEnd(csv.getMemory(), " GiB").replace(",", "");
 		t.setRam((int) Math.round(Double.parseDouble(memoryStr) * 1024d));
 
 		// Rating
@@ -283,7 +266,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			return n;
 		}, previous -> {
 			final var type = context.getLocalTypes().computeIfAbsent(previous.getCode(),
-					code -> ObjectUtils.defaultIfNull(context.getTRepository().findBy("code", code), previous));
+					code -> ObjectUtils.getIfNull(context.getTRepository().findBy("code", code), previous));
 
 			// Update the statistics only once
 			return copyAsNeeded(context, type, t -> copy(context, csv, t), context.getTRepository());
@@ -358,12 +341,12 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 					RegExUtils.replaceAll(csv.getPurchaseOption(), "([a-z])Upfront", "$1 Upfront"), "No\\s*Upfront"));
 			t.setName(Arrays
 					.stream(new String[] { csv.getTermType(),
-							StringUtils.replace(csv.getLeaseContractLength(), " ", ""), name,
-							StringUtils.trimToNull(StringUtils.remove(csv.getOfferingClass(), "standard")) })
+							Strings.CS.replace(csv.getLeaseContractLength(), " ", ""), name,
+							StringUtils.trimToNull(Strings.CS.remove(csv.getOfferingClass(), "standard")) })
 					.filter(Objects::nonNull).collect(Collectors.joining(", ")));
-			t.setReservation(StringUtils.containsIgnoreCase(term.getName(), "reserved")); // ODCR not yet managed of
+			t.setReservation(Strings.CI.contains(term.getName(), "reserved")); // ODCR not yet managed of
 			t.setConvertibleType(
-					!term.getReservation() || StringUtils.containsIgnoreCase(term.getName(), "convertible"));
+					!term.getReservation() || Strings.CI.contains(term.getName(), "convertible"));
 
 			// Only for OD term
 			t.setConvertibleFamily(!t.getReservation());
@@ -388,7 +371,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			newTerm.setCode(k);
 			return newTerm;
 		}, sharedTerm -> context.getLocalPriceTerms().computeIfAbsent(sharedTerm.getCode(),
-				c -> ObjectUtils.defaultIfNull(iptRepository.findBy("code", c), sharedTerm)));
+				c -> ObjectUtils.getIfNull(iptRepository.findBy("code", c), sharedTerm)));
 	}
 
 	/**

@@ -32,7 +32,7 @@ import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * The provisioning price service for RDS AWS. Manage install or update of prices.
+ * The provisioning price service for RDS AWS. Manage installation or update of prices.
  */
 @Component
 @Slf4j
@@ -117,8 +117,8 @@ public class AwsPriceImportRds extends
 				return p;
 			}, p ->
 
-			// Update the price as needed
-			saveAsNeeded(context, p, csv.getPricePerUnit(), spRepository));
+					// Update the price as needed
+					saveAsNeeded(context, p, csv.getPricePerUnit(), spRepository));
 		}
 	}
 
@@ -225,4 +225,11 @@ public class AwsPriceImportRds extends
 			t.setStorageRate(Rate.BEST);
 		}
 	}
+
+	@Override
+	protected boolean priceMatchConstraintButType(final ProvDatabasePrice p1, ProvDatabasePrice p2) {
+		return super.priceMatchConstraintButType(p1, p2)
+				&& Strings.CS.equals(p1.getEngine(), p2.getEngine());
+	}
+
 }

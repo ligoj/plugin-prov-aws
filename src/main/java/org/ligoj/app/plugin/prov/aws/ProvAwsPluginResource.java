@@ -169,7 +169,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	}
 
 	/**
-	 * Create Curl request for AWS service. Initialize default values for awsAccessKey, awsSecretKey and regionName and
+	 * Create a cUrl request for AWS service. Initialize default values for awsAccessKey, awsSecretKey and regionName and
 	 * compute signature.
 	 *
 	 * @param builder      {@link AWS4SignatureQueryBuilder} initialized with values used for this call (headers,
@@ -182,7 +182,7 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	}
 
 	/**
-	 * Create Curl request for AWS service. Initialize default values for awsAccessKey, awsSecretKey and regionName and
+	 * Create a cUrl request for AWS service. Initialize default values for awsAccessKey, awsSecretKey and regionName and
 	 * compute signature.
 	 *
 	 * @param builder    {@link AWS4SignatureQueryBuilder} initialized with values used for this call (headers,

@@ -28,7 +28,7 @@ public class AWS4SignatureQuery {
 	private String method = "POST";
 
 	/**
-	 * AWS service name : s3, ec2, ...
+	 * AWS service name: s3, ec2, ...
 	 */
 	private String service;
 	/**
@@ -40,7 +40,7 @@ public class AWS4SignatureQuery {
 	 */
 	private String accessKey;
 	/**
-	 * AWS Secret Key : I won't give my secret key for the javadoc :)
+	 * AWS Secret Key
 	 */
 	private String secretKey;
 	/**
@@ -57,7 +57,7 @@ public class AWS4SignatureQuery {
 	private String body;
 
 	/**
-	 * Builder class : used to initialize some attributes with default values
+	 * Builder class: used to initialize some attributes with default values
 	 */
 	public static class AWS4SignatureQueryBuilder {
 		/**

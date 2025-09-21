@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
 import lombok.Setter;
 
 /**
- * The provisioning price service for AWS. Manage install or update of prices.
+ * The provisioning price service for AWS. Manage installation or update of prices.
  */
 @Component
 @Setter

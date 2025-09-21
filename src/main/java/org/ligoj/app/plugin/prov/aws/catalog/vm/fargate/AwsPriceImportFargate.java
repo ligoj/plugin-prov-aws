@@ -25,7 +25,7 @@ import java.util.stream.DoubleStream;
 import java.util.stream.Stream;
 
 /**
- * The provisioning price service for AWS. Manage install or update of prices.
+ * The provisioning price service for AWS. Manage installation or update of prices.
  *
  * @see <a href="https://aws.amazon.com/fargate/pricing/">Farget prices</a>
  */
@@ -364,6 +364,11 @@ public class AwsPriceImportFargate extends
 	@Override
 	protected boolean isEnabledOs(final AbstractUpdateContext context, final String os) {
 		return true;
+	}
+
+	@Override
+	protected void updateScoredPrices(final LocalFargateContext context, String api) {
+		// Ignore
 	}
 
 }

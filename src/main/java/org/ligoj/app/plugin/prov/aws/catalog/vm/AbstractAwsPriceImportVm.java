@@ -6,6 +6,7 @@ package org.ligoj.app.plugin.prov.aws.catalog.vm;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.*;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractAwsImport;
 import org.ligoj.app.plugin.prov.aws.catalog.AbstractLocalContext;
 import org.ligoj.app.plugin.prov.aws.catalog.AwsPriceRegion;
@@ -60,12 +61,12 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	protected static final String TERM_SPOT = "Spot";
 
 	/**
-	 * Compute Savings Plan name
+	 * Compute Saving Plan name
 	 */
 	private static final String TERM_COMPUTE_SP = "Compute Savings Plan";
 
 	/**
-	 * EC2 Savings Plan name
+	 * EC2 Saving Plan name
 	 */
 	private static final String TERM_EC2_SP = "EC2 Savings Plan";
 
@@ -96,7 +97,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 *
 	 * @param context The regional update context.
 	 * @param csv     The current CSV price entry.
-	 * @return <code>true</code> when the current CSV entry is associated to a RI with up-front.
+	 * @return <code>true</code> when the current CSV entry is associated with a RI with up-front.
 	 */
 	protected boolean handlePartialCost(final X context, final C csv) {
 		if (!hasPartialCost(csv)) {
@@ -119,9 +120,9 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	/**
 	 * Handle partial up-front prices split into multiple price entries.
 	 *
-	 * @param context    The regional update context.
-	 * @param one        The current CSV price entry.
-	 * @param two      The previous CSV price entry.
+	 * @param context The regional update context.
+	 * @param one     The current CSV price entry.
+	 * @param two     The previous CSV price entry.
 	 */
 	private void handlePartialCost(final X context, final C one, final C two) {
 		// Up-front part
@@ -188,10 +189,10 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		t.setProcessor(StringUtils
 				.trimToNull(RegExUtils.removeAll(csv.getPhysicalProcessor(), "(Variable|\\s*Family|\\([^)]*\\))")));
 		t.setDescription(ArrayUtils.toString(
-				ArrayUtils.removeAllOccurrences(new String[] { csv.getStorage(), csv.getNetworkPerformance() }, null)));
+				ArrayUtils.removeAllOccurrences(new String[]{csv.getStorage(), csv.getNetworkPerformance()}, null)));
 		resolveBaseline(context, t);
 
-		// Convert GiB to MiB, and rounded
+		// Convert rounded GiB to MiB
 		final var memoryStr = Strings.CI.removeEnd(csv.getMemory(), " GiB").replace(",", "");
 		t.setRam((int) Math.round(Double.parseDouble(memoryStr) * 1024d));
 
@@ -288,7 +289,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * @param type The rating mapping name.
 	 * @param csv  The CSV price row.
 	 * @return The direct [class, generation, size] rate association, or the [class, generation] rate association, or
-	 *         the [class] association, of the explicit default association or {@link Rate#MEDIUM} value.
+	 * the [class] association, of the explicit default association or {@link Rate#MEDIUM} value.
 	 */
 	private Rate getRate(final String type, final C csv) {
 		return getRate(type, csv, csv.getInstanceType());
@@ -301,8 +302,8 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * @param name The name to map.
 	 * @param csv  The CSV price row.
 	 * @return The direct [class, generation, size] rate association, or the [class, generation] rate association, or
-	 *         the [class] association, of the explicit default association or {@link Rate#MEDIUM} value. Previous
-	 *         generations types are downgraded.
+	 * the [class] association, of the explicit default association or {@link Rate#MEDIUM} value. Previous
+	 * generations types are downgraded.
 	 */
 	protected Rate getRate(final String type, final C csv, final String name) {
 		var rate = getRate(type, name);
@@ -340,11 +341,11 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			final var name = StringUtils.trimToNull(RegExUtils.removeAll(
 					RegExUtils.replaceAll(csv.getPurchaseOption(), "([a-z])Upfront", "$1 Upfront"), "No\\s*Upfront"));
 			t.setName(Arrays
-					.stream(new String[] { csv.getTermType(),
+					.stream(new String[]{csv.getTermType(),
 							Strings.CS.replace(csv.getLeaseContractLength(), " ", ""), name,
-							StringUtils.trimToNull(Strings.CS.remove(csv.getOfferingClass(), "standard")) })
+							StringUtils.trimToNull(Strings.CS.remove(csv.getOfferingClass(), "standard"))})
 					.filter(Objects::nonNull).collect(Collectors.joining(", ")));
-			t.setReservation(Strings.CI.contains(term.getName(), "reserved")); // ODCR not yet managed of
+			t.setReservation(Strings.CI.contains(term.getName(), "reserved")); // ODCR not yet managed
 			t.setConvertibleType(
 					!term.getReservation() || Strings.CI.contains(term.getName(), "convertible"));
 
@@ -378,10 +379,9 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * Read the network rate mapping. File containing the mapping from the AWS network rate to the normalized
 	 * application rating.
 	 *
+	 * @throws IOException When the JSON mapping file cannot be read.
 	 * @see <a href="https://calculator.s3.amazonaws.com/index.html">calculator</a>
 	 * @see <a href="https://aws.amazon.com/ec2/instance-types/">instance-types</a>
-	 *
-	 * @throws IOException When the JSON mapping file cannot be read.
 	 */
 	@PostConstruct
 	public void initRate() throws IOException {
@@ -392,17 +392,17 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	}
 
 	/**
-	 * Return <code>true</code> when the Savings Plan product is accepted.
-	 * 
+	 * Return <code>true</code> when the Saving Plan product is accepted.
+	 *
 	 * @param product The product to accept.
-	 * @return <code>true</code> when the Savings Plan product is accepted.
+	 * @return <code>true</code> when the Saving Plan product is accepted.
 	 */
 	protected boolean filterSPProduct(SavingsPlanProduct product) {
 		return true;
 	}
 
 	/**
-	 * Download and install Savings Plan prices from AWS endpoint.
+	 * Download and install Saving Plan prices from the AWS endpoint.
 	 */
 	private void installSavingsPlan(final X context, final String api, final String serviceCode, final String endpoint,
 			final Map<String, P> previousOd) {
@@ -426,13 +426,17 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 							previousOd, odTermCode, sp.getRates()))
 					.filter(Objects::nonNull).toList();
 			if (!skuErrors.isEmpty()) {
-				// At least one SKU as not been resolved
+				// At least one SKU has not been resolved
 				log.warn("AWS {} Savings Plan import errors @{} with {} unresolved SKUs, first : {}", api,
 						region.getName(), skuErrors.size(), skuErrors.getFirst());
 			}
 
 			// Purge the SKUs
 			purgePrices(context);
+
+			// Update the prices according to the most recent generations
+			updateScoredPrices(context, api + " (scoring 2/2)");
+			nextStep(context, api + " (scoring 2/2)", region.getName(), 1);
 		} catch (final IOException | IllegalArgumentException use) {
 			// Something goes wrong for this region, stop for this region
 			log.warn("AWS {} Savings Plan import failed @{}", api, region.getName(), use);
@@ -445,8 +449,8 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	}
 
 	/**
-	 * Persist the savings plan prices for a specific term and region.
-	 * 
+	 * Persist the saving plan prices for a specific term and region.
+	 *
 	 * @param context     The current global context to handle lazy sub-entities creation.
 	 * @param serviceCode The service code to filter.
 	 * @param term        The current term.
@@ -463,7 +467,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	}
 
 	/**
-	 * Create or update the savings plan term and return it.
+	 * Create or update the saving plan term and return it.
 	 */
 	private ProvInstancePriceTerm newSavingsPlanTerm(final X context, final SavingsPlanTerm sp) {
 		final var description = sp.getDescription();
@@ -471,20 +475,20 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		final String name;
 		final String code;
 		if (sp.getDescription().contains(TERM_COMPUTE_SP)) {
-			// Sample: "3 year No Upfront Compute Savings Plan"
+			// Sample: "3 years No Upfront Compute Savings Plan"
 			// Sample: "1 year All Upfront Compute Savings Plan"
 			name = RegExUtils.replaceAll(description, "(\\d+) year\\s+(.*)\\s+Compute Savings Plan",
 					TERM_COMPUTE_SP + ", $1yr, $2");
 			computePlan = true;
 			code = sp.getSku();
 		} else {
-			// Sample: "3 year Partial Upfront r5 EC2 Instance Savings Plan in eu-west-3"
+			// Sample: "3 years Partial Upfront r5 EC2 Instance Savings Plan in eu-west-3"
 			name = RegExUtils.replaceAll(description, "(\\d+) year (.*)\\s+(.+)\\s+EC2 Instance Savings Plan (.*)",
 					TERM_EC2_SP + ", $1yr, $2");
 			computePlan = false;
 			code = name;
 		}
-		final var term = newTermAsNeeded(context,code);
+		final var term = newTermAsNeeded(context, code);
 
 		// Update the properties only once
 		return copyAsNeeded(context, term, t -> {
@@ -502,9 +506,9 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	}
 
 	/**
-	 * Install the SP prices related to a term. The instance price type is reused from the discounted OnDemand price,
+	 * Install the SP prices related to a term. The instance price type is reused from the discounted OnDemand price
 	 * and must exist.
-	 * 
+	 *
 	 * @param context    The regional update context.
 	 * @param term       The current term.
 	 * @param jsonPrice  The SP price to persist.
@@ -541,10 +545,10 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	}
 
 	/**
-	 * Save initial cost depending on the term of given price.
-	 * 
+	 * Save initial cost depending on the term of the given price.
+	 *
 	 * @param price The target price to complete.
-	 * @param cost  The actual monthly based cost.
+	 * @param cost  The actual monthly-based cost.
 	 */
 	protected void saveInitialCost(final X context, final P price, final double cost) {
 		final var costPeriod = cost * Math.max(1, price.getTerm().getPeriod());
@@ -564,18 +568,18 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	}
 
 	/**
-	 * Copy OnDemand attributes to Savings Plan price.
-	 * 
+	 * Copy OnDemand attributes to Saving plan price.
+	 *
 	 * @param odPrice The OnDemand source price.
-	 * @param spPrice The target savings plan price.
+	 * @param spPrice The target saving plan price.
 	 */
 	protected void copySavingsPlan(final P odPrice, final P spPrice) {
 		// Nothing to do by default
 	}
 
 	/**
-	 * Install savings plan prices of target regions.
-	 * 
+	 * Install saving plan prices of target regions.
+	 *
 	 * @param gContext    The current global context to handle lazy sub-entities creation.
 	 * @param endpoint    The endpoint price URL.
 	 * @param api         The current API name.
@@ -585,7 +589,8 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 */
 	protected void installSavingsPlan(final UpdateContext gContext, final String endpoint, final String api,
 			final String serviceCode, final ProvLocation region, final X context) {
-		log.info("AWS {} Savings Plan import started @{}>{} ...", api, region.getName(), endpoint);
+		nextStep(context, api + " (saving plan)", region.getName(), 1);
+		log.info("AWS {} Savings Plan import started @{} ->{} ...", api, region.getName(), endpoint);
 		final var spContext = newContext(gContext, region, TERM_EC2_SP, TERM_COMPUTE_SP);
 		spContext.setLocalTypes(context.getLocalTypes());
 		spContext.setRegion(context.getRegion());
@@ -595,7 +600,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 
 	/**
 	 * Return a new local context.
-	 * 
+	 *
 	 * @param gContext The current global context to handle lazy sub-entities creation.
 	 * @param region   The target region.
 	 * @param term1    The expected term name prefix alternative 1.
@@ -610,7 +615,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 *
 	 * @param previousOd The previous On Demand prices.
 	 * @return The rate term code without SKU part of the current On Demand session and looks like:
-	 *         <code>.JRTCKXETXF</code>. <code>null</code> when not found.
+	 * <code>.JRTCKXETXF</code>. Return <code>null</code> when not found.
 	 */
 	protected String getOnDemandCode(final Map<String, P> previousOd) {
 		return previousOd.values().stream()
@@ -675,7 +680,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 
 	/**
 	 * Install all prices related to the current service.
-	 * 
+	 *
 	 * @param gContext    The current global context.
 	 * @param api         The current API name.
 	 * @param serviceCode The current service code
@@ -710,7 +715,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			final String serviceCode, final AwsPriceRegion spRegion, final String term1, final String term2) {
 		final var regionCode = pRegion.getRegionCode();
 		final var endpoint = getCsvUrl(gContext, pRegion.getUrl());
-		log.info("AWS {} OnDemand/Reserved import started for @{}>{} ...", api, regionCode, endpoint);
+		log.info("AWS {} OnDemand/Reserved import started for @{} -> {} ...", api, regionCode, endpoint);
 		nextStep(gContext, api, regionCode, 0);
 
 		var region = locationRepository.findByName(gContext.getNode().getId(), regionCode);
@@ -756,17 +761,120 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 					context.getPrices().size(), String.format("%+d", context.getPrices().size() - oldCount));
 		}
 
-		// Savings Plan part: only when OD succeed
+		// Saving plans part: only when OD succeed
 		if (spRegion == null) {
 			nextStep(context, api, null, 1);
 		} else if (succeed) {
-			nextStep(context, api, regionCode, 1);
+			updateScoredPrices(context, api + " (scoring 1/2)");
+
+			// Saving plans
 			installSavingsPlan(gContext, context.getUrl(spRegion.getUrl()), api, serviceCode, region, context);
-			nextStep(context, api + " (saving plan)", regionCode, 1);
 		} else {
 			nextStep(context, api, null, 2);
 		}
+
 		context.cleanup();
+	}
+
+	/**
+	 * Complete the scored priced regarding the most recent type generations.
+	 *
+	 * @param context The regional update context.
+	 * @param api     The current API name.
+	 */
+	protected void updateScoredPrices(final X context, String api) {
+		// Update the prices according to the most recent generations
+		nextStep(context, api, context.getRegion().getName(), 1);
+
+		// Compute the type references
+		var typeToMatch = new HashMap<String, String>();
+		var matchToScoredTypes = new HashMap<String, Map<Integer, T>>();
+		// "u-9tb1.112xlarge", "r6idn.4xlarge", "r7a.32xlarge", "r8g.metal-24xl", "t2.xlarge"
+		context.getLocalTypes().forEach((typeCode, type) -> {
+			var sizeParts = StringUtils.split(typeCode, '.');
+			if (sizeParts.length != 2) {
+				log.warn("AWS {} Ignore instance type '{}', unable to extract size part", api, typeCode);
+				return;
+			}
+			var typeNoSize = sizeParts[0];
+			var typeNoSizeParts = StringUtils.splitByCharacterType(typeNoSize);
+			if (typeNoSizeParts.length == 1) {
+				log.warn("AWS {} Ignore instance type '{}', unable to extract family parts", api, typeCode);
+				return;
+			}
+			var size = sizeParts[1]; // "32xlarge", "metal-24xl"
+			var generation = typeNoSizeParts[1]; // "-" (ignored), "6"
+			var family = typeNoSizeParts[0]; // "r", "u", "t"
+			if (!NumberUtils.isDigits(generation)) {
+				if (!"-".equals(generation)) {
+					log.warn("AWS {} Ignore instance type '{}', invalid generation '{}', not a digit", api, typeCode, generation);
+				}
+				return;
+			}
+			var match = family + typeNoSize.substring(family.length() + generation.length()) + "." + size;
+			typeToMatch.put(typeCode, match);
+			var generations = matchToScoredTypes.computeIfAbsent(match, f -> new TreeMap<>(Comparator.reverseOrder()));
+			var previousSavedGenerationType = generations.put(Integer.parseInt(generation), type);
+			if (previousSavedGenerationType != null) {
+				log.warn("AWS {} Generation conflict '{}', previous type '{}' vs new one '{}'", api, generation, type.getCode(), previousSavedGenerationType.getCode());
+			}
+		});
+
+		// For each price, check the matchType's price
+		var progressIndex = 0;
+		var lastProgressPercentage = 0;
+		var workload = context.getLocals().size();
+		for (var p : context.getLocals().values()) {
+			// Reporting every 10 points of progression
+			progressIndex++;
+			var progressPercent = progressIndex * 100 / workload;
+			if (progressPercent - lastProgressPercentage > 10) {
+				lastProgressPercentage = progressPercent;
+				log.info("AWS {} Progress {}%", api, progressPercent);
+			}
+
+			var type = p.getType();
+			var typeCode = type.getCode();
+			var matchType = typeToMatch.get(typeCode);
+			if (matchType == null) {
+				// Skip reference for this orphan price or unmanaged type
+				continue;
+			}
+			var scoredTypes = matchToScoredTypes.get(matchType);
+			if (scoredTypes == null) {
+				log.warn("AWS {} Ignore price '{}', unable to extract scored types", api, p.getCode());
+				continue;
+			}
+			var p1TypeNatural = scoredTypes.values().stream().findFirst().get();
+			if (p1TypeNatural.getCode().equals(typeCode)) {
+				log.debug("AWS {} Already best type '{}' match of '{}' for price '{}'", api, typeCode, matchType, p.getCode());
+				continue;
+			}
+
+			var p1TypeByDeepMatch = scoredTypes.values().stream().filter(t ->
+					context.getLocals().values().stream().anyMatch(pp -> pp.getType().getCode().equals(t.getCode()) && priceMatchConstraintButType(pp, p))
+			).findFirst().orElse(null);
+
+			if (p1TypeByDeepMatch == null) {
+				log.warn("AWS {} Failed to find top type '{}' prices from price '{}", api, typeCode, p.getCode());
+			} else if (!Strings.CS.equals(p.getType().getCode(), p1TypeByDeepMatch.getCode())
+					&& (p.getP1Type() == null || !Strings.CS.equals(p.getP1Type().getCode(), p1TypeByDeepMatch.getCode()))) {
+				p.setP1Type(p1TypeByDeepMatch);
+				context.getPRepository().save(p);
+			}
+		}
+	}
+
+	/**
+	 * Verify 2 prices have the same constraints by ignoring their type and costs.
+	 *
+	 * @param p1 One price.
+	 * @param p2 Another price
+	 * @return <code>true</code> when the 2 prices are the same.
+	 */
+	protected boolean priceMatchConstraintButType(final P p1, P p2) {
+		return p1.getTerm().getId().equals(p2.getTerm().getId())
+				&& Strings.CS.equals(p1.getLicense(), p2.getLicense());
 	}
 
 	/**
@@ -785,8 +893,8 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	public abstract AbstractAwsPriceImportVm<T, P, C, Q, X, R> newProxy();
 
 	/**
-	 * Is this record is enabled.
-	 * 
+	 * Is this record enabled?
+	 *
 	 * @param context The regional update context.
 	 * @param csv     The current CSV entry.
 	 * @return <code>true</code> when this record is accepted.

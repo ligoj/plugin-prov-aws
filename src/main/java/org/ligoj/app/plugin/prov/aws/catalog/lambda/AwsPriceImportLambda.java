@@ -3,6 +3,14 @@
  */
 package org.ligoj.app.plugin.prov.aws.catalog.lambda;
 
+import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVm;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlanProduct;
+import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlanRate;
+import org.ligoj.app.plugin.prov.model.*;
+import org.ligoj.bootstrap.core.SpringUtils;
+import org.springframework.stereotype.Component;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.Collection;
@@ -11,19 +19,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
-
-import org.ligoj.app.plugin.prov.aws.catalog.UpdateContext;
-import org.ligoj.app.plugin.prov.aws.catalog.vm.AbstractAwsPriceImportVm;
-import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlanProduct;
-import org.ligoj.app.plugin.prov.aws.catalog.vm.ec2.SavingsPlanPrice.SavingsPlanRate;
-import org.ligoj.app.plugin.prov.model.ProvFunctionPrice;
-import org.ligoj.app.plugin.prov.model.ProvFunctionType;
-import org.ligoj.app.plugin.prov.model.ProvInstancePriceTerm;
-import org.ligoj.app.plugin.prov.model.ProvLocation;
-import org.ligoj.app.plugin.prov.model.ProvQuoteFunction;
-import org.ligoj.app.plugin.prov.model.Rate;
-import org.ligoj.bootstrap.core.SpringUtils;
-import org.springframework.stereotype.Component;
 
 /**
  * The provisioning Lambda price service for AWS. Manage install and update of prices.
@@ -248,4 +243,10 @@ public class AwsPriceImportLambda extends
 	public AbstractAwsPriceImportVm<ProvFunctionType, ProvFunctionPrice, AwsLambdaPrice, ProvQuoteFunction, LocalLambdaContext, CsvForBeanLambda> newProxy() {
 		return SpringUtils.getBean(AwsPriceImportLambda.class);
 	}
+
+	@Override
+	protected void updateScoredPrices(final LocalLambdaContext context, String api) {
+		// Ignore
+	}
+
 }

@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
- * The provisioning price service for AWS. Manage install or update of prices.
+ * The provisioning price service for AWS. Manage installation or update of prices.
  */
 @Slf4j
 @Component
@@ -218,7 +218,7 @@ public class AwsPriceImportEc2 extends
 	}
 
 	/**
-	 * Read the EC2 software name from AWS to standard name.
+	 * Read the EC2 software name from AWS to the standard name.
 	 *
 	 * @throws IOException When the JSON mapping file cannot be read.
 	 */
@@ -233,4 +233,12 @@ public class AwsPriceImportEc2 extends
 		return new LocalEc2Context(gContext, iptRepository, itRepository, ipRepository, qiRepository, region, term1,
 				term2);
 	}
+
+	@Override
+	protected boolean priceMatchConstraintButType(final ProvInstancePrice p1, ProvInstancePrice p2) {
+		return super.priceMatchConstraintButType(p1, p2)
+				&& p1.getTenancy() == p2.getTenancy()
+				&& Strings.CS.equals(p1.getSoftware(), p2.getSoftware());
+	}
+
 }

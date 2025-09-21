@@ -39,4 +39,9 @@ public abstract class AbstractAwsPriceImportVmOs<T extends AbstractInstanceType,
 		return super.isEnabled(context, csv) && isEnabledOs(context, csv.getOs());
 	}
 
+	@Override
+	protected boolean priceMatchConstraintButType(final P p1, P p2) {
+		return super.priceMatchConstraintButType(p1, p2)
+				&& p1.getOs() == p2.getOs();
+	}
 }

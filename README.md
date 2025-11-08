@@ -1,4 +1,4 @@
-# :link: Ligoj AWS plugin [![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.ligoj.plugin/plugin-prov-aws/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.ligoj.plugin/plugin-prov-aws)
+# :link: Ligoj AWS plugin ![Maven Central](https://img.shields.io/maven-central/v/org.ligoj.plugin/plugin-prov-aws)
 
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=org.ligoj.plugin%3Aplugin-prov-aws&metric=coverage)](https://sonarcloud.io/dashboard?id=org.ligoj.plugin%3Aplugin-prov-aws)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?metric=alert_status&project=org.ligoj.plugin:plugin-prov-aws)](https://sonarcloud.io/dashboard/index/org.ligoj.plugin:plugin-prov-aws)

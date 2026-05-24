@@ -8,3 +8,6 @@
 /*.exec
 **/*.iml
 bin/
+**/node_modules
+/package-lock.json
+src/main/resources/META-INF/resources/webjars/prov-aws/vue/*

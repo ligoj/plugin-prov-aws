@@ -8,7 +8,7 @@ export default {
   // Identifiants d'API AWS (labels du formulaire d'abonnement).
   'service:prov:aws:access-key-id': "Identifiant de clé d'accès",
   'service:prov:aws:secret-access-key': "Secret de clé d'accès",
-  'service:prov:aws:account': 'Compte',
+  'service:prov:aws:account': 'Numéro de compte',
 
   // Descriptions des plans de support AWS. Texte brut — le résolveur i18n
   // de l'hôte renvoie le message tel quel, donc on évite le HTML.

@@ -13,7 +13,7 @@ export default {
   // AWS API credentials (subscribe wizard parameter labels).
   'service:prov:aws:access-key-id': 'Access Key Id',
   'service:prov:aws:secret-access-key': 'Secret Access Key',
-  'service:prov:aws:account': 'Account',
+  'service:prov:aws:account': 'Account ID',
 
   // AWS Support plan descriptions. Plain text — vue-i18n's flat resolver
   // returns the message verbatim, so the host renders it as text rather

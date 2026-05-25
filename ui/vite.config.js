@@ -13,8 +13,23 @@ import { resolve } from 'path'
 // EXTERNAL: the plugin must use the host's module instances or reactivity
 // and plugin registries break across SFC boundaries.
 
+// Path to the Ligoj host repo, sitting beside `ligoj-plugins/` in the
+// developer workspace. Used to resolve `@ligoj/host` for tests and the
+// standalone dev server (runtime uses the host's import map).
+const HOST_SRC = resolve(__dirname, '../../../ligoj/app-ui/src/main/webapp/src')
+
 export default defineConfig({
   plugins: [vue()],
+
+  resolve: {
+    alias: {
+      '@ligoj/host': resolve(HOST_SRC, 'host.js'),
+      '@': HOST_SRC,
+    },
+    // Force a single instance of every shared dep so `setActivePinia`
+    // from the test reaches `useI18nStore` resolved through `@ligoj/host`.
+    dedupe: ['vue', 'pinia', 'vue-router', 'vuetify'],
+  },
 
   build: {
     lib: {
@@ -42,6 +57,19 @@ export default defineConfig({
     proxy: {
       '/rest': { target: 'http://localhost:8080', changeOrigin: true },
       '/webjars': { target: 'http://localhost:8080', changeOrigin: true },
+    },
+  },
+
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['src/__tests__/setup.js'],
+    exclude: ['node_modules/**', 'dist/**'],
+    css: false,
+    server: {
+      deps: {
+        inline: ['vuetify'],
+      },
     },
   },
 })

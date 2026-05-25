@@ -1,8 +1,33 @@
 {
   "name": "ligoj-plugin-prov-aws",
   "version": "0.1.0",
+  "description": "AWS provider for the Ligoj provisioning plugin — labels, account chip, AWS console link.",
   "private": true,
   "type": "module",
+  "license": "MIT",
+  "author": "kloudy.io",
+  "contributors": [
+    "Fabrice Daugan <fabrice.daugan@gmail.com>"
+  ],
+  "homepage": "https://github.com/ligoj/plugin-prov-aws#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ligoj/plugin-prov-aws.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ligoj/plugin-prov-aws/issues"
+  },
+  "keywords": [
+    "ligoj",
+    "plugin",
+    "provisioning",
+    "aws",
+    "vue",
+    "vite"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",

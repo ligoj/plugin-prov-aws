@@ -1,5 +1,4 @@
-import { h } from 'vue'
-import { VBtn, VChip, VIcon, useI18nStore } from '@ligoj/host'
+import { renderServiceLink, renderDetailsChip, useI18nStore } from '@ligoj/host'
 
 /** Pull the AWS account id out of a subscription. Mirrors the legacy
  *  `subscription.parameters['service:prov:aws:account']` lookup. */
@@ -21,22 +20,11 @@ const service = {
     const { t } = useI18nStore()
     const account = accountOf(subscription)
     if (!account) return []
-
-    return [
-      h(
-        VBtn,
-        {
-          icon: true,
-          size: 'small',
-          variant: 'text',
-          href: `https://${encodeURIComponent(account)}.signin.aws.amazon.com/console`,
-          target: '_blank',
-          rel: 'noopener',
-          title: t('service:prov:aws:console'),
-        },
-        () => h(VIcon, { size: 'small' }, () => 'mdi-aws'),
-      ),
-    ]
+    return [renderServiceLink({
+      icon: 'mdi-aws',
+      href: `https://${encodeURIComponent(account)}.signin.aws.amazon.com/console`,
+      title: t('service:prov:aws:console'),
+    })]
   },
 
   /**
@@ -51,21 +39,7 @@ const service = {
     const { t } = useI18nStore()
     const account = accountOf(subscription)
     if (!account) return null
-
-    return h(
-      VChip,
-      {
-        size: 'x-small',
-        variant: 'tonal',
-        class: 'mr-1',
-        title: t('service:prov:aws:account'),
-      },
-      () => [
-        h(VIcon, { start: true, size: 'x-small' }, () => 'mdi-aws'),
-        ' ',
-        String(account),
-      ],
-    )
+    return renderDetailsChip({ icon: 'mdi-aws', text: account, title: t('service:prov:aws:account'), size: 'x-small' })
   },
 
   /**

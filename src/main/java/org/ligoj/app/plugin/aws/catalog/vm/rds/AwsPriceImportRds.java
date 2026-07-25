@@ -62,6 +62,8 @@ public class AwsPriceImportRds extends
 		nextStep(context, API, null, 0);
 		context.setDatabaseTypes(dtRepository.findAllBy(BY_NODE, context.getNode()).stream()
 				.collect(Collectors.toConcurrentMap(AbstractCodedEntity::getCode, Function.identity())));
+		// Detach the bulk-loaded entities: they stay usable from the context, and the following flushes stay cheap
+		flushAndClear();
 		context.setValidDatabaseType(Pattern.compile(configuration.get(CONF_DTYPE, ".*")));
 		context.setValidDatabaseEngine(Pattern.compile(configuration.get(CONF_ETYPE, ".*")));
 		installPrices(context, API, SERVICE_CODE, TERM_ON_DEMAND, TERM_RESERVED);

@@ -40,6 +40,8 @@ public abstract class AbstractAwsPriceImportMultiRegion<C extends AbstractAwsSto
 		// See https://github.com/ligoj/plugin-prov-aws/issues/14
 		context.setPreviousStorage(spRepository.findByLocation(context.getNode().getId(), "").stream()
 				.collect(Collectors.toMap(ProvStoragePrice::getCode, Function.identity())));
+		// Detach the bulk-loaded entities: they stay usable from the context, and the following flushes stay cheap
+		flushAndClear();
 
 		var priceCounter = 0;
 		// Get the remote prices stream

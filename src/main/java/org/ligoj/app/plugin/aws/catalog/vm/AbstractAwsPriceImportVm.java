@@ -20,11 +20,11 @@ import org.ligoj.app.plugin.prov.catalog.AbstractUpdateContext;
 import org.ligoj.app.plugin.prov.catalog.Co2Data;
 import org.ligoj.app.plugin.prov.catalog.ImportCatalog;
 import org.ligoj.app.plugin.prov.model.*;
-import org.ligoj.bootstrap.core.curl.CurlProcessor;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -415,10 +415,10 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		}
 
 		final var oldCount = context.getLocals().size();
-		try (var curl = new CurlProcessor()) {
-			// Get the remote prices stream
-			final var rawJson = curl.get(endpoint);
-			final var sps = objectMapper.readValue(rawJson, SavingsPlanPrice.class);
+		try (var input = new BufferedInputStream(new URI(endpoint).toURL().openStream())) {
+			// Parse the remote prices stream: no buffering of the whole payload in memory, the Savings Plan index of
+			// some regions weighs hundreds of MB
+			final var sps = objectMapper.readValue(input, SavingsPlanPrice.class);
 			final var skus = sps.getProducts().stream().filter(this::filterSPProduct).map(SavingsPlanProduct::getSku)
 					.collect(Collectors.toSet());
 			final var skuErrors = sps.getTerms().getSavingsPlan().stream().filter(sp -> skus.contains(sp.getSku()))
@@ -437,7 +437,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			// Update the prices according to the most recent generations
 			updateScoredPrices(context, api + " (scoring 2/2)");
 			nextStep(context, api + " (scoring 2/2)", region.getName(), 1);
-		} catch (final IOException | IllegalArgumentException use) {
+		} catch (final IOException | IllegalArgumentException | URISyntaxException use) {
 			// Something goes wrong for this region, stop for this region
 			log.warn("AWS {} Savings Plan import failed @{}", api, region.getName(), use);
 		} finally {
@@ -594,6 +594,8 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		final var spContext = newContext(gContext, region, TERM_EC2_SP, TERM_COMPUTE_SP);
 		spContext.setLocalTypes(context.getLocalTypes());
 		spContext.setRegion(context.getRegion());
+		// Detach the bulk-loaded entities: they stay usable from the context, and the following flushes stay cheap
+		flushAndClear();
 		installSavingsPlan(spContext, api, serviceCode, endpoint, context.getLocals());
 		spContext.cleanup();
 	}
@@ -728,6 +730,8 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		final var oldCount = context.getLocals().size();
 		context.setPreviousStorage(spRepository.findByLocation(context.getNode().getId(), regionCode).stream()
 				.collect(Collectors.toMap(ProvStoragePrice::getCode, Function.identity())));
+		// Detach the bulk-loaded entities: they stay usable from the context, and the following flushes stay cheap
+		flushAndClear();
 
 		// Get the remote prices stream
 		var succeed = false;

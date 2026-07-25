@@ -12,11 +12,15 @@ import org.ligoj.app.plugin.aws.catalog.suppport.AwsPriceImportSupport;
 import org.ligoj.app.plugin.aws.catalog.vm.ec2.AwsPriceImportEc2;
 import org.ligoj.app.plugin.aws.catalog.vm.fargate.AwsPriceImportFargate;
 import org.ligoj.app.plugin.aws.catalog.vm.rds.AwsPriceImportRds;
+import org.ligoj.app.plugin.prov.ProvResource;
 import org.ligoj.app.plugin.prov.catalog.AbstractImportCatalogResource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 /**
  * The provisioning price service for AWS. Manage installation or update of prices.
@@ -49,13 +53,40 @@ public class AwsPriceImport extends AbstractImportCatalogResource {
 	@Autowired
 	private AwsPriceImportSupport support;
 
+	@Autowired
+	private PlatformTransactionManager txManager;
+
 	/**
-	 * Install or update prices.
+	 * Install or update prices.<br>
+	 * When the parallel import is disabled (<code>service:prov:use-parallel=0</code>), the whole update is executed
+	 * inside a single transaction: prices are accumulated in the persistence context and flushed by chunks with JDBC
+	 * batching instead of one transaction per price. With the (default) parallel import, the worker threads run their
+	 * own transactions and would not see the uncommitted entities of an enclosing one: each save keeps its own
+	 * transaction as before.
 	 *
 	 * @param force When <code>true</code>, all cost attributes are update.
 	 * @throws IOException        When CSV or XML files cannot be read.
 	 */
 	public void install(final boolean force) throws IOException {
+		if (configuration.get(ProvResource.USE_PARALLEL, 1) == 0) {
+			try {
+				new TransactionTemplate(txManager).executeWithoutResult(s -> {
+					initJdbcBatch();
+					try {
+						installInternal(force);
+					} catch (final IOException e) {
+						throw new UncheckedIOException(e);
+					}
+				});
+			} catch (final UncheckedIOException e) {
+				throw e.getCause();
+			}
+		} else {
+			installInternal(force);
+		}
+	}
+
+	private void installInternal(final boolean force) throws IOException {
 		final var context = initContext(new UpdateContext(), ProvAwsPluginResource.KEY, force);
 
 		base.install(context);

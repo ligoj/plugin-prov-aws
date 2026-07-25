@@ -147,6 +147,8 @@ public class AwsPriceImportEc2 extends
 
 		// Get previous prices for this location
 		final var context = newContext(gContext, region, TERM_SPOT, TERM_SPOT);
+		// Detach the bulk-loaded entities: they stay usable from the context, and the following flushes stay cheap
+		flushAndClear();
 		final var term = newSpotInstanceTerm(context);
 		r.getInstanceTypes().stream().flatMap(t -> t.getSizes().stream())
 				.filter(t -> isEnabledType(gContext, t.getName())).forEach(t -> {

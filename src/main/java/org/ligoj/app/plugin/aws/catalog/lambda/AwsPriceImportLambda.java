@@ -55,6 +55,10 @@ public class AwsPriceImportLambda extends
 
 	private void completePrices(final LocalLambdaContext context, final String rateType, final String code,
 	                            final double price) {
+		if (rateType == null) {
+			// Price dimension without group (new upstream billing dimension): ignored
+			return;
+		}
 		context.getMapper().entrySet().stream().filter(e -> e.getKey().stream().anyMatch(rateType::endsWith))
 				.findFirst().ifPresent(e -> e.getValue().accept(code, price));
 	}
@@ -126,6 +130,8 @@ public class AwsPriceImportLambda extends
 	                                        String term2) {
 		final var context = new LocalLambdaContext(gContext, iptRepository, ftRepository, fpRepository, qfRepository,
 				region, term1, term2);
+		// Detach the bulk-loaded entities: they stay usable from the context, and the following flushes stay cheap
+		flushAndClear();
 		setupMapper(context);
 		return context;
 	}

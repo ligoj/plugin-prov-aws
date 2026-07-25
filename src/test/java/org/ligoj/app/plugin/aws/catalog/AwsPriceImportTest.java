@@ -150,8 +150,34 @@ class AwsPriceImportTest extends AbstractServerTest {
 		clearAllCache();
 		System.setProperties(initialProperties);
 
-		// Mock catalog import helper
-		final var helper = new ImportCatalogResource();
+		// Mock catalog import helper, whose task operations run in the current (test) transaction instead of a
+		// REQUIRES_NEW one, so the uncommitted test data is visible
+		final var helper = new ImportCatalogResource() {
+			@Override
+			public ImportCatalogStatus startTask(final String lockedId,
+					final java.util.function.Consumer<ImportCatalogStatus> initializer) {
+				return startTaskInternal(lockedId, initializer);
+			}
+
+			@Override
+			public ImportCatalogStatus nextStep(final String lockedId,
+					final java.util.function.Consumer<ImportCatalogStatus> stepper) {
+				return nextStepInternal(lockedId, stepper);
+			}
+
+			@Override
+			public ImportCatalogStatus endTask(final String lockedId, final boolean failed) {
+				return endTaskInternal(lockedId, failed, t -> {
+					// Nothing to do
+				});
+			}
+
+			@Override
+			public ImportCatalogStatus endTask(final String lockedId, final boolean failed,
+					final java.util.function.Consumer<ImportCatalogStatus> finalizer) {
+				return endTaskInternal(lockedId, failed, finalizer);
+			}
+		};
 		applicationContext.getAutowireCapableBeanFactory().autowireBean(helper);
 		this.resource = initCatalog(helper, new AwsPriceImport());
 		this.resource.setBase(initCatalog(helper, new AwsPriceImportBase()));
@@ -190,7 +216,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		configure(AwsPriceImportFargate.CONF_URL_FARGATE_PRICES_SPOT, "/spot-fargate.json");
 		configure(AwsPriceImportEc2.CONF_URL_EC2_PRICES_SPOT, "/spot.js");
 
-		initSpringSecurityContext(DEFAULT_USER);
+		initSpringSecurityContext(DEFAULT_USER, new org.springframework.security.core.authority.SimpleGrantedAuthority(org.ligoj.bootstrap.core.security.SecurityHelper.ADMIN));
 		resetImportTask();
 	}
 
@@ -325,7 +351,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		// Install a new configuration
 		mockAll();
 		applicationContext.getBean(SystemConfigurationRepository.class).findAll();
-		initSpringSecurityContext(DEFAULT_USER);
+		initSpringSecurityContext(DEFAULT_USER, new org.springframework.security.core.authority.SimpleGrantedAuthority(org.ligoj.bootstrap.core.security.SecurityHelper.ADMIN));
 		startMockServer();
 
 		// Check the basic quote
@@ -369,15 +395,15 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(6, ipRepository.findAllBy("term.code", "spot").size()); // EC2 Spot
 		Assertions.assertEquals(1, ipRepository.findAllBy("term.code", "EC2 Savings Plan, 1yr, No Upfront").size()); // EC2 SP
 		Assertions.assertEquals(1, ipRepository.findAllBy("term.code", "8GU23DFTKP2N43SD").size()); // Compute SP
-		Assertions.assertEquals(150, cpRepository.findAllBy("term.code", "JRTCKXETXF").size()); // Fargate OD
-		Assertions.assertEquals(50, cpRepository.findAllBy("term.code", "ZGC49G7XS8QA54BQ").size()); // Fargate Compute
+		Assertions.assertEquals(191, cpRepository.findAllBy("term.code", "JRTCKXETXF").size()); // Fargate OD
+		Assertions.assertEquals(74, cpRepository.findAllBy("term.code", "ZGC49G7XS8QA54BQ").size()); // Fargate Compute
 		// SP
-		Assertions.assertEquals(100, cpRepository.findAllBy("term.code", "spot").size()); // Fargate Spot x 2 regions
+		Assertions.assertEquals(148, cpRepository.findAllBy("term.code", "spot").size()); // Fargate Spot x 2 regions
 		Assertions.assertEquals(20, bpRepository.findAll().size()); // RDS
 
-		Assertions.assertEquals(100, ctRepository.findAll().size()); // Fargate type
+		Assertions.assertEquals(148, ctRepository.findAll().size()); // Fargate type
 
-		checkImportStatus(449, 210);
+		checkImportStatus(562, 258);
 
 		// Check EC2 savings plan
 		final var ec2SsavingsPlanPrice = qiResource.lookup(subscription,
@@ -491,7 +517,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		// Install again to check the update without change
 		resetImportTask();
 		resource.install(false);
-		checkImportStatus(449 /* same */, 210);
+		checkImportStatus(562 /* same */, 258);
 		checkType();
 
 		provResource.updateCost(subscription);
@@ -501,7 +527,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		resetImportTask();
 		resource.install(true);
 		check(provResource.getConfiguration(subscription), 448.793d, 46.667d);
-		checkImportStatus(449 /* same */, 210);
+		checkImportStatus(562 /* same */, 258);
 		checkType();
 
 		// Install again with force mode, with only specs changes in force mode
@@ -515,8 +541,8 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("{Moderate NEW}", dtype.getDescription());
 		Assertions.assertEquals(3, dtype.getCpu());
 		Assertions.assertEquals(7782, dtype.getRam());
-		checkImportStatus(449 - 1 /* purged RDS */ + 1 /* new RDS */
-				- 1 /* purged EC2 */ + 1 /* new EC2 */, 210 /* Fargate */ + 1 /* new type */);
+		checkImportStatus(562 - 1 /* purged RDS */ + 1 /* new RDS */
+				- 1 /* purged EC2 */ + 1 /* new EC2 */, 258 /* Fargate */ + 1 /* new type */);
 
 		// Check the v1 only prices are still available
 		bpRepository.findByExpected("code", "OLD_____________.JRTCKXETXF.6YS6EN2CT7");
@@ -583,8 +609,8 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("{EBS only,20 Gigabit}", type.getDescription());
 
 		// Check status
-		checkImportStatus(449 + 2 /* saving plans */ + 1 - 1 /* purged RDS price */ /* new RDS price */
-				- 5 /* purged EC2 price */ + 1 /* new EC2 price */, 210 + 1);
+		checkImportStatus(562 + 2 /* saving plans */ + 1 - 1 /* purged RDS price */ /* new RDS price */
+				- 5 /* purged EC2 price */ + 1 /* new EC2 price */, 258 + 1);
 
 
 		// Check Support
@@ -628,8 +654,8 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 	private void checkImportStatus(final int count, final int nbTypes) {
 		final var status = this.resource.getImportCatalogResource().getTask("service:prov:aws");
-		Assertions.assertEquals(37, status.getDone());
-		Assertions.assertEquals(51, status.getWorkload()); // 6 (regions) * 7 + 9
+		Assertions.assertEquals(35, status.getDone());
+		Assertions.assertEquals(69, status.getWorkload()); // 6 (regions) * 7 + 9
 		Assertions.assertEquals("support", status.getPhase());
 		Assertions.assertEquals(DEFAULT_USER, status.getAuthor());
 		Assertions.assertEquals(nbTypes, status.getNbTypes().intValue());
@@ -743,7 +769,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 	void installSavingsPlanNoOnDemand() throws Exception {
 		// Install a new configuration
 		applicationContext.getBean(SystemConfigurationRepository.class).findAll();
-		initSpringSecurityContext(DEFAULT_USER);
+		initSpringSecurityContext(DEFAULT_USER, new org.springframework.security.core.authority.SimpleGrantedAuthority(org.ligoj.bootstrap.core.security.SecurityHelper.ADMIN));
 		mockEmpty();
 		mock("/offers/v1.0/aws/index.json", "mock-server/aws/offers/v1.0/aws/index-only-savings-plan.json");
 		startMockServer();
@@ -758,7 +784,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 	void installIndexNotFound() {
 		// Install a new configuration
 		applicationContext.getBean(SystemConfigurationRepository.class).findAll();
-		initSpringSecurityContext(DEFAULT_USER);
+		initSpringSecurityContext(DEFAULT_USER, new org.springframework.security.core.authority.SimpleGrantedAuthority(org.ligoj.bootstrap.core.security.SecurityHelper.ADMIN));
 		mock404("/offers/v1.0/aws/index.json");
 		startMockServer();
 
@@ -772,7 +798,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 	void installIndexNoSavingsPlan() throws Exception {
 		// Install a new configuration
 		applicationContext.getBean(SystemConfigurationRepository.class).findAll();
-		initSpringSecurityContext(DEFAULT_USER);
+		initSpringSecurityContext(DEFAULT_USER, new org.springframework.security.core.authority.SimpleGrantedAuthority(org.ligoj.bootstrap.core.security.SecurityHelper.ADMIN));
 		mockAll();
 		mock("/offers/v1.0/aws/index.json", "mock-server/aws/offers/v1.0/aws/index-empty-savings-plan.json");
 		startMockServer();
@@ -790,7 +816,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 	void installEc2SavingsPlanRegionFileNotFound() throws Exception {
 		// Install a new configuration
 		applicationContext.getBean(SystemConfigurationRepository.class).findAll();
-		initSpringSecurityContext(DEFAULT_USER);
+		initSpringSecurityContext(DEFAULT_USER, new org.springframework.security.core.authority.SimpleGrantedAuthority(org.ligoj.bootstrap.core.security.SecurityHelper.ADMIN));
 
 		mockAll();
 		mock404("/savingsPlan/v1.0/aws/AWSComputeSavingsPlan/current/eu-west-1/index.json");
@@ -849,8 +875,8 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(0, provResource.getConfiguration(subscription).getCost().getMin(), DELTA);
 
 		// No instance imported
-		Assertions.assertEquals(100, ctRepository.findAll().size()); // ARM+x86
-		Assertions.assertEquals(100, cpRepository.findAll().size()); // 2 spot regions
+		Assertions.assertEquals(148, ctRepository.findAll().size()); // ARM+x86
+		Assertions.assertEquals(148, cpRepository.findAll().size()); // 2 spot regions
 	}
 
 	/**

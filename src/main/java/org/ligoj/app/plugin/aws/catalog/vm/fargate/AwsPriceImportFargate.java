@@ -134,10 +134,10 @@ public class AwsPriceImportFargate extends
 						p.setCode(c);
 						return p;
 					});
-			copyAsNeeded(context, price, p -> {
-				p.setLocation(context.getRegion());
-				p.setType(type);
-			});
+			if (isNeedUpdate(context, price)) {
+				price.setLocation(context.getRegion());
+				price.setType(type);
+			}
 			saveAsNeededInternal(context, price, price.getCostGb(),
 					csvStorage.getPricePerUnit() * context.getHoursMonth(), (cR, c) -> {
 						price.setCostGb(cR);
@@ -202,11 +202,13 @@ public class AwsPriceImportFargate extends
 			final double ram) {
 		final var code = toPriceCode(csv.getRateCode(), cpu, ram);
 		final var price = context.getLocals().computeIfAbsent(code, context::newPrice);
-		return copyAsNeeded(context, price,
-				p -> copy(context, csv, p,
-						installInstanceType(context, cpu, ram,
-								Strings.CI.contains(csv.getUsageType(), "arm") ? "arm" : null),
-						installInstancePriceTerm(context, csv)));
+		if (isNeedUpdate(context, price)) {
+			copy(context, csv, price,
+					installInstanceType(context, cpu, ram,
+							Strings.CI.contains(csv.getUsageType(), "arm") ? "arm" : null),
+					installInstancePriceTerm(context, csv));
+		}
+		return price;
 	}
 
 	/**

@@ -177,6 +177,30 @@ public class AwsPriceImportEc2 extends
 		final var region = context.getRegion();
 		final var type = context.getLocalTypes().get(json.getName());
 		final var baseCode = TERM_SPOT_CODE + "-" + region.getName() + "-" + type.getName() + "-";
+//		for (final var op : json.getOsPrices()) {
+//			if (Strings.CI.startsWith(op.getPrices().get("USD"), "N/A")) {
+//				// Unavailable price for this OS
+//				continue;
+//			}
+//			op.setOs(op.getName().equals("mswin") ? VmOs.WINDOWS : VmOs.LINUX);
+//			if (isEnabledOs(context, op.getOs())) {
+//				// Build the key for this spot
+//				final var price = context.getLocals().computeIfAbsent(baseCode + op.getOs(), c -> {
+//					final var p = context.newPrice(c);
+//					p.setType(type);
+//					p.setTerm(term);
+//					p.setTenancy(ProvTenancy.SHARED);
+//					p.setOs(op.getOs());
+//					p.setLocation(region);
+//					p.setPeriod(0);
+//					return p;
+//				});
+//
+//				// Update the price as needed
+//				final var cost = Double.parseDouble(op.getPrices().get("USD"));
+//				saveAsNeeded(context, price, cost * context.getHoursMonth(), ipRepository);
+//			}
+//		}
 		json.getOsPrices().stream().filter(op -> !Strings.CI.startsWith(op.getPrices().get("USD"), "N/A"))
 				.peek(op -> op.setOs(op.getName().equals("mswin") ? VmOs.WINDOWS : VmOs.LINUX))
 				.filter(op -> isEnabledOs(context, op.getOs())).forEach(op -> {

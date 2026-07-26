@@ -1,0 +1,56 @@
+{
+  "version" : "20260722233041",
+  "publicationDate" : "2026-07-22T23:30:41Z",
+  "products" : [ {
+    "sku" : "DZCHH8H3SPVYZ2Z4",
+    "productFamily" : "DatabaseSavingsPlans",
+    "serviceCode" : "DatabaseSavingsPlans",
+    "usageType" : "DatabaseSP:1yrNoUpfront",
+    "operation" : "",
+    "attributes" : {
+      "purchaseOption" : "No Upfront",
+      "granularity" : "hourly",
+      "locationType" : "AWS Region",
+      "purchaseTerm" : "1yr",
+      "location" : "Any"
+    }
+  } ],
+
+  "terms" : {
+    "savingsPlan" : [ {
+      "sku" : "DZCHH8H3SPVYZ2Z4",
+      "description" : "1 year No Upfront Database Savings Plan",
+      "leaseContractLength" : {
+        "duration" : 1
+      },
+      "rates" : [ {
+        "discountedSku" : "TBNHT84HARTQH8TY",
+        "discountedServiceCode" : "AmazonRDS",
+        "discountedUsageType" : "EUW1-InstanceUsage:db.m1.large",
+        "rateCode" : "DZCHH8H3SPVYZ2Z4.TBNHT84HARTQH8TY",
+        "discountedRate" : {
+          "price" : "0.198"
+        },
+        "unit" : "Hrs"
+      }, {
+        "discountedSku" : "UNKNOWN_SKU_____",
+        "discountedServiceCode" : "AmazonRDS",
+        "discountedUsageType" : "EUW1-InstanceUsage:db.x9.large",
+        "rateCode" : "DZCHH8H3SPVYZ2Z4.UNKNOWN_SKU_____",
+        "discountedRate" : {
+          "price" : "0.1"
+        },
+        "unit" : "Hrs"
+      }, {
+        "discountedSku" : "TIMESTREAM_SKU__",
+        "discountedServiceCode" : "AmazonTimestream",
+        "discountedUsageType" : "EUW1-Timestream",
+        "rateCode" : "DZCHH8H3SPVYZ2Z4.TIMESTREAM_SKU__",
+        "discountedRate" : {
+          "price" : "0.2"
+        },
+        "unit" : "Hrs"
+      } ]
+    } ]
+  }
+}

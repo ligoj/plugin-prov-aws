@@ -25,7 +25,7 @@ public abstract class AbstractAwsPriceImportMultiRegion<C extends AbstractAwsSto
 
 	/**
 	 * Install the prices from a single CSV file.
-	 * 
+	 *
 	 * @param context     The current global catalog context
 	 * @param api         The related API code.
 	 * @param serviceCode The related service code. i.e. <code>AmazonS3</code>.
@@ -106,10 +106,10 @@ public abstract class AbstractAwsPriceImportMultiRegion<C extends AbstractAwsSto
 			return p;
 		});
 
-		copyAsNeeded(context, price, p -> {
-			p.setLocation(location);
-			p.setType(type);
-		});
+		if (isNeedUpdate(context, price)) {
+			price.setLocation(location);
+			price.setType(type);
+		}
 		saveAsNeeded(context, price, csv.getPricePerUnit(), spRepository);
 	}
 }

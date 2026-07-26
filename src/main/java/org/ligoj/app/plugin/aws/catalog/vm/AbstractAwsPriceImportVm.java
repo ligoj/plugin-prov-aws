@@ -10,6 +10,7 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.ligoj.app.plugin.aws.catalog.AbstractAwsImport;
 import org.ligoj.app.plugin.aws.catalog.AbstractLocalContext;
 import org.ligoj.app.plugin.aws.catalog.AwsPriceRegion;
+import org.ligoj.bootstrap.core.resource.TechnicalException;
 import org.ligoj.app.plugin.aws.catalog.UpdateContext;
 import org.ligoj.app.plugin.aws.catalog.vm.ec2.AbstractCsvForBeanEc2;
 import org.ligoj.app.plugin.aws.catalog.vm.ec2.SavingsPlanPrice;
@@ -69,6 +70,12 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * EC2 Saving Plan name
 	 */
 	private static final String TERM_EC2_SP = "EC2 Savings Plan";
+
+	/**
+	 * Database Savings Plan term name prefix. Flexible across families, sizes, regions and engines of the
+	 * participating database services.
+	 */
+	protected static final String TERM_DATABASE_SP = "Database Savings Plan";
 
 	/**
 	 * Reserved term types.
@@ -160,9 +167,12 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * @return The new updated price entity.
 	 */
 	protected P newPrice(final X context, final C csv) {
-		return syncAdd(context.getLocals(), csv.getRateCode(), context::newPrice,
-				price -> copyAsNeeded(context, price, p -> copy(context, csv, price, installInstanceType(context, csv),
-						installInstancePriceTerm(context, csv))));
+		var previous = context.getLocals().computeIfAbsent(csv.getRateCode(), context::newPrice);
+		if (isNeedUpdate(context, previous)) {
+			copy(context, csv, previous, installInstanceType(context, csv),
+					installInstancePriceTerm(context, csv));
+		}
+		return previous;
 	}
 
 	/**
@@ -260,18 +270,17 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * @return Either the previous entity, either a new one. Never <code>null</code>.
 	 */
 	protected final T installInstanceType(final X context, final C csv) {
-		return syncAdd(context.getPreviousTypes(), csv.getInstanceType(), code -> {
-			final var n = context.newType();
-			n.setNode(context.getNode());
-			n.setCode(code);
-			return n;
-		}, previous -> {
-			final var type = context.getLocalTypes().computeIfAbsent(previous.getCode(),
-					code -> ObjectUtils.getIfNull(context.getTRepository().findBy("code", code), previous));
-
-			// Update the statistics only once
-			return copyAsNeeded(context, type, t -> copy(context, csv, t), context.getTRepository());
+		var previous = context.getPreviousTypes().computeIfAbsent(csv.getInstanceType(), code -> {
+			final var t = context.newType();
+			t.setNode(context.getNode());
+			t.setCode(code);
+			return t;
 		});
+		final var type = context.getLocalTypes().computeIfAbsent(csv.getInstanceType(),
+				c -> ObjectUtils.getIfNull(context.getTRepository().findBy("code", c), previous));
+
+		// Update the statistics only once
+		return copyAsNeeded(context, type, t -> copy(context, csv, t), context.getTRepository());
 	}
 
 	private Rate toStorage(final C csv) {
@@ -354,6 +363,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			t.setConvertibleEngine(!t.getReservation());
 			t.setConvertibleOs(!t.getReservation());
 			t.setConvertibleLocation(!t.getReservation());
+			log.info("Would install term, code={}, name={}", term.getCode(), term.getName());
 
 			// Handle leasing
 			final var matcher = LEASING_TIME.matcher(StringUtils.defaultIfBlank(csv.getLeaseContractLength(), ""));
@@ -366,13 +376,15 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	}
 
 	protected ProvInstancePriceTerm newTermAsNeeded(final X context, final String code) {
-		return syncAdd(context.getPriceTerms(), code, k -> {
+		var previous = context.getPriceTerms().computeIfAbsent(code, c -> {
 			final var newTerm = new ProvInstancePriceTerm();
 			newTerm.setNode(context.getNode());
-			newTerm.setCode(k);
+			newTerm.setCode(c);
+			log.info("Would install term, code={}", code);
 			return newTerm;
-		}, sharedTerm -> context.getLocalPriceTerms().computeIfAbsent(sharedTerm.getCode(),
-				c -> ObjectUtils.getIfNull(iptRepository.findBy("code", c), sharedTerm)));
+		});
+		return context.getLocalPriceTerms().computeIfAbsent(previous.getCode(),
+				c -> ObjectUtils.getIfNull(iptRepository.findBy("code", c), previous));
 	}
 
 	/**
@@ -471,21 +483,28 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 */
 	private ProvInstancePriceTerm newSavingsPlanTerm(final X context, final SavingsPlanTerm sp) {
 		final var description = sp.getDescription();
-		final boolean computePlan;
+		final boolean flexiblePlan;
+		final boolean databasePlan = description.contains(TERM_DATABASE_SP);
 		final String name;
 		final String code;
-		if (sp.getDescription().contains(TERM_COMPUTE_SP)) {
+		if (description.contains(TERM_COMPUTE_SP)) {
 			// Sample: "3 years No Upfront Compute Savings Plan"
 			// Sample: "1 year All Upfront Compute Savings Plan"
 			name = RegExUtils.replaceAll(description, "(\\d+) year\\s+(.*)\\s+Compute Savings Plan",
 					TERM_COMPUTE_SP + ", $1yr, $2");
-			computePlan = true;
+			flexiblePlan = true;
+			code = sp.getSku();
+		} else if (databasePlan) {
+			// Sample: "1 year No Upfront Database Savings Plan"
+			name = RegExUtils.replaceAll(description, "(\\d+) years?\\s+(.*)\\s+Database Savings Plan",
+					TERM_DATABASE_SP + ", $1yr, $2");
+			flexiblePlan = true;
 			code = sp.getSku();
 		} else {
 			// Sample: "3 years Partial Upfront r5 EC2 Instance Savings Plan in eu-west-3"
 			name = RegExUtils.replaceAll(description, "(\\d+) year (.*)\\s+(.+)\\s+EC2 Instance Savings Plan (.*)",
 					TERM_EC2_SP + ", $1yr, $2");
-			computePlan = false;
+			flexiblePlan = false;
 			code = name;
 		}
 		final var term = newTermAsNeeded(context, code);
@@ -494,11 +513,11 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		return copyAsNeeded(context, term, t -> {
 			term.setName(name);
 			term.setReservation(false);
-			term.setConvertibleLocation(computePlan);
-			term.setConvertibleFamily(computePlan);
+			term.setConvertibleLocation(flexiblePlan);
+			term.setConvertibleFamily(flexiblePlan);
 			term.setConvertibleType(true);
 			term.setConvertibleOs(true);
-			term.setConvertibleEngine(false);
+			term.setConvertibleEngine(databasePlan);
 			term.setDescription(description);
 			term.setPeriod(Math.round(sp.getLeaseContractLength().getDuration() * 12d));
 			term.setInitialCost(name.matches(".*(All|Partial) Upfront.*"));
@@ -530,15 +549,21 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			return jsonPrice.getDiscountedSku();
 		}
 
-		// Add this code to the existing SKU codes
-		final var price = newSavingPlanPrice(context, odPrice, jsonPrice, term);
-		final var cost = jsonPrice.getDiscountedRate().getPrice() * context.getHoursMonth();
+		try {
+			// Add this code to the existing SKU codes
+			final var price = newSavingPlanPrice(context, odPrice, jsonPrice, term);
+			final var cost = jsonPrice.getDiscountedRate().getPrice() * context.getHoursMonth();
 
-		// Save the price as needed with up-front computation if any
-		saveAsNeeded(context, price, price.getCost(), cost, (cR, c) -> {
-			price.setCost(cR);
-			saveInitialCost(context, price, c);
-		}, context.getPRepository()::save);
+			// Save the price as needed with up-front computation if any
+			saveAsNeeded(context, price, price.getCost(), cost, (cR, c) -> {
+				price.setCost(cR);
+				saveInitialCost(context, price, c);
+			}, context.getPRepository()::save);
+		} catch (final RuntimeException re) {
+			// Unexpected error for this price only: reported and skipped without stopping the import
+			log.warn("AWS Savings Plan price {} install failed", jsonPrice.getRateCode(), re);
+			return jsonPrice.getDiscountedSku();
+		}
 
 		// No error
 		return null;
@@ -578,6 +603,24 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	}
 
 	/**
+	 * Return the first Savings Plan term name prefix of this service, used to load the previous Savings Plan prices.
+	 *
+	 * @return The first Savings Plan term name prefix of this service.
+	 */
+	protected String getSPTerm1() {
+		return TERM_EC2_SP;
+	}
+
+	/**
+	 * Return the second Savings Plan term name prefix of this service, used to load the previous Savings Plan prices.
+	 *
+	 * @return The second Savings Plan term name prefix of this service.
+	 */
+	protected String getSPTerm2() {
+		return TERM_COMPUTE_SP;
+	}
+
+	/**
 	 * Install saving plan prices of target regions.
 	 *
 	 * @param gContext    The current global context to handle lazy sub-entities creation.
@@ -591,7 +634,7 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			final String serviceCode, final ProvLocation region, final X context) {
 		nextStep(context, api + " (saving plan)", region.getName(), 1);
 		log.info("AWS {} Savings Plan import started @{} ->{} ...", api, region.getName(), endpoint);
-		final var spContext = newContext(gContext, region, TERM_EC2_SP, TERM_COMPUTE_SP);
+		final var spContext = newContext(gContext, region, getSPTerm1(), getSPTerm2());
 		spContext.setLocalTypes(context.getLocalTypes());
 		spContext.setRegion(context.getRegion());
 		// Detach the bulk-loaded entities: they stay usable from the context, and the following flushes stay cheap
@@ -652,15 +695,15 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 */
 	protected P newSavingPlanPrice(final X context, final P odPrice, final SavingsPlanRate jsonPrice,
 			final ProvInstancePriceTerm term) {
-		final var type = odPrice.getType();
-		return syncAdd(context.getLocals(), jsonPrice.getRateCode(), context::newPrice,
-				price -> copyAsNeeded(context, price, p -> {
-					p.setLocation(context.getRegion());
-					p.setType(type);
-					p.setTerm(term);
-					p.setPeriod(term.getPeriod());
-					newSavingPlanPrice(odPrice, p);
-				}));
+		var previous = context.getLocals().computeIfAbsent(jsonPrice.getRateCode(), context::newPrice);
+		if (isNeedUpdate(context, previous)) {
+			previous.setLocation(context.getRegion());
+			previous.setType(odPrice.getType());
+			previous.setTerm(term);
+			previous.setPeriod(term.getPeriod());
+			newSavingPlanPrice(odPrice, previous);
+		}
+		return previous;
 	}
 
 	/**
@@ -698,8 +741,18 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		final var regions = getRegionalPrices(gContext, api, serviceCode);
 		final var spRegions = getRegionalSPPrices(gContext, api, serviceCode);
 		nextStep(gContext, api, null, 1);
-		newStream(regions.values()).forEach(r -> newProxy().installRegionalPrices(gContext, r, api, serviceCode,
-				spRegions.get(r.getRegionCode()), term1, term2));
+		newStream(regions.values()).forEach(r -> {
+			try {
+				newProxy().installRegionalPrices(gContext, r, api, serviceCode, spRegions.get(r.getRegionCode()),
+						term1, term2);
+			} catch (final TechnicalException te) {
+				// Structural failure, like an unsupported CSV header: the whole import must stop
+				throw te;
+			} catch (final RuntimeException re) {
+				// Unexpected error for this region only: reported and skipped without stopping the import
+				log.warn("AWS {} import failed @{}, this region is ignored", api, r.getRegionCode(), re);
+			}
+		});
 	}
 
 	/**
@@ -794,19 +847,22 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 		var typeToMatch = new HashMap<String, String>();
 		var matchToScoredTypes = new HashMap<String, Map<Integer, T>>();
 		// "u-9tb1.112xlarge", "r6idn.4xlarge", "r7a.32xlarge", "r8g.metal-24xl", "t2.xlarge"
+		// RDS types have a "db." prefix and may have a variant suffix: "db.r5.2xlarge", "db.r5.2xlarge.tpc2.mem4x"
 		context.getLocalTypes().forEach((typeCode, type) -> {
-			var sizeParts = StringUtils.split(typeCode, '.');
-			if (sizeParts.length != 2) {
+			var codeNoDb = Strings.CS.removeStart(typeCode, "db.");
+			var dotIndex = codeNoDb.indexOf('.');
+			if (dotIndex <= 0 || dotIndex == codeNoDb.length() - 1) {
 				log.warn("AWS {} Ignore instance type '{}', unable to extract size part", api, typeCode);
 				return;
 			}
-			var typeNoSize = sizeParts[0];
+			var typeNoSize = codeNoDb.substring(0, dotIndex);
 			var typeNoSizeParts = StringUtils.splitByCharacterType(typeNoSize);
 			if (typeNoSizeParts.length == 1) {
 				log.warn("AWS {} Ignore instance type '{}', unable to extract family parts", api, typeCode);
 				return;
 			}
-			var size = sizeParts[1]; // "32xlarge", "metal-24xl"
+			// Size includes the variant suffix, so a variant only matches the same variant of another generation
+			var size = codeNoDb.substring(dotIndex + 1); // "32xlarge", "metal-24xl", "2xlarge.tpc2.mem4x"
 			var generation = typeNoSizeParts[1]; // "-" (ignored), "6"
 			var family = typeNoSizeParts[0]; // "r", "u", "t"
 			if (!NumberUtils.isDigits(generation)) {
@@ -855,10 +911,19 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 				continue;
 			}
 
-			var p1TypeByDeepMatch = scoredTypes.values().stream().filter(t ->
-					context.getLocals().values().stream().anyMatch(pp -> pp.getType().getCode().equals(t.getCode()) && priceMatchConstraintButType(pp, p))
-			).findFirst().orElse(null);
-
+			// No virtual functions there for performance, keep the old "for"
+			T p1TypeByDeepMatch = null;
+			for (var t : scoredTypes.values()) {
+				for (var pp : context.getLocals().values()) {
+					if (pp.getType().getCode().equals(t.getCode()) && priceMatchConstraintButType(pp, p)) {
+						p1TypeByDeepMatch = t;
+						break;
+					}
+				}
+				if (p1TypeByDeepMatch != null) {
+					break;
+				}
+			}
 			if (p1TypeByDeepMatch == null) {
 				log.warn("AWS {} Failed to find top type '{}' prices from price '{}", api, typeCode, p.getCode());
 			} else if (!Strings.CS.equals(p.getType().getCode(), p1TypeByDeepMatch.getCode())

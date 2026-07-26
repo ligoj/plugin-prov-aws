@@ -100,18 +100,20 @@ public class AwsPriceImportRds extends
 				return;
 			}
 
-			log.info("Add Database storage sku={}, type={}, location={}", csv.getSku(), type.getName(),
+			final var code = csv.getSku();
+			log.info("Add Database storage sku={}, type={}, location={}", code, type.getName(),
 					context.getRegion().getName());
-			syncAdd(context.getPreviousStorage(), csv.getSku(), c -> {
+
+			var previous = context.getPreviousStorage().computeIfAbsent(code, c -> {
 				final var p = new ProvStoragePrice();
 				p.setCode(c);
 				p.setType(type);
 				p.setLocation(context.getRegion());
 				return p;
-			}, p ->
+			});
 
-					// Update the price as needed
-					saveAsNeeded(context, p, csv.getPricePerUnit(), spRepository));
+			// Update the price as needed
+			saveAsNeeded(context, previous, csv.getPricePerUnit(), spRepository);
 		}
 	}
 
@@ -139,15 +141,19 @@ public class AwsPriceImportRds extends
 				engine = csv.getEngine();
 				nameSuffix = "-" + engine.toLowerCase(Locale.ENGLISH).replace(' ', '-');
 			}
-			if ("General Purpose".equals(csv.getVolume())) {
-				name = "rds-gp" + nameSuffix;
-			} else if ("Provisioned IOPS".equals(csv.getVolume())) {
-				name = "rds-io" + nameSuffix;
-			} else if ("Magnetic".equals(csv.getVolume())) {
-				name = "rds-magnetic" + nameSuffix;
-			} else {
-				log.error("Unknown RDS storage type {}/{}/{}", csv.getVolume(), csv.getEngine(), csv.getSku());
-				return null;
+			switch (csv.getVolume()) {
+				case "General Purpose":
+					name = "rds-gp" + nameSuffix;
+					break;
+				case "Provisioned IOPS":
+					name = "rds-io" + nameSuffix;
+					break;
+				case "Magnetic":
+					name = "rds-magnetic" + nameSuffix;
+					break;
+				default:
+					log.error("Unknown RDS storage type {}/{}/{}", csv.getVolume(), csv.getEngine(), csv.getSku());
+					return null;
 			}
 		}
 
@@ -177,6 +183,25 @@ public class AwsPriceImportRds extends
 	protected void copy(final AwsRdsPrice csv, final ProvDatabasePrice p) {
 		p.setEngine(StringUtils.trimToNull(csv.getEngine().toUpperCase(Locale.ENGLISH)));
 		p.setEdition(StringUtils.trimToNull(StringUtils.trimToEmpty(csv.getEdition()).toUpperCase(Locale.ENGLISH)));
+	}
+
+	@Override
+	protected void copySavingsPlan(final ProvDatabasePrice odPrice, final ProvDatabasePrice p) {
+		super.copySavingsPlan(odPrice, p);
+		p.setEngine(odPrice.getEngine());
+		p.setEdition(odPrice.getEdition());
+		p.setStorageEngine(odPrice.getStorageEngine());
+	}
+
+	@Override
+	protected String getSPTerm1() {
+		return TERM_DATABASE_SP;
+	}
+
+	@Override
+	protected String getSPTerm2() {
+		// Legacy term name, from the imports made before the dedicated Database Savings Plan term handling
+		return "1 year No Upfront Database Savings Plan";
 	}
 
 	@Override

@@ -28,7 +28,8 @@
       "offerCode" : "AmazonRDS",
       "versionIndexUrl" : "/offers/v1.0/aws/AmazonRDS/index.json",
       "currentVersionUrl" : "/offers/v1.0/aws/AmazonRDS/current/index.json",
-      "currentRegionIndexUrl" : "/offers/v1.0/aws/AmazonRDS/current/region_index.json"
+      "currentRegionIndexUrl" : "/offers/v1.0/aws/AmazonRDS/current/region_index.json",
+      "currentSavingsPlanIndexUrl" : "/savingsPlan/v1.0/aws/AWSDatabaseSavingsPlans/current/region_index.json"
     },
     "AmazonEFS" : {
       "offerCode" : "AmazonEFS",

@@ -30,10 +30,16 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 	@Autowired
 	private ProvResource provResource;
 
-	protected Double toInteger(final String value) {
-		return Optional.ofNullable(StringUtils.trimToNull(value))
-				.map(v -> StringUtils.replaceEach(v, new String[] { "GB", "TB", " " }, new String[] { "", "", "" }))
-				.map(Double::valueOf).map(v -> value.contains("TB") ? v * 1024 : v).orElse(0d);
+	protected double toInteger(final String value) {
+		 var strNull = StringUtils.trimToNull(value);
+		if (strNull != null) {
+			strNull = StringUtils.replaceEach(strNull, new String[] { "GB", "TB", " " }, new String[] { "", "", "" });
+		}
+		if (strNull == null || strNull.isEmpty()) {
+			return 0d;
+		}
+		final var number = Double.parseDouble(strNull);
+		return value.contains("TB") ? number * 1024 : number;
 	}
 
 	/**
@@ -49,7 +55,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 
 	/**
 	 * Return the full CSV URL from the relative URL
-	 * 
+	 *
 	 * @param gContext The current global context.
 	 * @param url      The relative JSON URL.
 	 * @return The full CSV URL from the relative URL.
@@ -122,7 +128,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 
 	/**
 	 * Return the regional prices of each enabled region.
-	 * 
+	 *
 	 * @param context     The update context.
 	 * @param api         The API name, only for logging.
 	 * @param serviceCode The AWS service code, like <code>AmazonEC2</code>.
@@ -137,7 +143,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 
 	/**
 	 * Return the regional savings plan prices of each enabled region.
-	 * 
+	 *
 	 * @param context     The update context.
 	 * @param api         The API name, only for logging.
 	 * @param serviceCode The AWS service code, like <code>AmazonEC2</code>.
@@ -152,7 +158,7 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 
 	/**
 	 * Return the regional savings plan prices of each enabled region.
-	 * 
+	 *
 	 * @param context     The update context.
 	 * @param api         The API name, only for logging.
 	 * @param serviceCode The AWS service code, like <code>AmazonEC2</code>.

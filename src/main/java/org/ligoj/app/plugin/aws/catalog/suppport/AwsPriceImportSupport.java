@@ -36,12 +36,12 @@ public class AwsPriceImportSupport extends AbstractAwsImport implements ImportCa
 		csvForBean.toBean(ProvSupportPrice.class, "csv/aws-prov-support-price.csv").forEach(t -> {
 			final var entity = previous.computeIfAbsent(t.getCode(), n -> t);
 			// Merge the support type details
-			final var price = copyAsNeeded(context, entity, s -> {
-				s.setLimit(t.getLimit());
-				s.setMin(t.getMin());
-				s.setRate(t.getRate());
-			});
-			saveAsNeeded(context, price, t.getCost(), sp2Repository);
+			if (isNeedUpdate(context, entity)) {
+				entity.setLimit(t.getLimit());
+				entity.setMin(t.getMin());
+				entity.setRate(t.getRate());
+			}
+			saveAsNeeded(context, entity, t.getCost(), sp2Repository);
 		});
 		nextStep(context, "support",null, 1);
 	}

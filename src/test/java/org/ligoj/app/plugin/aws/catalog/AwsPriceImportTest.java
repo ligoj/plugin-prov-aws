@@ -295,12 +295,12 @@ class AwsPriceImportTest extends AbstractServerTest {
 		}
 		if (SERVICES_MULTI_REGION.contains(service)) {
 			mockOffer("/" + service + "/current/index" + version + ".csv");
-			if (version.equals("")) {
+			if ("".equals(version)) {
 				mockOffer("/" + service + "/current/empty.csv");
 			}
 		} else {
 			mockOffer("/" + service + "/current/region_index" + version + ".json");
-			if (version.equals("")) {
+			if ("".equals(version)) {
 				mockOffer("/" + service + "/current/default/empty.csv");
 			}
 			mockOffer("/" + service + "/current/eu-west-1/index" + version + ".csv");
@@ -326,6 +326,8 @@ class AwsPriceImportTest extends AbstractServerTest {
 		mockSavingsPlan("/AWSComputeSavingsPlan/current/region_index-empty.json");
 		mockSavingsPlan("/AWSComputeSavingsPlan/current/eu-west-1/index.json");
 		mockSavingsPlan("/AWSComputeSavingsPlan/current/default/empty.json");
+		mockSavingsPlan("/AWSDatabaseSavingsPlans/current/region_index.json");
+		mockSavingsPlan("/AWSDatabaseSavingsPlans/current/eu-west-1/index.json");
 		mock("/spot.js", "mock-server/aws/spot.js");
 		mock("/spot-fargate.json", "mock-server/aws/spot-fargate.json");
 
@@ -359,7 +361,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Check the whole quote
 		final var instance = check(quote, 448.793d, 46.667d);
-		final var subscription = instance.getConfiguration().getSubscription().getId();
+		final int subscription = instance.getConfiguration().getSubscription().getId();
 
 		// Check the v1 only prices
 		bpRepository.findByExpected("code", "OLD_____________.JRTCKXETXF.6YS6EN2CT7");
@@ -399,11 +401,22 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals(74, cpRepository.findAllBy("term.code", "ZGC49G7XS8QA54BQ").size()); // Fargate Compute
 		// SP
 		Assertions.assertEquals(148, cpRepository.findAllBy("term.code", "spot").size()); // Fargate Spot x 2 regions
-		Assertions.assertEquals(20, bpRepository.findAll().size()); // RDS
+		Assertions.assertEquals(21, bpRepository.findAll().size()); // RDS, including 1 Database Savings Plan
 
 		Assertions.assertEquals(148, ctRepository.findAll().size()); // Fargate type
 
-		checkImportStatus(562, 258);
+		checkImportStatus(563, 258);
+
+		// Check the Database savings plan for RDS
+		final var dbSavingsPlanPrice = bpRepository.findByExpected("code", "DZCHH8H3SPVYZ2Z4.TBNHT84HARTQH8TY");
+		Assertions.assertEquals(144.54d, dbSavingsPlanPrice.getCost(), DELTA);
+		Assertions.assertEquals(1734.48d, dbSavingsPlanPrice.getCostPeriod(), DELTA);
+		Assertions.assertEquals("Database Savings Plan, 1yr, No Upfront", dbSavingsPlanPrice.getTerm().getName());
+		Assertions.assertEquals("DZCHH8H3SPVYZ2Z4", dbSavingsPlanPrice.getTerm().getCode());
+		Assertions.assertTrue(dbSavingsPlanPrice.getTerm().getConvertibleEngine());
+		Assertions.assertFalse(dbSavingsPlanPrice.getTerm().getInitialCost());
+		Assertions.assertEquals("ORACLE", dbSavingsPlanPrice.getEngine());
+		Assertions.assertEquals(12d, dbSavingsPlanPrice.getPeriod(), DELTA);
 
 		// Check EC2 savings plan
 		final var ec2SsavingsPlanPrice = qiResource.lookup(subscription,
@@ -517,7 +530,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		// Install again to check the update without change
 		resetImportTask();
 		resource.install(false);
-		checkImportStatus(562 /* same */, 258);
+		checkImportStatus(563 /* same */, 258);
 		checkType();
 
 		provResource.updateCost(subscription);
@@ -527,7 +540,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		resetImportTask();
 		resource.install(true);
 		check(provResource.getConfiguration(subscription), 448.793d, 46.667d);
-		checkImportStatus(562 /* same */, 258);
+		checkImportStatus(563 /* same */, 258);
 		checkType();
 
 		// Install again with force mode, with only specs changes in force mode
@@ -541,8 +554,9 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("{Moderate NEW}", dtype.getDescription());
 		Assertions.assertEquals(3, dtype.getCpu());
 		Assertions.assertEquals(7782, dtype.getRam());
-		checkImportStatus(562 - 1 /* purged RDS */ + 1 /* new RDS */
-				- 1 /* purged EC2 */ + 1 /* new EC2 */, 258 /* Fargate */ + 1 /* new type */);
+		// No Database Savings Plan region in the 'vs' index: 3 less steps
+		checkImportStatus(562 + 1 /* Database SP */ - 1 /* purged RDS */ + 1 /* new RDS */
+				- 1 /* purged EC2 */ + 1 /* new EC2 */, 258 /* Fargate */ + 1 /* new type */, 35);
 
 		// Check the v1 only prices are still available
 		bpRepository.findByExpected("code", "OLD_____________.JRTCKXETXF.6YS6EN2CT7");
@@ -609,8 +623,8 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("{EBS only,20 Gigabit}", type.getDescription());
 
 		// Check status
-		checkImportStatus(562 + 2 /* saving plans */ + 1 - 1 /* purged RDS price */ /* new RDS price */
-				- 5 /* purged EC2 price */ + 1 /* new EC2 price */, 258 + 1);
+		checkImportStatus(562 + 3 /* saving plans */ + 1 - 1 /* purged RDS price */ /* new RDS price */
+				- 5 /* purged EC2 price */ + 1 /* new EC2 price */, 258 + 1, 35);
 
 
 		// Check Support
@@ -653,8 +667,13 @@ class AwsPriceImportTest extends AbstractServerTest {
 	}
 
 	private void checkImportStatus(final int count, final int nbTypes) {
+		// 3 more steps when the Database Savings Plan region is present
+		checkImportStatus(count, nbTypes, 38);
+	}
+
+	private void checkImportStatus(final int count, final int nbTypes, final int done) {
 		final var status = this.resource.getImportCatalogResource().getTask("service:prov:aws");
-		Assertions.assertEquals(35, status.getDone());
+		Assertions.assertEquals(done, status.getDone());
 		Assertions.assertEquals(69, status.getWorkload()); // 6 (regions) * 7 + 9
 		Assertions.assertEquals("support", status.getPhase());
 		Assertions.assertEquals(DEFAULT_USER, status.getAuthor());
@@ -823,7 +842,8 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		configuration.put(AwsPriceImportBase.CONF_REGIONS, "eu-west-1"); // Only one region for UTs
 		startMockServer();
-		checkNoSavingsPlan();
+		// The Database Savings Plan term is still there: only the EC2 Savings Plan file is missing
+		checkNoSavingsPlan(4);
 	}
 
 	private void startMockServer() {
@@ -832,6 +852,10 @@ class AwsPriceImportTest extends AbstractServerTest {
 	}
 
 	private void checkNoSavingsPlan() throws IOException {
+		checkNoSavingsPlan(3);
+	}
+
+	private void checkNoSavingsPlan(final int nbTerms) throws IOException {
 		resource.install(false);
 		em.flush();
 		em.clear();
@@ -839,7 +863,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 		// Only OD+RI prices have been imported
 		Assertions.assertEquals(76, itRepository.findAll().size());
-		Assertions.assertEquals(3, iptRepository.findAll().size()); // RI, OD, Spot
+		Assertions.assertEquals(nbTerms, iptRepository.findAll().size()); // RI, OD, Spot, and maybe Database SP
 	}
 
 	/**

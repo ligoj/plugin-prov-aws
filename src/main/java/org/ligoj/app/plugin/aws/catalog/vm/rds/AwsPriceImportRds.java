@@ -118,18 +118,35 @@ public class AwsPriceImportRds extends
 	}
 
 	/**
+	 * Return the storage type code part corresponding to a non-Aurora RDS volume type. The legacy
+	 * <code>&nbsp;(SSD)</code> labels, still used by some engines like Oracle and SQL Server, are folded into their
+	 * modern equivalent. Return <code>null</code> for an unsupported volume type.
+	 */
+	static String toVolumeCode(final String volume) {
+		return switch (Strings.CS.remove(volume, " (SSD)")) {
+			case "General Purpose" -> "gp";
+			case "General Purpose-GP3" -> "gp3";
+			case "Provisioned IOPS" -> "io";
+			case "Provisioned IOPS-IO2" -> "io2";
+			case "Magnetic" -> "magnetic";
+			default -> null;
+		};
+	}
+
+	/**
 	 * Install the RDS storage type as needed, and return it.
 	 */
 	private ProvStorageType installStorageType(final LocalRdsContext context, final AwsRdsPrice csv) {
 		// RDS Storage type is composition of
 		final String name;
 		final String engine;
-		if ("General Purpose-Aurora".equals(csv.getVolume())) {
+		if (Strings.CS.endsWith(csv.getVolume(), "-Aurora")) {
+			final var aurora = "General Purpose-Aurora".equals(csv.getVolume()) ? "gp" : "io";
 			if ("Aurora PostgreSQL".equals(csv.getEngine())) {
-				name = "rds-gp-aurora-postgresql";
+				name = "rds-" + aurora + "-aurora-postgresql";
 				engine = "Aurora PostgreSQL";
 			} else { /* Any */
-				name = "rds-gp-aurora-mysql";
+				name = "rds-" + aurora + "-aurora-mysql";
 				engine = "Aurora MySQL";
 			}
 		} else {
@@ -141,20 +158,12 @@ public class AwsPriceImportRds extends
 				engine = csv.getEngine();
 				nameSuffix = "-" + engine.toLowerCase(Locale.ENGLISH).replace(' ', '-');
 			}
-			switch (csv.getVolume()) {
-				case "General Purpose":
-					name = "rds-gp" + nameSuffix;
-					break;
-				case "Provisioned IOPS":
-					name = "rds-io" + nameSuffix;
-					break;
-				case "Magnetic":
-					name = "rds-magnetic" + nameSuffix;
-					break;
-				default:
-					log.error("Unknown RDS storage type {}/{}/{}", csv.getVolume(), csv.getEngine(), csv.getSku());
-					return null;
+			final var volumeCode = toVolumeCode(csv.getVolume());
+			if (volumeCode == null) {
+				log.error("Unknown RDS storage type {}/{}/{}", csv.getVolume(), csv.getEngine(), csv.getSku());
+				return null;
 			}
+			name = "rds-" + volumeCode + nameSuffix;
 		}
 
 		// Create as needed
@@ -167,7 +176,9 @@ public class AwsPriceImportRds extends
 
 		// Merge the updated statistics
 		return copyAsNeeded(context, type, t -> {
-			final var ssd = Strings.CS.contains(csv.getStorage(), "SSD");
+			// Only the magnetic family is not SSD-backed, whatever the label details
+			final var ssd = Strings.CS.contains(csv.getStorage(), "SSD")
+					|| !Strings.CS.contains(csv.getVolume(), "Magnetic");
 			t.setName(type.getCode());
 			t.setDescription(csv.getVolume());
 			t.setMinimal(toInteger(csv.getSizeMin()));

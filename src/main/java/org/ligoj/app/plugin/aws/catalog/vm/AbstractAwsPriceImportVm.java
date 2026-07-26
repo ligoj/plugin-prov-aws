@@ -244,9 +244,10 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	protected void copy(final X context, final C csv, final P p, final T type, final ProvInstancePriceTerm term) {
 		copy(csv, p);
 		p.setLocation(context.getRegion());
+		// Normalized (upper-case) license, so the case-normalized lookups match: BYOL, MARKETPLACE (Db2), ...
 		p.setLicense(StringUtils.trimToNull(Objects.requireNonNullElse(csv.getLicenseModel(), "")
 				.replace("No License required", "").replace("No license required", "").replace("License included", "")
-				.replace("Bring your own license", ProvInstancePrice.LICENSE_BYOL)));
+				.replace("Bring your own license", ProvInstancePrice.LICENSE_BYOL).toUpperCase(Locale.ENGLISH)));
 		p.setType(type);
 		p.setTerm(term);
 		p.setPeriod(term.getPeriod());

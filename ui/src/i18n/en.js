@@ -24,4 +24,10 @@ export default {
     'The Business Support plan offers resources for customers running production workloads on AWS as well as any customers who: • Run one or more applications in production environments; • Have multiple services activated, or use key services extensively; • Depend on their business solutions to be available, scalable, and secure.',
   'service:prov:aws:support:enterprise':
     'The Enterprise Support plan offers resources for customers running business & mission critical workloads on AWS, as well as any customers who want to: • Focus on proactive management to increase efficiency and availability; • Build and operate workloads following AWS best practices; • Leverage AWS expertise to support launches and migrations.',
+  'catalog.config.awsPricesUrl': 'Prices index URL',
+  'catalog.config.awsPricesUrlHelp': 'URL of the AWS bulk price index (offers index.json).',
+  'catalog.config.awsCo2InstanceUrl': 'CO2 instances dataset URL',
+  'catalog.config.awsCo2InstanceUrlHelp': 'URL of the CSV dataset providing the carbon footprint per instance type.',
+  'catalog.config.awsCo2RegionUrl': 'CO2 regions dataset URL',
+  'catalog.config.awsCo2RegionUrlHelp': 'URL of the CSV dataset providing the carbon intensity per region.',
 }

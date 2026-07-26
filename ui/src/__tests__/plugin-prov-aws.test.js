@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import pluginProvAwsDef from '../index.js'
+import pluginProvAwsDef, { catalogConfiguration } from '../index.js'
 
 describe('plugin-prov-aws contract', () => {
   it('exports required fields (id, label, install, feature, service, meta)', () => {
@@ -76,3 +76,19 @@ describe('plugin-prov-aws contract', () => {
     )
   })
 })
+
+describe('catalogConfiguration', () => {
+  it('exports the provider scoped configuration properties', () => {
+    expect(Array.isArray(catalogConfiguration)).toBe(true)
+    expect(catalogConfiguration.length).toBeGreaterThan(0)
+    for (const property of catalogConfiguration) {
+      expect(property.name.startsWith('service:prov:aws:')).toBe(true)
+      expect(['regExp', 'string']).toContain(property.type)
+      expect(property).toHaveProperty('default')
+      expect(property.key).toBeTruthy()
+    }
+    // Also reachable through the feature dispatcher used by plugin-prov
+    expect(pluginProvAwsDef.feature('catalogConfiguration')).toBe(catalogConfiguration)
+  })
+})
+

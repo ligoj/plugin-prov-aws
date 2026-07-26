@@ -18,4 +18,10 @@ export default {
     "Le plan Business Support fournit des ressources aux clients exécutant des charges de production sur AWS, ainsi qu'à tous les clients qui : • exécutent une ou plusieurs applications en environnement de production ; • ont plusieurs services activés ou utilisent intensivement des services clés ; • dépendent de la disponibilité, de l'évolutivité et de la sécurité de leurs solutions métier.",
   'service:prov:aws:support:enterprise':
     "Le plan Enterprise Support fournit des ressources aux clients exécutant des charges critiques sur AWS, ainsi qu'à tous les clients souhaitant : • se concentrer sur une gestion proactive pour gagner en efficacité et en disponibilité ; • construire et exploiter leurs charges selon les bonnes pratiques AWS ; • s'appuyer sur l'expertise AWS pour leurs lancements et migrations.",
+  'catalog.config.awsPricesUrl': 'URL de l\'index des prix',
+  'catalog.config.awsPricesUrlHelp': 'URL de l\'index global des prix AWS (offers index.json).',
+  'catalog.config.awsCo2InstanceUrl': 'URL du jeu de données CO2 instances',
+  'catalog.config.awsCo2InstanceUrlHelp': 'URL du jeu de données CSV fournissant l\'empreinte carbone par type d\'instance.',
+  'catalog.config.awsCo2RegionUrl': 'URL du jeu de données CO2 régions',
+  'catalog.config.awsCo2RegionUrlHelp': 'URL du jeu de données CSV fournissant l\'intensité carbone par région.',
 }

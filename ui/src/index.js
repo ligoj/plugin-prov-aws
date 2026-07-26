@@ -25,10 +25,26 @@ import enMessages from './i18n/en.js'
 import frMessages from './i18n/fr.js'
 import service from './service.js'
 
+/**
+ * Provider scoped configuration properties, rendered by the parent plugin-prov's catalog configuration dialog.
+ * `name` is the SystemConfiguration entry, `key` resolves the NLS label/tooltip (`catalog.config.<key>[Help]`).
+ */
+export const catalogConfiguration = [
+  {
+    name: 'service:prov:aws:aws-prices-url',
+    key: 'awsPricesUrl',
+    type: 'string',
+    default: 'https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/index.json',
+  },
+  { name: 'service:prov:aws:co2-instance-url', key: 'awsCo2InstanceUrl', type: 'string', default: '' },
+  { name: 'service:prov:aws:co2-region-url', key: 'awsCo2RegionUrl', type: 'string', default: '' },
+]
+
 const features = {
   renderFeatures: service.renderFeatures,
   renderDetailsKey: service.renderDetailsKey,
   dashboardLink: service.dashboardLink,
+  catalogConfiguration: () => catalogConfiguration,
 }
 
 export default {

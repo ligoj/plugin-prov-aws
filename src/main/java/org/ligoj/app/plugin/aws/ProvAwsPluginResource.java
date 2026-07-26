@@ -16,6 +16,8 @@ import org.ligoj.app.plugin.aws.auth.AWS4SignatureQuery.AWS4SignatureQueryBuilde
 import org.ligoj.app.plugin.aws.auth.AWS4SignerForAuthorizationHeader;
 import org.ligoj.app.plugin.aws.catalog.AwsPriceImport;
 import org.ligoj.app.plugin.prov.catalog.ImportCatalogService;
+import org.ligoj.app.plugin.prov.dao.ProvConfigurationRepository;
+import org.ligoj.app.plugin.prov.model.ProvConfiguration;
 import org.ligoj.app.plugin.prov.terraform.TerraformContext;
 import org.ligoj.app.plugin.prov.terraform.Terraforming;
 import org.ligoj.bootstrap.core.NamedBean;
@@ -51,14 +53,9 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	public static final String KEY = URL.replace('/', ':').substring(1);
 
 	/**
-	 * The default region, fixed for now.
+	 * The default region when the provider configuration does not define a default location.
 	 */
 	private static final String DEFAULT_REGION = "eu-west-1";
-
-	/**
-	 * Configuration key used for {@link #DEFAULT_REGION}
-	 */
-	public static final String CONF_REGION = KEY + ":region";
 
 	/**
 	 * Parameter used for AWS authentication
@@ -80,6 +77,9 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 
 	@Autowired
 	private ConfigurationResource configuration;
+
+	@Autowired
+	private ProvConfigurationRepository provConfigurationRepository;
 
 	@Autowired
 	protected AwsPriceImport priceImport;
@@ -212,12 +212,13 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	}
 
 	/**
-	 * Return the default region for this plug-in.
+	 * Return the default region for this plug-in: the default location of the provider configuration when defined.
 	 *
 	 * @return the default region.
 	 */
 	protected String getRegion() {
-		return configuration.get(CONF_REGION, DEFAULT_REGION);
+		return provConfigurationRepository.findById(KEY).map(ProvConfiguration::getDefaultLocation)
+				.orElse(DEFAULT_REGION);
 	}
 
 	/**

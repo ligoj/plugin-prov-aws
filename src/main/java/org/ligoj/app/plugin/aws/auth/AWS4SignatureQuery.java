@@ -3,11 +3,11 @@
  */
 package org.ligoj.app.plugin.aws.auth;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import lombok.Builder;
 import lombok.Getter;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Query used to sign AWS V4 API Query
@@ -63,12 +63,12 @@ public class AWS4SignatureQuery {
 		/**
 		 * query headers
 		 */
-		private final Map<String, String> headers = new HashMap<>();
+		private Map<String, String> headers = new HashMap<>();
 
 		/**
 		 * query parameters
 		 */
-		private final Map<String, String> queryParameters = new HashMap<>();
+		private Map<String, String> queryParameters = new HashMap<>();
 	}
 
 	/**

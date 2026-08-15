@@ -3,7 +3,6 @@
  */
 package org.ligoj.app.plugin.aws.catalog;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.plugin.aws.ProvAwsPluginResource;
@@ -16,6 +15,7 @@ import org.ligoj.app.plugin.prov.model.ProvStorageType;
 import org.ligoj.bootstrap.core.INamableBean;
 import org.ligoj.bootstrap.core.csv.CsvBeanReader;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.type.TypeReference;
 
 import java.io.BufferedReader;
 import java.io.IOException;

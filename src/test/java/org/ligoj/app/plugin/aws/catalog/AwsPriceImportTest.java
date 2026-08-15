@@ -167,7 +167,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 
 			@Override
 			public ImportCatalogStatus endTask(final String lockedId, final boolean failed) {
-				return endTaskInternal(lockedId, failed, t -> {
+				return endTaskInternal(lockedId, failed, _ -> {
 					// Nothing to do
 				});
 			}

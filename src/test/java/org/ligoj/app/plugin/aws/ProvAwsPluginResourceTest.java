@@ -187,7 +187,8 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 	@Test
 	void checkSubscriptionStatusDown() {
 		final var resource = newSpyResource();
-		doReturn(false).when(resource).validateAccess(ArgumentMatchers.anyInt());
+		// The status check validates with the parameters it received, never through the secured lookup by identifier
+		doReturn(false).when(resource).validateSubscriptionAccess(ArgumentMatchers.anyMap());
 		final var status = resource.checkSubscriptionStatus(subscription, null, new HashMap<>());
 		Assertions.assertFalse(status.getStatus().isUp());
 	}

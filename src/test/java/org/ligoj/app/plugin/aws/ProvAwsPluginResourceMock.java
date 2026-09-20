@@ -12,4 +12,9 @@ public class ProvAwsPluginResourceMock extends ProvAwsPluginResource {
 		return true;
 	}
 
+	@Override
+	public boolean validateSubscriptionAccess(java.util.Map<String, String> parameters) {
+		return true;
+	}
+
 }

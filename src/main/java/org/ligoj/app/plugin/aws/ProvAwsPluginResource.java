@@ -114,8 +114,8 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	@Override
 	public SubscriptionStatusWithData checkSubscriptionStatus(final int subscription, final String node,
 			final Map<String, String> parameters) {
-		// Validate the account
-		if (validateAccess(subscription)) {
+		// Validate the account, with the parameters the caller already resolved
+		if (validateSubscriptionAccess(parameters)) {
 			// Return the quote details
 			return super.checkSubscriptionStatus(subscription, node, parameters);
 		}
@@ -243,11 +243,23 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 	 * @return <code>true</code> if AWS connection is up
 	 */
 	public boolean validateAccess(final int subscription) {
+		return validateSubscriptionAccess(subscriptionResource.getParameters(subscription));
+	}
+
+	/**
+	 * Check AWS connection and account with the given subscription parameters. The scheduled health check uses this
+	 * form with the parameters it already holds: it runs without any authenticated user, so it must not go through
+	 * the secured parameters lookup of {@link #validateAccess(int)}.
+	 *
+	 * @param parameters The subscription parameters.
+	 * @return <code>true</code> if AWS connection is up
+	 */
+	public boolean validateSubscriptionAccess(final Map<String, String> parameters) {
 		// Call STS GetCallerIdentity
 		final var query = "Action=GetCallerIdentity&Version=2011-06-15";
 		final var builder = AWS4SignatureQuery.builder().service("sts").path("/").body(query);
 		try (var curlProcessor = new CurlProcessor()) {
-			return curlProcessor.process(newRequest(builder, subscription));
+			return curlProcessor.process(newRequest(builder, parameters));
 		}
 	}
 

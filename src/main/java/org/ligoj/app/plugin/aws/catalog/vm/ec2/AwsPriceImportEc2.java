@@ -15,9 +15,6 @@ import org.ligoj.app.plugin.aws.catalog.vm.AbstractAwsPriceImportVmOs;
 import org.ligoj.app.plugin.prov.model.*;
 import org.ligoj.bootstrap.core.SpringUtils;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Isolation;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -135,13 +132,18 @@ public class AwsPriceImportEc2 extends
 	}
 
 	/**
-	 * Create a new transactional (READ_UNCOMMITTED) process for spot prices in a specific region.
+	 * Install the spot prices of a specific region. When no transaction is active (parallel import), the whole region
+	 * is processed inside a single dedicated transaction with JDBC batching. In serial mode the enclosing global
+	 * transaction is joined.
 	 *
 	 * @param gContext The current global context.
 	 * @param r        The spot region.
 	 */
-	@Transactional(propagation = Propagation.SUPPORTS, isolation = Isolation.READ_UNCOMMITTED)
 	public void installSpotPrices(final UpdateContext gContext, final SpotRegion r) {
+		inRegionTransaction(() -> installSpotPricesInternal(gContext, r));
+	}
+
+	private void installSpotPricesInternal(final UpdateContext gContext, final SpotRegion r) {
 		nextStep(gContext, "ec2 (spot)", r.getRegion(), 0);
 		final var region = locationRepository.findByName(gContext.getNode().getId(), r.getRegion());
 

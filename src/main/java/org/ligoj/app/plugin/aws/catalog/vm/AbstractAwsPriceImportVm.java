@@ -21,9 +21,6 @@ import org.ligoj.app.plugin.prov.catalog.AbstractUpdateContext;
 import org.ligoj.app.plugin.prov.catalog.Co2Data;
 import org.ligoj.app.plugin.prov.catalog.ImportCatalog;
 import org.ligoj.app.plugin.prov.model.*;
-import org.springframework.transaction.annotation.Isolation;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -757,7 +754,9 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	}
 
 	/**
-	 * Create a new transactional (READ_UNCOMMITTED) process for OnDemand/SPE prices in a specific region.
+	 * Install the OnDemand/SP prices of a specific region. When no transaction is active (parallel import), the whole
+	 * region is processed inside a single dedicated transaction with JDBC batching: one commit per region instead of
+	 * one transaction per price. In serial mode the enclosing global transaction is joined.
 	 *
 	 * @param gContext    The current global context.
 	 * @param pRegion     The region configuration with price URLs.
@@ -766,9 +765,15 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 	 * @param term1       The expected term name prefix alternative 1.
 	 * @param term2       The expected term name prefix alternative 2.
 	 */
-	@Transactional(propagation = Propagation.SUPPORTS, isolation = Isolation.READ_UNCOMMITTED)
 	public void installRegionalPrices(final UpdateContext gContext, final AwsPriceRegion pRegion, final String api,
 			final String serviceCode, final AwsPriceRegion spRegion, final String term1, final String term2) {
+		inRegionTransaction(
+				() -> installRegionalPricesInternal(gContext, pRegion, api, serviceCode, spRegion, term1, term2));
+	}
+
+	private void installRegionalPricesInternal(final UpdateContext gContext, final AwsPriceRegion pRegion,
+			final String api, final String serviceCode, final AwsPriceRegion spRegion, final String term1,
+			final String term2) {
 		final var regionCode = pRegion.getRegionCode();
 		final var endpoint = getCsvUrl(gContext, pRegion.getUrl());
 		log.info("AWS {} OnDemand/Reserved import started for @{} -> {} ...", api, regionCode, endpoint);
@@ -881,6 +886,12 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			}
 		});
 
+		// Index the local prices by their type code: the deep match below only scans the candidate type's prices
+		// instead of the whole region's prices, keeping this scoring pass near-linear
+		var pricesByType = new HashMap<String, List<P>>();
+		context.getLocals().values()
+				.forEach(pp -> pricesByType.computeIfAbsent(pp.getType().getCode(), _ -> new ArrayList<>()).add(pp));
+
 		// For each price, check the matchType's price
 		var progressIndex = 0;
 		var lastProgressPercentage = 0;
@@ -915,8 +926,8 @@ public abstract class AbstractAwsPriceImportVm<T extends AbstractInstanceType, P
 			// No virtual functions there for performance, keep the old "for"
 			T p1TypeByDeepMatch = null;
 			for (var t : scoredTypes.values()) {
-				for (var pp : context.getLocals().values()) {
-					if (pp.getType().getCode().equals(t.getCode()) && priceMatchConstraintButType(pp, p)) {
+				for (var pp : pricesByType.getOrDefault(t.getCode(), List.of())) {
+					if (priceMatchConstraintButType(pp, p)) {
 						p1TypeByDeepMatch = t;
 						break;
 					}

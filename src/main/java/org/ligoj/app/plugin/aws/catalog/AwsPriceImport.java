@@ -60,9 +60,10 @@ public class AwsPriceImport extends AbstractImportCatalogResource {
 	 * Install or update prices.<br>
 	 * When the parallel import is disabled (<code>service:prov:use-parallel=0</code>), the whole update is executed
 	 * inside a single transaction: prices are accumulated in the persistence context and flushed by chunks with JDBC
-	 * batching instead of one transaction per price. With the (default) parallel import, the worker threads run their
-	 * own transactions and would not see the uncommitted entities of an enclosing one: each save keeps its own
-	 * transaction as before.
+	 * batching instead of one transaction per price. With the (default) parallel import, each region worker runs its
+	 * own dedicated transaction with the same JDBC batching: one commit per region instead of one transaction per
+	 * price. The shared entities (types, terms, locations) are committed immediately in their own transaction so the
+	 * concurrent region transactions can reference them.
 	 *
 	 * @param force When <code>true</code>, all cost attributes are update.
 	 * @throws IOException        When CSV or XML files cannot be read.

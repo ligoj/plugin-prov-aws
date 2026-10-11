@@ -104,6 +104,20 @@ public class ProvAwsPluginResource extends AbstractProvResource implements Terra
 		return validateAccess(parameters);
 	}
 
+	/**
+	 * Check the connection of a node configuration before it is saved. Overrides <code>ToolPlugin#checkConnection</code>
+	 * of an API having the connection check, without <code>@Override</code>: this plug-in still builds and runs on an
+	 * older API, which never calls it.
+	 *
+	 * @param node       The node identifier, it may not exist yet.
+	 * @param parameters The parameter values the node would have once saved.
+	 * @return <code>true</code> when AWS accepts the given keys.
+	 */
+	public boolean checkConnection(final String node, final Map<String, String> parameters) {
+		// The given parameters only, as the status check
+		return validateAccess(parameters);
+	}
+
 	@Override
 	public void create(final int subscription) {
 		if (!validateAccess(subscription)) {

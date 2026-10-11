@@ -215,6 +215,35 @@ class ProvAwsPluginResourceTest extends AbstractServerTest {
 		Assertions.assertTrue(resource.checkStatus(null, parameters));
 	}
 
+	private Map<String, String> checkParameters() {
+		final var parameters = new HashMap<String, String>();
+		parameters.put("service:prov:aws:access-key-id", "12345678901234567890");
+		parameters.put("service:prov:aws:secret-access-key", "secret_secret_secret");
+		parameters.put("service:prov:aws:account", "123456789");
+		return parameters;
+	}
+
+	@Test
+	void checkConnection() {
+		// The given keys of a node not saved yet, as the status check
+		Assertions.assertTrue(validateAccess(HttpStatus.SC_OK));
+		final var resource = newSpyResource();
+		doReturn(MOCK_URL).when(resource).toUrl(ArgumentMatchers.any());
+		Assertions.assertTrue(resource.checkConnection("service:prov:aws:new", checkParameters()));
+	}
+
+	@Test
+	void checkConnectionThroughApi() throws Exception {
+		// Built against an API without this feature, the method overrides the API's one when it exists
+		final var method = java.util.Arrays.stream(org.ligoj.app.api.ToolPlugin.class.getMethods())
+				.filter(m -> "checkConnection".equals(m.getName())).findFirst();
+		org.junit.jupiter.api.Assumptions.assumeTrue(method.isPresent(), "API without the connection check");
+		Assertions.assertTrue(validateAccess(HttpStatus.SC_OK));
+		final var resource = newSpyResource();
+		doReturn(MOCK_URL).when(resource).toUrl(ArgumentMatchers.any());
+		Assertions.assertEquals(true, method.get().invoke(resource, "service:prov:aws:new", checkParameters()));
+	}
+
 	@SuppressWarnings("unchecked")
 	private boolean validateAccess(int status) {
 		final var resource = newSpyResource();

@@ -172,7 +172,7 @@ class ProvAwsTerraformServiceTest extends AbstractServerTest {
 	}
 
 	@Test
-	void writeMutliple() throws IOException {
+	void writeMultiple() throws IOException {
 		final var instanceA = newQuoteInstance("InstanceEC21", VmOs.LINUX, null, 1, 1, 10, 8);
 		final var instanceB = newQuoteInstance("InstanceEC22", VmOs.WINDOWS, null, 1, 1, 10, 8);
 		final var instanceC = newQuoteInstance("InstanceSpot1", VmOs.LINUX, 0.1, 1, 1, 10, 8);

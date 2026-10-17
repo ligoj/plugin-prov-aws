@@ -85,7 +85,7 @@ public class ProvAwsTerraformService {
 	protected TerraformUtils utils;
 
 	/**
-	 * COnstructor initializing the mapping.
+	 * Constructor initializing the mapping.
 	 */
 	public ProvAwsTerraformService() {
 		// AMIs

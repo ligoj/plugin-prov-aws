@@ -554,7 +554,7 @@ class AwsPriceImportTest extends AbstractServerTest {
 		Assertions.assertEquals("{Moderate NEW}", dtype.getDescription());
 		Assertions.assertEquals(3, dtype.getCpu());
 		Assertions.assertEquals(7782, dtype.getRam());
-		// No Database Savings Plan region in the 'vs' index: 3 less steps
+		// No Database Savings Plan region in the 'vs' index: 3 fewer steps
 		checkImportStatus(562 + 1 /* Database SP */ - 1 /* purged RDS */ + 1 /* new RDS */
 				- 1 /* purged EC2 */ + 1 /* new EC2 */, 258 /* Fargate */ + 1 /* new type */, 35);
 

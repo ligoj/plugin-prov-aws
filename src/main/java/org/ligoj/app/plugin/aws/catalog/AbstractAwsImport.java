@@ -97,11 +97,9 @@ public abstract class AbstractAwsImport extends AbstractImportCatalogResource {
 	 * @param endpoint The prices end-point JSON URL.
 	 * @param apiClass The mapping model from JSON at region level.
 	 * @param mapper   The mapping function from JSON at region level to JPA entity.
-	 * @throws IOException When JSON content cannot be parsed.
 	 */
 	protected <R extends AwsRegionPrices, J extends AwsPrices<R>> void installJsonPrices(final UpdateContext context,
-			final String api, final String endpoint, final Class<J> apiClass, final Consumer<R> mapper)
-			throws IOException {
+			final String api, final String endpoint, final Class<J> apiClass, final Consumer<R> mapper) {
 		log.info("AWS {} prices...", api);
 		try (var curl = new CurlProcessor()) {
 			// Get the remote prices stream

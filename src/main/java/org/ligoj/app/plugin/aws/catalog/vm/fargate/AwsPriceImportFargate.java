@@ -273,7 +273,7 @@ public class AwsPriceImportFargate extends
 	 * @param endpoint The prices end-point JSON URL.
 	 * @throws IOException When JSON content cannot be parsed.
 	 */
-	private void installSpotPrices(final UpdateContext gContext, final String endpoint) throws IOException {
+	private void installSpotPrices(final UpdateContext gContext, final String endpoint) {
 		log.info("AWS Fargate Spot prices...");
 		try (var curl = new CurlProcessor()) {
 			// Get the remote prices stream
